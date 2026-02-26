@@ -84,7 +84,7 @@ const DailyJournal = () => {
   };
 
   return (
-    <div className="mx-auto max-w-2xl animate-fade-in">
+    <div className="w-full animate-fade-in">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">

@@ -13,22 +13,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { cn } from "@/lib/utils";
 
 const LIFE_AREAS = ["Career", "Health", "Relationships", "Personal Growth", "Finance"];
 const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
 const STATUSES = ["Not Started", "In Progress", "Completed"];
+
+const toOptions = (items: string[]) => items.map((i) => ({ value: i, label: i }));
 
 interface CreateToDoDialogProps {
   open: boolean;
@@ -68,7 +64,6 @@ const CreateToDoDialog = ({ open, onOpenChange, onSubmit }: CreateToDoDialogProp
       targetDate,
       recurring,
     });
-    // Reset
     setTitle("");
     setDescription("");
     setLifeArea("Career");
@@ -83,11 +78,11 @@ const CreateToDoDialog = ({ open, onOpenChange, onSubmit }: CreateToDoDialogProp
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-title-1 text-primary">Create New To Do</DialogTitle>
+          <DialogTitle className="text-title-1 text-foreground">Create New To Do</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <label className="text-body-5 font-medium text-primary">Title *</label>
+            <label className="text-body-5 font-medium text-foreground">Title *</label>
             <Input
               placeholder="What needs to be done?"
               value={title}
@@ -96,7 +91,7 @@ const CreateToDoDialog = ({ open, onOpenChange, onSubmit }: CreateToDoDialogProp
             />
           </div>
           <div>
-            <label className="text-body-5 font-medium text-primary">Description</label>
+            <label className="text-body-5 font-medium text-foreground">Description</label>
             <Textarea
               placeholder="Add details..."
               value={description}
@@ -106,48 +101,45 @@ const CreateToDoDialog = ({ open, onOpenChange, onSubmit }: CreateToDoDialogProp
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-body-5 font-medium text-primary">Life Area</label>
-              <Select value={lifeArea} onValueChange={setLifeArea}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {LIFE_AREAS.map((a) => (
-                    <SelectItem key={a} value={a}>{a}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <label className="text-body-5 font-medium text-foreground">Life Area</label>
+              <div className="mt-1">
+                <SearchableSelect
+                  options={toOptions(LIFE_AREAS)}
+                  value={lifeArea}
+                  onValueChange={setLifeArea}
+                  placeholder="Select area"
+                  searchPlaceholder="Search areas..."
+                />
+              </div>
             </div>
             <div>
-              <label className="text-body-5 font-medium text-primary">Priority</label>
-              <Select value={priority} onValueChange={setPriority}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PRIORITIES.map((p) => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <label className="text-body-5 font-medium text-foreground">Priority</label>
+              <div className="mt-1">
+                <SearchableSelect
+                  options={toOptions(PRIORITIES)}
+                  value={priority}
+                  onValueChange={setPriority}
+                  placeholder="Select priority"
+                  searchPlaceholder="Search priorities..."
+                />
+              </div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-body-5 font-medium text-primary">Status</label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <label className="text-body-5 font-medium text-foreground">Status</label>
+              <div className="mt-1">
+                <SearchableSelect
+                  options={toOptions(STATUSES)}
+                  value={status}
+                  onValueChange={setStatus}
+                  placeholder="Select status"
+                  searchPlaceholder="Search statuses..."
+                />
+              </div>
             </div>
             <div>
-              <label className="text-body-5 font-medium text-primary">Target Date</label>
+              <label className="text-body-5 font-medium text-foreground">Target Date</label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -187,7 +179,7 @@ const CreateToDoDialog = ({ open, onOpenChange, onSubmit }: CreateToDoDialogProp
           </div>
           <div className="flex justify-end gap-3 border-t pt-3">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button onClick={handleSubmit} disabled={!title.trim()} className="gap-1">
+            <Button variant="secondary" onClick={handleSubmit} disabled={!title.trim()} className="gap-1">
               <Save className="h-4 w-4" /> Create To Do
             </Button>
           </div>
