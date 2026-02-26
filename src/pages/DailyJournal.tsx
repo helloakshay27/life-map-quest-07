@@ -1,31 +1,29 @@
-import { useState } from "react";
-import { ArrowLeft, HelpCircle, Plus, Calendar } from "lucide-react";
+import { useState, useMemo } from "react";
+import { ArrowLeft, HelpCircle, Plus, Calendar, Trash2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
+import WeekStrip from "@/components/journal/WeekStrip";
+import AddAchievementDialog from "@/components/journal/AddAchievementDialog";
+import CreateToDoDialog, { type TodoItem } from "@/components/journal/CreateToDoDialog";
 
 const MOODS = ["Peaceful", "Energized", "Grateful", "Anxious", "Tired", "Stressed", "Focused", "Content", "Joyful", "Inspired", "Calm", "Excited"];
-
 const LIFE_AREAS = ["Career", "Health", "Relationships", "Personal Growth", "Finance"];
-
-const WEEKDAYS = [
-  { day: "SU", date: 22, filled: true },
-  { day: "M", date: 23, filled: true },
-  { day: "TU", date: 24, filled: true },
-  { day: "W", date: 25, filled: true, today: true },
-  { day: "TH", date: 26, filled: false },
-  { day: "F", date: 27, filled: false },
-  { day: "SA", date: 28, filled: false },
-];
 
 const DailyJournal = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("new");
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  // Form state
   const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
+  const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
   const [energy, setEnergy] = useState([5]);
   const [alignment, setAlignment] = useState([5]);
   const [gratitude, setGratitude] = useState("");
@@ -34,10 +32,55 @@ const DailyJournal = () => {
   const [letterSubject, setLetterSubject] = useState("");
   const [letterBody, setLetterBody] = useState("");
 
+  // Data state
+  const [achievements, setAchievements] = useState<{ title: string; points: number }[]>([]);
+  const [priorities, setPriorities] = useState<string[]>([""]);
+  const [todos, setTodos] = useState<TodoItem[]>([]);
+
+  // Dialog state
+  const [showAchievementDialog, setShowAchievementDialog] = useState(false);
+  const [showTodoDialog, setShowTodoDialog] = useState(false);
+
+  const filledDates = useMemo(() => [], [] as Date[]);
+
   const toggleMood = (mood: string) => {
     setSelectedMoods((prev) =>
       prev.includes(mood) ? prev.filter((m) => m !== mood) : [...prev, mood]
     );
+  };
+
+  const toggleArea = (area: string) => {
+    setSelectedAreas((prev) =>
+      prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area]
+    );
+  };
+
+  const addPriority = () => {
+    if (priorities.length < 5) setPriorities([...priorities, ""]);
+  };
+
+  const updatePriority = (index: number, value: string) => {
+    const updated = [...priorities];
+    updated[index] = value;
+    setPriorities(updated);
+  };
+
+  const removePriority = (index: number) => {
+    setPriorities(priorities.filter((_, i) => i !== index));
+  };
+
+  const handleSaveEntry = () => {
+    toast({
+      title: "Journal Entry Saved ✅",
+      description: `Entry for ${format(selectedDate, "MMMM d, yyyy")} saved successfully.`,
+    });
+  };
+
+  const handleSaveLetter = () => {
+    if (!letterBody.trim()) return;
+    toast({ title: "Letter Saved 💌", description: "Your letter has been saved." });
+    setLetterSubject("");
+    setLetterBody("");
   };
 
   return (
@@ -53,66 +96,37 @@ const DailyJournal = () => {
             <p className="text-body-5 text-muted-foreground">5-minute reflection on your day</p>
           </div>
         </div>
-        <button className="flex items-center gap-1 text-body-6 text-muted-foreground">
+        <button className="flex items-center gap-1 text-body-6 text-muted-foreground hover:text-foreground">
           <HelpCircle className="h-4 w-4" /> Help
         </button>
       </div>
 
-      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-6 w-full">
           <TabsTrigger value="new" className="flex-1">New</TabsTrigger>
-          <TabsTrigger value="past" className="flex-1">Past (1)</TabsTrigger>
+          <TabsTrigger value="past" className="flex-1">Past ({todos.length > 0 ? 1 : 0})</TabsTrigger>
           <TabsTrigger value="insights" className="flex-1">Insights</TabsTrigger>
           <TabsTrigger value="letters" className="flex-1">Letters</TabsTrigger>
         </TabsList>
 
         {/* NEW TAB */}
         <TabsContent value="new" className="space-y-4">
-          {/* Calendar Week */}
-          <div className="journal-section-green rounded-xl p-4">
-            <div className="mb-3 flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-foreground" />
-              <span className="text-body-4 font-medium text-foreground">Wednesday, February 25, 2026</span>
-            </div>
-            <p className="mb-2 text-center text-body-6 text-muted-foreground">This Week</p>
-            <div className="flex justify-center gap-2">
-              {WEEKDAYS.map((d) => (
-                <div
-                  key={d.date}
-                  className={`flex h-12 w-10 flex-col items-center justify-center rounded-lg text-body-6 ${
-                    d.today
-                      ? "bg-primary text-primary-foreground"
-                      : d.filled
-                      ? "bg-destructive/80 text-primary-foreground"
-                      : "bg-card text-foreground"
-                  }`}
-                >
-                  <span className="text-[10px] font-medium">{d.day}</span>
-                  <span className="font-semibold">{d.date}</span>
-                  {d.filled && !d.today && (
-                    <span className="text-[8px]">+10</span>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="mt-2 flex justify-center gap-4 text-body-6 text-muted-foreground">
-              <span>● Filled</span>
-              <span>● Missed</span>
-              <span>○ Upcoming</span>
-            </div>
-          </div>
+          {/* Week Strip */}
+          <WeekStrip selectedDate={selectedDate} onDateChange={setSelectedDate} filledDates={filledDates} />
 
           {/* Guiding Principles */}
           <div className="journal-section-purple rounded-xl p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-body-3 font-semibold text-foreground">Guiding Principles</h3>
-            </div>
+            <h3 className="mb-3 text-body-3 font-semibold text-foreground">Guiding Principles</h3>
             <p className="mb-1 text-body-5 font-medium text-foreground">Core Values Lived Today</p>
             <p className="mb-2 text-body-5 text-muted-foreground">Life Areas Focused On</p>
             <div className="flex flex-wrap gap-2">
               {LIFE_AREAS.map((area) => (
-                <Badge key={area} variant="outline" className="cursor-pointer hover:bg-muted">
+                <Badge
+                  key={area}
+                  variant={selectedAreas.includes(area) ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => toggleArea(area)}
+                >
                   {area}
                 </Badge>
               ))}
@@ -123,18 +137,36 @@ const DailyJournal = () => {
           <div className="journal-section-yellow rounded-xl p-4">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-body-3 font-semibold text-foreground">Today's Reflection</h3>
-              <Button size="sm" className="gap-1">
+              <Button size="sm" className="gap-1" onClick={() => setShowAchievementDialog(true)}>
                 <Plus className="h-3 w-3" /> Add Item
               </Button>
             </div>
 
-            <div className="mb-4 rounded-lg bg-card p-4 text-center">
-              <p className="text-body-5 text-muted-foreground">No achievements added yet</p>
-              <Button variant="outline" size="sm" className="mt-2 gap-1">
-                <Plus className="h-3 w-3" /> Add Your First Win
-              </Button>
-            </div>
+            {/* Achievements */}
+            {achievements.length === 0 ? (
+              <div className="mb-4 rounded-lg bg-card p-4 text-center">
+                <p className="text-body-5 text-muted-foreground">No achievements added yet</p>
+                <Button variant="outline" size="sm" className="mt-2 gap-1" onClick={() => setShowAchievementDialog(true)}>
+                  <Plus className="h-3 w-3" /> Add Your First Win
+                </Button>
+              </div>
+            ) : (
+              <div className="mb-4 space-y-2">
+                {achievements.map((a, i) => (
+                  <div key={i} className="flex items-center justify-between rounded-lg bg-card px-3 py-2">
+                    <span className="text-body-5 text-foreground">🏆 {a.title}</span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="text-body-6">+{a.points}pts</Badge>
+                      <button onClick={() => setAchievements(achievements.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-destructive">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
+            {/* Habits placeholder */}
             <div className="mb-4">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-body-5 font-medium text-foreground">Today's Habits</p>
@@ -146,24 +178,15 @@ const DailyJournal = () => {
               </div>
             </div>
 
+            {/* Gratitude & Challenges */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <p className="mb-1 text-body-5 font-medium text-foreground">What are you grateful for today?</p>
-                <Textarea
-                  placeholder="Express your thanks..."
-                  value={gratitude}
-                  onChange={(e) => setGratitude(e.target.value)}
-                  className="min-h-[80px] resize-none"
-                />
+                <Textarea placeholder="Express your thanks..." value={gratitude} onChange={(e) => setGratitude(e.target.value)} className="min-h-[80px] resize-none" />
               </div>
               <div>
                 <p className="mb-1 text-body-5 font-medium text-foreground">Challenges, Changes & Key Insights?</p>
-                <Textarea
-                  placeholder="Challenges you face today..."
-                  value={challenges}
-                  onChange={(e) => setChallenges(e.target.value)}
-                  className="min-h-[80px] resize-none"
-                />
+                <Textarea placeholder="Challenges you face today..." value={challenges} onChange={(e) => setChallenges(e.target.value)} className="min-h-[80px] resize-none" />
               </div>
             </div>
 
@@ -172,12 +195,7 @@ const DailyJournal = () => {
               <p className="mb-2 text-body-5 font-medium text-foreground">Mood</p>
               <div className="flex flex-wrap gap-2">
                 {MOODS.map((mood) => (
-                  <Badge
-                    key={mood}
-                    variant={selectedMoods.includes(mood) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => toggleMood(mood)}
-                  >
+                  <Badge key={mood} variant={selectedMoods.includes(mood) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleMood(mood)}>
                     {mood}
                   </Badge>
                 ))}
@@ -205,51 +223,81 @@ const DailyJournal = () => {
 
           {/* Shaping Tomorrow */}
           <div className="journal-section-blue rounded-xl p-4">
-            <h3 className="mb-3 text-body-3 font-semibold text-foreground">Shaping Tomorrow</h3>
-            <div className="mb-3 rounded-lg bg-card p-4 text-center">
-              <Calendar className="mx-auto mb-1 h-8 w-8 text-muted-foreground/40" />
-              <p className="text-body-5 text-muted-foreground">No calendars configured</p>
-            </div>
-            <div className="flex items-center justify-between">
-              <p className="text-body-5 font-medium text-foreground">Priorities for Tomorrow?</p>
-              <Button size="sm" className="gap-1">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-body-3 font-semibold text-foreground">Shaping Tomorrow</h3>
+              <Button size="sm" className="gap-1" onClick={addPriority} disabled={priorities.length >= 5}>
                 <Plus className="h-3 w-3" /> Add Priority
               </Button>
             </div>
-            <Input placeholder="Priority #1" className="mt-2" />
+            <div className="space-y-2">
+              {priorities.map((p, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Input
+                    placeholder={`Priority #${i + 1}`}
+                    value={p}
+                    onChange={(e) => updatePriority(i, e.target.value)}
+                  />
+                  {priorities.length > 1 && (
+                    <button onClick={() => removePriority(i)} className="text-muted-foreground hover:text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Daily Affirmation */}
           <div className="journal-section-pink rounded-xl p-4">
             <h3 className="mb-3 text-body-3 font-semibold text-foreground">Your Daily Affirmation</h3>
-            <Textarea
-              placeholder="A positive statement about yourself..."
-              value={affirmation}
-              onChange={(e) => setAffirmation(e.target.value)}
-              className="min-h-[60px] resize-none"
-            />
+            <Textarea placeholder='A positive statement about yourself...' value={affirmation} onChange={(e) => setAffirmation(e.target.value)} className="min-h-[60px] resize-none" />
             <p className="mt-1 text-body-6 text-muted-foreground">
               Present tense ("I am"), positive, specific, repeat daily with emotion.
             </p>
           </div>
 
-          {/* Review Goals */}
+          {/* Review To Do's & Goals */}
           <div className="journal-section-orange rounded-xl p-4">
             <div className="flex items-center justify-between">
               <h3 className="text-body-3 font-semibold text-foreground">Review To Do's & Goals</h3>
-              <Button size="sm" className="gap-1">
+              <Button size="sm" className="gap-1" onClick={() => setShowTodoDialog(true)}>
                 <Plus className="h-3 w-3" /> Add
               </Button>
             </div>
-            <div className="mt-3 rounded-lg bg-card p-4 text-center">
-              <p className="text-body-5 text-muted-foreground">No to-do's yet</p>
-            </div>
+            {todos.length === 0 ? (
+              <div className="mt-3 rounded-lg bg-card p-4 text-center">
+                <p className="text-body-5 text-muted-foreground">No to-do's yet</p>
+                <Button variant="outline" size="sm" className="mt-2" onClick={() => setShowTodoDialog(true)}>
+                  Create Your First To Do
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-3 space-y-2">
+                {todos.map((todo) => (
+                  <div key={todo.id} className="flex items-center justify-between rounded-lg bg-card px-3 py-2">
+                    <div>
+                      <p className="text-body-5 font-medium text-foreground">{todo.title}</p>
+                      <div className="mt-1 flex gap-2">
+                        <Badge variant="outline" className="text-body-6">{todo.lifeArea}</Badge>
+                        <Badge variant="secondary" className="text-body-6">{todo.priority}</Badge>
+                        <Badge variant={todo.status === "Completed" ? "default" : "outline"} className="text-body-6">{todo.status}</Badge>
+                      </div>
+                    </div>
+                    <button onClick={() => setTodos(todos.filter((t) => t.id !== todo.id))} className="text-muted-foreground hover:text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Actions */}
           <div className="sticky bottom-0 flex justify-end gap-3 border-t bg-background py-3">
-            <Button variant="outline">Cancel</Button>
-            <Button>Save Entry - Feb 25, 2026</Button>
+            <Button variant="outline" onClick={() => navigate(-1)}>Cancel</Button>
+            <Button onClick={handleSaveEntry}>
+              Save Entry - {format(selectedDate, "MMM d, yyyy")}
+            </Button>
           </div>
         </TabsContent>
 
@@ -259,11 +307,11 @@ const DailyJournal = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-foreground" />
-                <span className="text-body-4 font-medium text-foreground">Wednesday, February 25, 2026</span>
+                <span className="text-body-4 font-medium text-foreground">{format(selectedDate, "EEEE, MMMM d, yyyy")}</span>
               </div>
               <div className="flex gap-2">
-                <Badge className="bg-error text-error-foreground">Energy 10/10</Badge>
-                <Badge className="bg-success text-success-foreground">Align 5/10</Badge>
+                <Badge className="bg-error text-error-foreground">Energy {energy[0]}/10</Badge>
+                <Badge className="bg-success text-success-foreground">Align {alignment[0]}/10</Badge>
               </div>
             </div>
           </div>
@@ -287,32 +335,27 @@ const DailyJournal = () => {
               <span className="text-xl">✨</span>
               <div>
                 <h3 className="text-body-3 font-semibold text-foreground">Write a Letter to Yourself</h3>
-                <p className="text-body-5 text-muted-foreground">
-                  Write to your future or present self - share your thoughts, dreams, and reflections
-                </p>
+                <p className="text-body-5 text-muted-foreground">Share your thoughts, dreams, and reflections</p>
               </div>
             </div>
             <div className="space-y-3">
               <div>
                 <label className="text-body-5 font-medium text-foreground">Subject (Optional)</label>
-                <Input
-                  placeholder="e.g., Dear Future Me, A Letter of Gratitude..."
-                  value={letterSubject}
-                  onChange={(e) => setLetterSubject(e.target.value)}
-                  className="mt-1"
-                />
+                <Input placeholder="e.g., Dear Future Me, A Letter of Gratitude..." value={letterSubject} onChange={(e) => setLetterSubject(e.target.value)} className="mt-1" />
               </div>
               <div>
                 <label className="text-body-5 font-medium text-foreground">Your Letter</label>
                 <Textarea
-                  placeholder="Dear Self,&#10;&#10;Write your thoughts, feelings, dreams, and reflections here...&#10;&#10;What do you want to remember? What are you grateful for? What are your hopes and dreams?"
+                  placeholder={"Dear Self,\n\nWrite your thoughts, feelings, dreams, and reflections here...\n\nWhat do you want to remember? What are you grateful for?"}
                   value={letterBody}
                   onChange={(e) => setLetterBody(e.target.value)}
                   className="mt-1 min-h-[160px] resize-none"
                 />
               </div>
               <div className="flex justify-end">
-                <Button className="gap-1">💾 Save Letter</Button>
+                <Button className="gap-1" onClick={handleSaveLetter} disabled={!letterBody.trim()}>
+                  💾 Save Letter
+                </Button>
               </div>
             </div>
           </div>
@@ -322,6 +365,18 @@ const DailyJournal = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Dialogs */}
+      <AddAchievementDialog
+        open={showAchievementDialog}
+        onOpenChange={setShowAchievementDialog}
+        onSubmit={(a) => setAchievements([...achievements, a])}
+      />
+      <CreateToDoDialog
+        open={showTodoDialog}
+        onOpenChange={setShowTodoDialog}
+        onSubmit={(todo) => setTodos([...todos, todo])}
+      />
     </div>
   );
 };
