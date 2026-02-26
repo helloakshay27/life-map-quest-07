@@ -82,7 +82,7 @@ const CreateToDoDialog = ({ open, onOpenChange, onSubmit }: CreateToDoDialogProp
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <label className="text-body-5 font-medium text-foreground">Title *</label>
+            <label className="text-body-5 font-medium text-primary">Title *</label>
             <Input
               placeholder="What needs to be done?"
               value={title}
@@ -91,7 +91,7 @@ const CreateToDoDialog = ({ open, onOpenChange, onSubmit }: CreateToDoDialogProp
             />
           </div>
           <div>
-            <label className="text-body-5 font-medium text-foreground">Description</label>
+            <label className="text-body-5 font-medium text-primary">Description</label>
             <Textarea
               placeholder="Add details..."
               value={description}
@@ -101,7 +101,7 @@ const CreateToDoDialog = ({ open, onOpenChange, onSubmit }: CreateToDoDialogProp
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-body-5 font-medium text-foreground">Life Area</label>
+              <label className="text-body-5 font-medium text-primary">Life Area</label>
               <div className="mt-1">
                 <SearchableSelect
                   options={toOptions(LIFE_AREAS)}
@@ -113,7 +113,7 @@ const CreateToDoDialog = ({ open, onOpenChange, onSubmit }: CreateToDoDialogProp
               </div>
             </div>
             <div>
-              <label className="text-body-5 font-medium text-foreground">Priority</label>
+              <label className="text-body-5 font-medium text-primary">Priority</label>
               <div className="mt-1">
                 <SearchableSelect
                   options={toOptions(PRIORITIES)}
@@ -127,7 +127,7 @@ const CreateToDoDialog = ({ open, onOpenChange, onSubmit }: CreateToDoDialogProp
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-body-5 font-medium text-foreground">Status</label>
+              <label className="text-body-5 font-medium text-primary">Status</label>
               <div className="mt-1">
                 <SearchableSelect
                   options={toOptions(STATUSES)}
@@ -139,7 +139,7 @@ const CreateToDoDialog = ({ open, onOpenChange, onSubmit }: CreateToDoDialogProp
               </div>
             </div>
             <div>
-              <label className="text-body-5 font-medium text-foreground">Target Date</label>
+              <label className="text-body-5 font-medium text-primary">Target Date</label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
