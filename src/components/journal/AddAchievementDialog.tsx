@@ -29,7 +29,7 @@ const AddAchievementDialog = ({ open, onOpenChange, onSubmit }: AddAchievementDi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-title-1 text-primary">
+          <DialogTitle className="flex items-center gap-2 text-title-1 text-foreground">
             <Trophy className="h-5 w-5" /> Add Achievement
           </DialogTitle>
         </DialogHeader>
@@ -46,7 +46,7 @@ const AddAchievementDialog = ({ open, onOpenChange, onSubmit }: AddAchievementDi
           </div>
           <div className="flex justify-end gap-3">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button onClick={handleSubmit} disabled={!title.trim()}>Add Win 🎉</Button>
+            <Button variant="secondary" onClick={handleSubmit} disabled={!title.trim()}>Add Win 🎉</Button>
           </div>
         </div>
       </DialogContent>
