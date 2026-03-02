@@ -13,10 +13,22 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 export function AppHeader() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
+  
+const handleLogout = async () => {
+    try {
+      await fetch("https://life-api.lockated.com/logout", { 
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          
+        }
+      });
+    } catch (error) {
+      console.error("Failed to logout from server:", error);
+    } finally {
+      logout();
+      navigate("/login");
+    }
   };
 
   const initials = user?.name

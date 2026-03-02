@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!emailOrMobile || !password) {
       toast({ title: "Please fill all fields", variant: "destructive" });
@@ -25,24 +25,41 @@ const Login = () => {
 
     setLoading(true);
     try {
-      // Mock login - replace with actual API call
-      // const res = await apiRequest("/auth/login", { method: "POST", body: JSON.stringify({ email: emailOrMobile, password }) });
-      // const data = await res.json();
-      // login(data.token, data.user);
+      const response = await fetch("https://life-api.lockated.com/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user: {
+            email: emailOrMobile,
+            password: password,
+          }
+        }),
+      });
 
-      // Demo login
-      setTimeout(() => {
-        login("demo-token-123", {
-          id: "1",
-          name: "Akshay Shinde",
-          email: emailOrMobile,
-        });
-        navigate("/");
-        setLoading(false);
-      }, 800);
-    } catch {
-      toast({ title: "Login failed", description: "Invalid credentials", variant: "destructive" });
-      setLoading(false);
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Throw an error to be caught by the catch block below
+        throw new Error(data.message || data.error || "Invalid credentials");
+      }
+
+      // Success! Pass the token and user data to your AuthContext
+      // Note: Adjust 'data.token' or 'data.user' based on what your API actually returns
+      login(data.token || data.auth_token, data.user || data);
+      
+      toast({ title: "Login successful" });
+      navigate("/");
+      
+    } catch (error) {
+      toast({ 
+        title: "Login failed", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    } finally {
+      setLoading(false); // Ensure loading state is reset whether it succeeds or fails
     }
   };
 
@@ -111,9 +128,9 @@ const Login = () => {
               </button>
               <span className="text-muted-foreground">
                 Need an account?{" "}
-                <button type="button" className="font-medium text-primary hover:underline">
+                <Link to={"/signUp"} type="button" className="font-medium text-primary hover:underline">
                   Sign up
-                </button>
+                </Link>
               </span>
             </div>
           </form>

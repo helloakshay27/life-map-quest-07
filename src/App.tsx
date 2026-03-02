@@ -14,6 +14,11 @@ import NotFound from "./pages/NotFound";
 import LeaderBoard from "./pages/LeaderBoard";
 import Analytics from "./pages/Analytics";
 import People from "./pages/People";
+import VisionAndValues from "./pages/VisionAndValues";
+import BucketList from "./components/BucketList";
+import SignUp from "./pages/SignUp";
+import KraSelfEvaluation from "./pages/KRA";
+import WeeklyJournal from "./pages/WeeklyJournal";
 
 const queryClient = new QueryClient();
 
@@ -27,17 +32,19 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
+                        <Route path="/signUp" element={<SignUp />} />
+
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/daily-journal" element={<DailyJournal />} />
-              <Route path="/weekly-journal" element={<PlaceholderPage />} />
+              <Route path="/weekly-journal" element={<WeeklyJournal />} />
               <Route path="/calendar" element={<PlaceholderPage />} />
-              <Route path="/vision-values" element={<PlaceholderPage />} />
-              <Route path="/bucket-list" element={<PlaceholderPage />} />
+              <Route path="/vision-values" element={<VisionAndValues/>} />
+              <Route path="/bucket-list" element={<BucketList/>} />
               <Route path="/goals-habits" element={<PlaceholderPage />} />
               <Route path="/todos" element={<PlaceholderPage />} />
               <Route path="/people" element={<People />} />
-              <Route path="/kra" element={<PlaceholderPage />} />
+              <Route path="/kra" element={<KraSelfEvaluation/>} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/achievements" element={<PlaceholderPage />} />
               <Route path="/learn" element={<PlaceholderPage />} />
