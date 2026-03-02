@@ -4,8 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Compass, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { GophygitalLogo } from "@/components/AppHeader";
 
 const Login = () => {
   const [emailOrMobile, setEmailOrMobile] = useState("");
@@ -60,6 +61,23 @@ const Login = () => {
       });
     } finally {
       setLoading(false); // Ensure loading state is reset whether it succeeds or fails
+      // Demo login
+      setTimeout(() => {
+        login("demo-token-123", {
+          id: "1",
+          name: "Akshay Shinde",
+          email: emailOrMobile,
+        });
+        navigate("/");
+        setLoading(false);
+      }, 800);
+    } catch {
+      toast({
+        title: "Login failed",
+        description: "Invalid credentials",
+        variant: "destructive",
+      });
+      setLoading(false);
     }
   };
 
@@ -69,11 +87,15 @@ const Login = () => {
         <div className="rounded-2xl border bg-card p-8 shadow-lg">
           {/* Logo */}
           <div className="mb-6 flex flex-col items-center">
-            <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-secondary">
-              <Compass className="h-10 w-10 text-primary" />
+            <div className="mb-4 flex items-center justify-center">
+              <GophygitalLogo className="h-12 w-auto text-primary" />
             </div>
-            <h1 className="text-heading text-foreground">Welcome to CBX Life Compass</h1>
-            <p className="mt-1 text-body-4 text-muted-foreground">Sign in to continue</p>
+            <h1 className="text-heading text-foreground">
+              Welcome to CBX Life Compass
+            </h1>
+            <p className="mt-1 text-body-4 text-muted-foreground">
+              Sign in to continue
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -113,12 +135,21 @@ const Login = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             </div>
 
-            <Button type="submit" className="w-full" size="lg" disabled={loading}>
+            <Button
+              type="submit"
+              className="w-full"
+              size="lg"
+              disabled={loading}
+            >
               {loading ? "Signing in..." : "Sign in"}
             </Button>
 
@@ -129,6 +160,10 @@ const Login = () => {
               <span className="text-muted-foreground">
                 Need an account?{" "}
                 <Link to={"/signUp"} type="button" className="font-medium text-primary hover:underline">
+                <button
+                  type="button"
+                  className="font-medium text-primary hover:underline"
+                >
                   Sign up
                 </Link>
               </span>

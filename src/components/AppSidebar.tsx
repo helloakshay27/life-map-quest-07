@@ -24,6 +24,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 const navItems = [
@@ -45,6 +46,8 @@ const navItems = [
 ];
 
 export function AppSidebar() {
+  const { setOpenMobile } = useSidebar();
+
   return (
     <Sidebar className="border-r border-sidebar-border">
       <SidebarContent className="pt-4">
@@ -57,6 +60,7 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.url === "/"}
+                      onClick={() => setOpenMobile(false)}
                       className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-body-5 text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
                       activeClassName="bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary"
                     >
