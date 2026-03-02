@@ -15,11 +15,10 @@ import LeaderBoard from "./pages/LeaderBoard";
 import Analytics from "./pages/Analytics";
 import People from "./pages/People";
 import VisionAndValues from "./pages/VisionAndValues";
-import BucketList from "./components/BucketList";
+import BucketList from "@/components/BucketList";
 import SignUp from "./pages/SignUp";
 import KraSelfEvaluation from "./pages/KRA";
 import WeeklyJournal from "./pages/WeeklyJournal";
-import BucketList from "@/components/BucketList";
 
 const queryClient = new QueryClient();
 
@@ -41,8 +40,6 @@ const App = () => (
               <Route path="/weekly-journal" element={<WeeklyJournal />} />
               <Route path="/calendar" element={<PlaceholderPage />} />
               <Route path="/vision-values" element={<VisionAndValues />} />
-              <Route path="/bucket-list" element={<BucketList />} />
-              <Route path="/vision-values" element={<PlaceholderPage />} />
               <Route path="/bucket-list" element={<BucketList />} />
               <Route path="/goals-habits" element={<PlaceholderPage />} />
               <Route path="/todos" element={<PlaceholderPage />} />

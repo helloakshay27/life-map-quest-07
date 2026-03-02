@@ -17,7 +17,7 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!emailOrMobile || !password) {
       toast({ title: "Please fill all fields", variant: "destructive" });
@@ -35,7 +35,7 @@ const Login = () => {
           user: {
             email: emailOrMobile,
             password: password,
-          }
+          },
         }),
       });
 
@@ -49,34 +49,16 @@ const Login = () => {
       // Success! Pass the token and user data to your AuthContext
       // Note: Adjust 'data.token' or 'data.user' based on what your API actually returns
       login(data.token || data.auth_token, data.user || data);
-      
+
       toast({ title: "Login successful" });
       navigate("/");
-      
     } catch (error) {
-      toast({ 
-        title: "Login failed", 
-        description: error.message, 
-        variant: "destructive" 
-      });
-    } finally {
-      setLoading(false); // Ensure loading state is reset whether it succeeds or fails
-      // Demo login
-      setTimeout(() => {
-        login("demo-token-123", {
-          id: "1",
-          name: "Akshay Shinde",
-          email: emailOrMobile,
-        });
-        navigate("/");
-        setLoading(false);
-      }, 800);
-    } catch {
       toast({
         title: "Login failed",
-        description: "Invalid credentials",
+        description: error.message,
         variant: "destructive",
       });
+    } finally {
       setLoading(false);
     }
   };
@@ -159,9 +141,8 @@ const Login = () => {
               </button>
               <span className="text-muted-foreground">
                 Need an account?{" "}
-                <Link to={"/signUp"} type="button" className="font-medium text-primary hover:underline">
-                <button
-                  type="button"
+                <Link
+                  to={"/signUp"}
                   className="font-medium text-primary hover:underline"
                 >
                   Sign up

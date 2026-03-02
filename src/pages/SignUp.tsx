@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Compass, Mail, Lock, Eye, EyeOff, User, Phone } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, User, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { GophygitalLogo } from "@/components/AppHeader";
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -19,7 +20,7 @@ const SignUp = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -30,7 +31,7 @@ const SignUp = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Basic Validation
     if (Object.values(formData).some((field) => !field)) {
       toast({ title: "Please fill all fields", variant: "destructive" });
@@ -56,17 +57,18 @@ const SignUp = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || "Failed to create account");
+        throw new Error(
+          data.message || data.error || "Failed to create account",
+        );
       }
 
       toast({ title: "Account created successfully! Please log in." });
       navigate("/login"); // Redirect to login page after successful signup
-      
     } catch (error) {
-      toast({ 
-        title: "Sign up failed", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Sign up failed",
+        description: error.message,
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -77,18 +79,18 @@ const SignUp = () => {
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
       <div className="w-full max-w-md animate-fade-in">
         <div className="rounded-2xl border bg-card p-8 shadow-lg">
-          
           {/* Logo & Header */}
           <div className="mb-6 flex flex-col items-center">
-            <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-secondary">
-              <Compass className="h-10 w-10 text-primary" />
+            <div className="mb-4 flex items-center justify-center">
+              <GophygitalLogo className="h-12 w-auto text-primary" />
             </div>
             <h1 className="text-heading text-foreground">Create an Account</h1>
-            <p className="mt-1 text-body-4 text-muted-foreground">Join CBX Life Compass today</p>
+            <p className="mt-1 text-body-4 text-muted-foreground">
+              Join CBX Life Compass today
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            
             {/* First Name & Last Name - Side by Side */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -182,14 +184,21 @@ const SignUp = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             </div>
 
             {/* Confirm Password */}
             <div className="space-y-2">
-              <Label htmlFor="password_confirmation" className="text-body-5 font-medium">
+              <Label
+                htmlFor="password_confirmation"
+                className="text-body-5 font-medium"
+              >
                 Confirm Password
               </Label>
               <div className="relative">
@@ -207,21 +216,30 @@ const SignUp = () => {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             </div>
 
-            <Button type="submit" className="w-full mt-2" size="lg" disabled={loading}>
+            <Button
+              type="submit"
+              className="w-full mt-2"
+              size="lg"
+              disabled={loading}
+            >
               {loading ? "Creating account..." : "Sign up"}
             </Button>
 
             <div className="flex items-center justify-center text-body-6 pt-2">
               <span className="text-muted-foreground">
                 Already have an account?{" "}
-                <button 
-                  type="button" 
-                  onClick={() => navigate('/login')}
+                <button
+                  type="button"
+                  onClick={() => navigate("/login")}
                   className="font-medium text-primary hover:underline"
                 >
                   Sign in
