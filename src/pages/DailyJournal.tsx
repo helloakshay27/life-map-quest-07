@@ -787,9 +787,6 @@ const DailyJournal = () => {
               </div>
 
               {/* Daily Affirmation */}
-<<<<<<< HEAD
-             <DailyAffirmation/>
-=======
               <div className="journal-section-pink rounded-xl p-6 shadow-sm border border-pink-100/50 bg-white">
                 <h3 className="mb-4 text-lg font-bold text-gray-900">
                   Your Daily Affirmation
@@ -805,7 +802,6 @@ const DailyJournal = () => {
                   emotion.
                 </p>
               </div>
->>>>>>> 04221d028a10c0a1aba908cd9a7ea3bbcda6f71d
 
               {/* 🟢 REPLACED WITH IMPORTED COMPONENT */}
               <BucketListProgress />
@@ -959,10 +955,6 @@ const DailyJournal = () => {
 
           {/* LETTERS TAB CONTENT */}
           <TabsContent value="letters" className="focus:outline-none">
-<<<<<<< HEAD
-  <LettersSection />
-</TabsContent>
-=======
             <div className="space-y-6">
               <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
                 <div className="mb-6 flex items-center gap-3">
@@ -1052,7 +1044,6 @@ const DailyJournal = () => {
               </div>
             </div>
           </TabsContent>
->>>>>>> 04221d028a10c0a1aba908cd9a7ea3bbcda6f71d
         </Tabs>
       </div>
 
