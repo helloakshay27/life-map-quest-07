@@ -1,7 +1,20 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, HelpCircle, Loader2, Lightbulb } from "lucide-react";
+import {
+  ArrowLeft,
+  HelpCircle,
+  Loader2,
+  Lightbulb,
+  Trash2,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import WeekStrip from "@/components/journal/WeekStrip";
 import { subDays, startOfWeek, endOfWeek, format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,6 +35,7 @@ const WeeklyJournal = () => {
   const { token, user } = useAuth();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
+  const [journalId, setJournalId] = useState<number | null>(null);
 
   // States lifted from WeeklyReflection
   const [challenge, setChallenge] = useState("");
@@ -75,6 +89,10 @@ const WeeklyJournal = () => {
   // === INSIGHTS STATE ===
   const [insights, setInsights] = useState<string[]>([]);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
+  const [selectedPastJournal, setSelectedPastJournal] =
+    useState<PastWeeklyJournal | null>(null);
+  const [isJournalModalOpen, setIsJournalModalOpen] = useState(false);
+  const [isLoadingJournal, setIsLoadingJournal] = useState(false);
 
   const myFilledDates = [
     new Date(), // Today
@@ -115,8 +133,13 @@ const WeeklyJournal = () => {
         },
       };
 
-      const res = await fetch(`${API_BASE_URL}/user_journals`, {
-        method: "POST",
+      const url = journalId
+        ? `${API_BASE_URL}/user_journals/${journalId}`
+        : `${API_BASE_URL}/user_journals`;
+      const method = journalId ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
@@ -125,6 +148,11 @@ const WeeklyJournal = () => {
       });
 
       if (!res.ok) throw new Error("Failed to save weekly journal");
+
+      const responseData = await res.json();
+      if (responseData.journal?.id) {
+        setJournalId(responseData.journal.id);
+      }
 
       toast({
         title: "Weekly plan saved ✅",
@@ -148,25 +176,37 @@ const WeeklyJournal = () => {
         setIsLoadingInsights(true);
         try {
           const authToken = token || localStorage.getItem("auth_token");
-          const res = await fetch(`${API_BASE_URL}/user_journals/weekly_journals_insights`, {
-            headers: {
-              "Content-Type": "application/json",
-              ...(authToken && { "Authorization": `Bearer ${authToken}` })
-            }
-          });
+          const res = await fetch(
+            `${API_BASE_URL}/user_journals/weekly_journals_insights`,
+            {
+              headers: {
+                "Content-Type": "application/json",
+                ...(authToken && { Authorization: `Bearer ${authToken}` }),
+              },
+            },
+          );
 
           if (res.ok) {
             const data = await res.json();
-            
+
             // Handle both object structure (Friend's logic) and array structure (Your logic)
             if (Array.isArray(data) || data.insights || data.data) {
-                const rawInsights = Array.isArray(data) ? data : (data.insights || data.data || []);
-                const formattedInsights = rawInsights.map((i: any) => 
-                  typeof i === 'string' ? i : (i.insight || i.message || i.content || JSON.stringify(i))
-                );
-                setInsights(formattedInsights);
+              const rawInsights = Array.isArray(data)
+                ? data
+                : data.insights || data.data || [];
+              const formattedInsights = rawInsights.map(
+                (
+                  i:
+                    | string
+                    | { insight?: string; message?: string; content?: string },
+                ) =>
+                  typeof i === "string"
+                    ? i
+                    : i.insight || i.message || i.content || JSON.stringify(i),
+              );
+              setInsights(formattedInsights);
             } else {
-                setInsightsData(data); // Using Friend's object structure
+              setInsightsData(data); // Using Friend's object structure
             }
           } else {
             console.error("Failed to fetch insights");
@@ -207,6 +247,74 @@ const WeeklyJournal = () => {
     }
   }, [activeTab, token]);
 
+  const fetchPastJournalById = async (id: number) => {
+    setIsJournalModalOpen(true);
+    setIsLoadingJournal(true);
+    try {
+      const res = await fetch(
+        `https://life-api.lockated.com/user_journals/${id}?journal_type=weekly`,
+        {
+          headers: {
+            Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
+          },
+        },
+      );
+      const data = await res.json();
+      setSelectedPastJournal(data);
+    } catch (error) {
+      console.error("Failed to fetch detailed journal", error);
+      toast({
+        title: "Error",
+        description: "Could not load journal details.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingJournal(false);
+    }
+  };
+
+  const handleDeletePastJournal = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this weekly journal entry?",
+      )
+    )
+      return;
+
+    try {
+      const res = await fetch(
+        `https://life-api.lockated.com/user_journals/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
+          },
+        },
+      );
+
+      if (!res.ok) throw new Error("Failed to delete weekly journal");
+
+      toast({
+        title: "Deleted",
+        description: "Weekly journal entry removed successfully.",
+      });
+
+      setPastJournals((prev) => prev.filter((j) => j.id !== id));
+
+      if (journalId === id) {
+        setJournalId(null);
+      }
+    } catch (error) {
+      console.error("Failed to delete journal", error);
+      toast({
+        title: "Error",
+        description: "Could not delete journal entry.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#fdfbf9] animate-fade-in font-sans relative pb-24">
       <div className="py-8 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
@@ -237,8 +345,8 @@ const WeeklyJournal = () => {
         {/* Tabs Area */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="mb-10 w-full p-1.5 bg-gray-100/80 border border-gray-200/60 rounded-xl h-auto shadow-inner flex">
-            <TabsTrigger 
-              value="new" 
+            <TabsTrigger
+              value="new"
               className="flex-1 py-2.5 rounded-lg text-sm font-bold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all text-gray-500 tracking-wide"
             >
               New
@@ -260,11 +368,11 @@ const WeeklyJournal = () => {
           {/* NEW TAB CONTENT */}
           <TabsContent value="new" className="focus:outline-none">
             <div className="flex flex-col w-full space-y-12">
-                <WeekStrip 
-                  selectedDate={currentDate} 
-                  onDateChange={(newDate) => setCurrentDate(newDate)} 
-                  filledDates={myFilledDates}
-                /> 
+              <WeekStrip
+                selectedDate={currentDate}
+                onDateChange={(newDate) => setCurrentDate(newDate)}
+                filledDates={myFilledDates}
+              />
               <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
                 <WeeklyReflection
                   challenge={challenge}
@@ -287,10 +395,10 @@ const WeeklyJournal = () => {
                   setHabitsText={setHabitsText}
                 />
               </div>
-              <WeeklyPlanComponent/>
-              <FocusAndBoundaries/>
-              <ReviewToDos/>
-              <BucketListProgress/>
+              <WeeklyPlanComponent />
+              <FocusAndBoundaries />
+              <ReviewToDos />
+              <BucketListProgress />
             </div>
           </TabsContent>
 
@@ -313,18 +421,31 @@ const WeeklyJournal = () => {
                 {pastJournals.map((journal) => (
                   <div
                     key={journal.id}
-                    className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 transition-all text-left"
+                    onClick={() => fetchPastJournalById(journal.id)}
+                    className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 transition-all text-left cursor-pointer hover:border-gray-300 hover:shadow-md"
                   >
                     <div className="flex justify-between items-start mb-4">
-                      <h4 className="font-bold text-lg text-gray-900">
-                        {journal.formatted_date ||
-                          format(new Date(journal.start_date), "MMMM d, yyyy")}
-                      </h4>
-                      {journal.alignment_score !== null && (
-                        <span className="bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-0.5 rounded-full text-xs font-semibold">
-                          Alignment: {journal.alignment_score}/10
-                        </span>
-                      )}
+                      <div>
+                        <h4 className="font-bold text-lg text-gray-900">
+                          {journal.formatted_date ||
+                            format(
+                              new Date(journal.start_date),
+                              "MMMM d, yyyy",
+                            )}
+                        </h4>
+                        {journal.alignment_score !== null && (
+                          <span className="bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-0.5 rounded-full text-xs font-semibold mt-2 inline-block">
+                            Alignment: {journal.alignment_score}/10
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={(e) => handleDeletePastJournal(journal.id, e)}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                        title="Delete entry"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                     {journal.data?.key_insight && (
                       <div className="mb-4">
@@ -370,30 +491,37 @@ const WeeklyJournal = () => {
           {/* INSIGHTS TAB CONTENT */}
           <TabsContent value="insights" className="focus:outline-none">
             {isLoadingInsights ? (
-               <div className="py-20 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
-                 <div className="flex flex-col items-center justify-center gap-3">
-                   <Loader2 className="w-8 h-8 animate-spin text-[#c69cf4]" />
-                   <p className="text-gray-500 font-medium">Generating your insights...</p>
-                 </div>
-               </div>
-            ) : insights.length > 0 ? (
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 min-h-[300px]">
-                  <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
-                    <Lightbulb className="w-6 h-6 text-[#c69cf4]" />
-                    <h2 className="text-xl font-bold text-gray-900">Your Weekly Insights</h2>
-                  </div>
-                  <div className="space-y-4">
-                    {insights.map((insightItem, index) => (
-                      <div 
-                        key={index} 
-                        className="p-5 bg-gray-50/80 rounded-xl border border-gray-100 text-gray-800 font-medium text-[15px] leading-relaxed animate-in fade-in slide-in-from-bottom-2 duration-500"
-                        style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'both' }}
-                      >
-                        {insightItem}
-                      </div>
-                    ))}
-                  </div>
+              <div className="py-20 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
+                <div className="flex flex-col items-center justify-center gap-3">
+                  <Loader2 className="w-8 h-8 animate-spin text-[#c69cf4]" />
+                  <p className="text-gray-500 font-medium">
+                    Generating your insights...
+                  </p>
                 </div>
+              </div>
+            ) : insights.length > 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 min-h-[300px]">
+                <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+                  <Lightbulb className="w-6 h-6 text-[#c69cf4]" />
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Your Weekly Insights
+                  </h2>
+                </div>
+                <div className="space-y-4">
+                  {insights.map((insightItem, index) => (
+                    <div
+                      key={index}
+                      className="p-5 bg-gray-50/80 rounded-xl border border-gray-100 text-gray-800 font-medium text-[15px] leading-relaxed animate-in fade-in slide-in-from-bottom-2 duration-500"
+                      style={{
+                        animationDelay: `${index * 100}ms`,
+                        animationFillMode: "both",
+                      }}
+                    >
+                      {insightItem}
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : insightsData?.total_weeks ? (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -533,6 +661,137 @@ const WeeklyJournal = () => {
           </button>
         </div>
       </div>
+
+      {/* Detail Dialog */}
+      <Dialog open={isJournalModalOpen} onOpenChange={setIsJournalModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Weekly Journal Entry</DialogTitle>
+            <DialogDescription>
+              {selectedPastJournal?.formatted_date ||
+                (selectedPastJournal?.start_date &&
+                  format(
+                    new Date(selectedPastJournal.start_date),
+                    "MMMM d, yyyy",
+                  ))}
+            </DialogDescription>
+          </DialogHeader>
+
+          {isLoadingJournal ? (
+            <div className="py-10 text-center text-gray-500">
+              Loading details...
+            </div>
+          ) : selectedPastJournal ? (
+            <div className="space-y-6 mt-4">
+              <div className="flex gap-4">
+                {selectedPastJournal.alignment_score !== null && (
+                  <span className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 rounded-full text-sm font-semibold">
+                    Alignment: {selectedPastJournal.alignment_score}/10
+                  </span>
+                )}
+                {selectedPastJournal.data?.life_balance_rating && (
+                  <span className="bg-purple-50 text-purple-700 border border-purple-200 px-3 py-1 rounded-full text-sm font-semibold">
+                    Balance: {selectedPastJournal.data.life_balance_rating}/5
+                  </span>
+                )}
+              </div>
+
+              {selectedPastJournal.gratitude_note && (
+                <div className="bg-yellow-50/50 p-4 rounded-xl border border-yellow-100">
+                  <p className="text-sm font-bold text-gray-800 mb-1">
+                    Gratitude
+                  </p>
+                  <p className="text-gray-700 text-sm italic">
+                    "{selectedPastJournal.gratitude_note}"
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {selectedPastJournal.data?.biggest_challenge && (
+                  <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+                    <p className="text-sm font-bold text-gray-800 mb-1">
+                      Biggest Challenge
+                    </p>
+                    <p className="text-gray-700 text-sm">
+                      {selectedPastJournal.data.biggest_challenge}
+                    </p>
+                    {selectedPastJournal.data?.challenge_cause && (
+                      <p className="text-gray-500 text-xs mt-2 border-t border-indigo-100 pt-2">
+                        Cause: {selectedPastJournal.data.challenge_cause}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {selectedPastJournal.data?.key_insight && (
+                  <div className="bg-pink-50/50 p-4 rounded-xl border border-pink-100">
+                    <p className="text-sm font-bold text-gray-800 mb-1">
+                      Key Insight
+                    </p>
+                    <p className="text-gray-700 text-sm">
+                      {selectedPastJournal.data.key_insight}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {selectedPastJournal.data?.weekly_story && (
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                  <p className="text-sm font-bold text-gray-800 mb-1">
+                    Weekly Story
+                  </p>
+                  <p className="text-gray-700 text-sm">
+                    {selectedPastJournal.data.weekly_story}
+                  </p>
+                </div>
+              )}
+
+              {selectedPastJournal.data?.mission_connection && (
+                <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                  <p className="text-sm font-bold text-gray-800 mb-1">
+                    Mission Connection
+                  </p>
+                  <p className="text-gray-700 text-sm">
+                    {selectedPastJournal.data.mission_connection}
+                  </p>
+                </div>
+              )}
+
+              {selectedPastJournal.data?.wins &&
+                selectedPastJournal.data.wins.length > 0 && (
+                  <div>
+                    <p className="text-sm font-bold text-gray-800 mb-3">
+                      Weekly Wins
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {selectedPastJournal.data.wins.map((win, i) => (
+                        <div
+                          key={i}
+                          className="flex gap-3 p-3 border border-gray-100 rounded-lg bg-white shadow-sm"
+                        >
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-gray-800">
+                              {win.description}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {win.day} • {win.category}
+                            </p>
+                          </div>
+                          {win.completed && (
+                            <div className="flex-shrink-0 flex items-center justify-center">
+                              <span className="text-green-500 text-xl">✅</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

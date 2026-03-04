@@ -496,6 +496,40 @@ const DailyJournal = () => {
     }
   };
 
+  const handleDeleteLetter = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this letter?")) return;
+
+    try {
+      const response = await fetch(
+        `https://life-api.lockated.com/user_letters/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete letter");
+      }
+
+      setPastLetters((prev) => prev.filter((letter) => letter.id !== id));
+      toast({
+        title: "Deleted",
+        description: "Letter removed successfully.",
+      });
+    } catch (error) {
+      console.error("Failed to delete letter:", error);
+      toast({
+        title: "Error",
+        description: "Could not delete the letter.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#fdfbf9] animate-fade-in font-sans py-8 px-4 sm:px-6 lg:px-8 relative">
       <div className="max-w-4xl mx-auto">
@@ -787,25 +821,7 @@ const DailyJournal = () => {
               </div>
 
               {/* Daily Affirmation */}
-<<<<<<< HEAD
-             <DailyAffirmation/>
-=======
-              <div className="journal-section-pink rounded-xl p-6 shadow-sm border border-pink-100/50 bg-white">
-                <h3 className="mb-4 text-lg font-bold text-gray-900">
-                  Your Daily Affirmation
-                </h3>
-                <Textarea
-                  placeholder="A positive statement about yourself..."
-                  value={affirmation}
-                  onChange={(e) => setAffirmation(e.target.value)}
-                  className="min-h-[80px] resize-none bg-pink-50/30 border-pink-200 focus:bg-white focus:ring-pink-400 focus:border-pink-400 text-gray-800"
-                />
-                <p className="mt-2 text-xs font-medium text-pink-500">
-                  Present tense ("I am"), positive, specific, repeat daily with
-                  emotion.
-                </p>
-              </div>
->>>>>>> 04221d028a10c0a1aba908cd9a7ea3bbcda6f71d
+              <DailyAffirmation />
 
               {/* 🟢 REPLACED WITH IMPORTED COMPONENT */}
               <BucketListProgress />
@@ -959,100 +975,8 @@ const DailyJournal = () => {
 
           {/* LETTERS TAB CONTENT */}
           <TabsContent value="letters" className="focus:outline-none">
-<<<<<<< HEAD
-  <LettersSection />
-</TabsContent>
-=======
-            <div className="space-y-6">
-              <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
-                <div className="mb-6 flex items-center gap-3">
-                  <span className="text-2xl">✨</span>
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900">
-                      Write a Letter to Yourself
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      Share your thoughts, dreams, and reflections
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-semibold text-gray-800 mb-1.5 block">
-                      Subject (Optional)
-                    </label>
-                    <Input
-                      placeholder="e.g., Dear Future Me, A Letter of Gratitude..."
-                      value={letterSubject}
-                      onChange={(e) => setLetterSubject(e.target.value)}
-                      className="bg-gray-50/50 focus:bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-semibold text-gray-800 mb-1.5 block">
-                      Your Letter
-                    </label>
-                    <Textarea
-                      placeholder={
-                        "Dear Self,\n\nWrite your thoughts, feelings, dreams, and reflections here...\n\nWhat do you want to remember? What are you grateful for?"
-                      }
-                      value={letterBody}
-                      onChange={(e) => setLetterBody(e.target.value)}
-                      className="min-h-[200px] resize-y bg-gray-50/50 focus:bg-white"
-                    />
-                  </div>
-                  <div className="flex justify-end pt-2">
-                    <Button
-                      className="gap-2 bg-black hover:bg-gray-800 text-white px-6"
-                      onClick={handleSaveLetter}
-                      disabled={!letterBody.trim() || isSavingLetter}
-                    >
-                      {isSavingLetter ? "Saving..." : "💾 Save Letter"}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
-                <h3 className="text-lg font-bold text-gray-900 mb-6">
-                  Past Letters
-                </h3>
-                {isLoadingLetters ? (
-                  <p className="text-gray-500 text-center py-4">
-                    Loading past letters...
-                  </p>
-                ) : pastLetters.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">
-                    No past letters found. Write your first one above!
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {pastLetters.map((letter) => (
-                      <div
-                        key={letter.id}
-                        className="p-4 border border-gray-100 rounded-xl bg-gray-50/50 flex flex-col sm:flex-row justify-between sm:items-center gap-4 transition-all hover:border-gray-200"
-                      >
-                        <div>
-                          <p className="font-semibold text-gray-800">
-                            {letter.subject || "Dear Future Me"}
-                          </p>
-                          <p className="text-sm text-gray-500 mt-0.5">
-                            {letter.formatted_date ||
-                              (letter.written_on &&
-                                format(
-                                  new Date(letter.written_on),
-                                  "MMMM d, yyyy",
-                                ))}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+            <LettersSection />
           </TabsContent>
->>>>>>> 04221d028a10c0a1aba908cd9a7ea3bbcda6f71d
         </Tabs>
       </div>
 
