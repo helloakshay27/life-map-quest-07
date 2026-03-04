@@ -1,20 +1,65 @@
 import React, { useState, useEffect } from "react";
-import { Copy, Save, Plus } from "lucide-react";
+import { Copy, Save, Plus, Trash2 } from "lucide-react"; 
 
- function Vision() {
-  // State for dynamic data
+// Base URL set kar diya
+const API_BASE_URL = "https://life-api.lockated.com"; 
+
+function Vision() {
+  // --- STATE ---
   const [images, setImages] = useState([]);
   const [imageUrl, setImageUrl] = useState("");
   const [visionStatement, setVisionStatement] = useState("");
   const [missionStatement, setMissionStatement] = useState("");
   const [legacyStatement, setLegacyStatement] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false); 
+  const [isUploading, setIsUploading] = useState(false); 
   
-  // State for the error/toast message
   const [toast, setToast] = useState(null);
 
-  // Handle showing the error toast (auto-hides after 3 seconds)
-  const showError = (message) => {
-    setToast(message);
+  // =========================================
+  // API INTEGRATION: FETCH VISION DATA (GET)
+  // =========================================
+  useEffect(() => {
+    fetchVisionData();
+  }, []);
+
+  const fetchVisionData = async () => {
+    try {
+      const token = localStorage.getItem("auth_token"); 
+      
+      const response = await fetch(`${API_BASE_URL}/vision`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` 
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const visionData = Array.isArray(data) ? data[0] : data; 
+
+        if (visionData) {
+          setImages(visionData.images || visionData.image_urls || []);
+          setVisionStatement(visionData.visionStatement || visionData.vision_statement || "");
+          setMissionStatement(visionData.missionStatement || visionData.mission_statement || "");
+          setLegacyStatement(visionData.legacyStatement || visionData.legacy_statement || "");
+        }
+      } else {
+        console.error("Failed to fetch vision data. Status:", response.status);
+      }
+    } catch (error) {
+      console.error("Error fetching vision data:", error);
+      showToast("Could not load your vision board. Please try again.", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // --- HANDLERS ---
+  const showToast = (message, type = "error") => {
+    setToast({ message, type });
     setTimeout(() => {
       setToast(null);
     }, 3000);
@@ -22,35 +67,189 @@ import { Copy, Save, Plus } from "lucide-react";
 
   const handleAddUrl = () => {
     if (!imageUrl.trim()) {
-      showError("Please enter an image URL");
+      showToast("Please enter an image URL", "error");
       return;
     }
     if (images.length >= 12) {
-      showError("You have reached the maximum of 12 images");
+      showToast("You have reached the maximum of 12 images", "error");
       return;
     }
-    // In a real app, you'd validate the URL here
-    setImages([...images, imageUrl]);
+    
+    // ✅ URL ko object banate waqt clear kar diya ki iski koi ID nahi hai
+    setImages([...images, { id: null, url: imageUrl, isUrlOnly: true }]); 
     setImageUrl("");
+  };
+
+  // =========================================
+  // API INTEGRATION: UPLOAD IMAGE (POST Base64)
+  // =========================================
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (images.length >= 12) {
+      showToast("You have reached the maximum of 12 images", "error");
+      e.target.value = ""; 
+      return;
+    }
+
+    if (file.size > 1024 * 1024) {
+      showToast("File size must be less than 1MB. Please compress it.", "error");
+      e.target.value = ""; 
+      return;
+    }
+
+    setIsUploading(true);
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64String = reader.result;
+
+      try {
+        const token = localStorage.getItem("auth_token");
+        const payload = {
+          base64: base64String
+        };
+
+        const response = await fetch(`${API_BASE_URL}/vision/upload_image`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          // ✅ Smart error handling for "Vision not found"
+          if (data && data.error === "Vision not found") {
+            throw new Error("VISION_NOT_FOUND");
+          }
+          throw new Error(data?.error || "Failed to upload image");
+        }
+
+        const uploadedUrl = data.image_url || data.url || base64String; 
+        
+        const newImageObj = {
+          id: data.id || data.image_id, 
+          url: uploadedUrl
+        };
+        
+        setImages((prevImages) => [...prevImages, newImageObj]);
+        showToast("Image uploaded successfully!", "success");
+
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        
+        if (error.message === "VISION_NOT_FOUND") {
+          showToast("Please click 'Save Vision & Mission' first to create your board, then upload images.", "error");
+        } else {
+          showToast("Failed to upload image. Please try again.", "error");
+        }
+      } finally {
+        setIsUploading(false);
+        e.target.value = ""; 
+      }
+    };
+    
+    reader.readAsDataURL(file); 
+  };
+
+  // =========================================
+  // API INTEGRATION: DELETE IMAGE (DELETE Method)
+  // =========================================
+  const handleDeleteImage = async (imageObj, index) => {
+    // Safe check agar image string format mein ho
+    const imageId = imageObj?.id || imageObj?.image_id;
+
+    // Agar imageId null/undefined nahi hai aur yeh sirf pasted URL nahi hai
+    if (imageId && !imageObj?.isUrlOnly) {
+      try {
+        const token = localStorage.getItem("auth_token");
+        const response = await fetch(`${API_BASE_URL}/vision/delete_image?image_id=${imageId}`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to delete from server");
+        }
+        showToast("Image deleted successfully!", "success");
+      } catch (error) {
+        console.error("Delete Error:", error);
+        showToast("Could not delete image. Please try again.", "error");
+        return; // Error aaye toh frontend se remove mat karo
+      }
+    }
+
+    // UI state se remove karein
+    setImages(images.filter((_, i) => i !== index));
   };
 
   const handleCopyPrompt = () => {
     if (visionStatement.length < 50) {
-      showError("Please write a more detailed vision first (50+ characters).");
+      showToast("Please write a more detailed vision first (50+ characters).", "error");
       return;
     }
     navigator.clipboard.writeText(visionStatement);
-    // Could add a success toast here
+    showToast("Prompt copied to clipboard!", "success");
   };
 
-  const handleSave = () => {
-    console.log("Saving data:", { images, visionStatement, missionStatement, legacyStatement });
-    // Save logic goes here
+  // =========================================
+  // API INTEGRATION: SAVE VISION DATA (POST)
+  // =========================================
+  const handleSave = async () => {
+    setIsSaving(true);
+    
+    try {
+      const token = localStorage.getItem("auth_token");
+
+      const payload = {
+        vision: {
+          vision_statement: visionStatement,
+          mission_statement: missionStatement,
+          legacy_statement: legacyStatement
+        }
+      };
+
+      const response = await fetch(`${API_BASE_URL}/vision`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save vision data.");
+      }
+
+      showToast("Vision & Mission saved successfully! 🎉", "success");
+      
+    } catch (error) {
+      console.error("Error saving data:", error);
+      showToast("Failed to save. Please try again.", "error");
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#faf9fc] flex items-center justify-center">
+        <p className="text-gray-500 font-medium animate-pulse">Loading your Vision Board...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#faf9fc] p-4 md:p-8 font-sans text-gray-800 relative">
-      <div className="max-w-4xl mx-auto space-y-10">
+      <div className="max-w-4xl mx-auto space-y-10 animate-fade-in">
         
         {/* =========================================
             SECTION 1: VISION BOARD
@@ -63,7 +262,6 @@ import { Copy, Save, Plus } from "lucide-react";
             <p className="text-gray-500 text-sm mt-1">Upload images or add URLs (max 12 images)</p>
           </div>
 
-          {/* Alert Boxes */}
           <div className="space-y-2">
             <div className="bg-purple-50 border-l-4 border-purple-500 p-3 rounded-r-md">
               <p className="text-sm text-purple-900 leading-relaxed">
@@ -77,33 +275,57 @@ import { Copy, Save, Plus } from "lucide-react";
             </div>
           </div>
 
-          {/* Dynamic Image Display Area */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg min-h-[200px] flex items-center justify-center p-4">
+          <div className="bg-gray-50 border border-gray-200 rounded-lg min-h-[200px] flex items-center justify-center p-4 relative">
+            {isUploading && (
+              <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-lg">
+                <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-2"></div>
+                <p className="text-purple-700 font-medium text-sm">Uploading Image...</p>
+              </div>
+            )}
+
             {images.length === 0 ? (
               <p className="text-gray-400 text-sm font-medium">No vision board images yet</p>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
-                {images.map((img, idx) => (
-                  <div key={idx} className="aspect-video bg-gray-200 rounded-md overflow-hidden relative group">
-                    {/* Placeholder for actual image rendering */}
-                    <div className="w-full h-full flex items-center justify-center text-xs text-gray-500 break-all p-2 text-center bg-gray-100">
-                      Image URL Added
+                {images.map((img, idx) => {
+                  const srcUrl = typeof img === "string" ? img : (img.image_url || img.url);
+
+                  return (
+                    <div key={idx} className="aspect-video bg-gray-200 rounded-md overflow-hidden relative group shadow-sm">
+                      <img 
+                        src={srcUrl} 
+                        alt={`Vision ${idx + 1}`} 
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          e.target.onerror = null; 
+                          e.target.src = "https://via.placeholder.com/300x200?text=Invalid+Image+URL";
+                        }}
+                      />
+                      
+                      <button
+                        onClick={() => handleDeleteImage(img, idx)}
+                        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-md"
+                        title="Delete Image"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
 
-          {/* Upload Inputs */}
           <div className="space-y-4">
-            {/* File Upload */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">Upload Image File</label>
               <div className="flex items-center gap-3">
                 <input 
                   type="file" 
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 border border-gray-200 rounded-md p-1 bg-white" 
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={isUploading}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 border border-gray-200 rounded-md p-1 bg-white disabled:opacity-50 disabled:cursor-not-allowed" 
                 />
               </div>
               <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
@@ -111,14 +333,12 @@ import { Copy, Save, Plus } from "lucide-react";
               </p>
             </div>
 
-            {/* OR Divider */}
             <div className="flex items-center text-gray-400 text-sm font-medium">
               <div className="flex-1 border-t border-gray-200"></div>
               <span className="px-4">OR</span>
               <div className="flex-1 border-t border-gray-200"></div>
             </div>
 
-            {/* URL Upload */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">Add Image URL</label>
               <div className="flex gap-2">
@@ -126,12 +346,14 @@ import { Copy, Save, Plus } from "lucide-react";
                   type="text" 
                   value={imageUrl}
                   onChange={(e) => setImageUrl(e.target.value)}
+                  disabled={isUploading}
                   placeholder="Paste Google Drive link or image URL..." 
-                  className="flex-1 border border-gray-200 rounded-md p-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  className="flex-1 border border-gray-200 rounded-md p-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-50"
                 />
                 <button 
                   onClick={handleAddUrl}
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md font-medium flex items-center gap-2 text-sm transition-colors"
+                  disabled={isUploading}
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md font-medium flex items-center gap-2 text-sm transition-colors disabled:opacity-70"
                 >
                   <Plus size={16} />
                   ({images.length}/12)
@@ -225,10 +447,11 @@ import { Copy, Save, Plus } from "lucide-react";
           <div className="pt-2">
             <button 
               onClick={handleSave}
-              className="bg-[#20b2aa] hover:bg-[#1a968f] text-white px-6 py-2.5 rounded-md font-medium flex items-center gap-2 transition-colors shadow-sm"
+              disabled={isSaving}
+              className="bg-[#20b2aa] hover:bg-[#1a968f] text-white px-6 py-2.5 rounded-md font-medium flex items-center gap-2 transition-colors shadow-sm disabled:opacity-70"
             >
               <Save size={18} />
-              Save Vision & Mission
+              {isSaving ? "Saving..." : "Save Vision & Mission"}
             </button>
           </div>
         </section>
@@ -236,12 +459,12 @@ import { Copy, Save, Plus } from "lucide-react";
       </div>
 
       {/* =========================================
-          TOAST ERROR NOTIFICATION
+          TOAST NOTIFICATION (SUCCESS & ERROR)
       ========================================= */}
       {toast && (
-        <div className="fixed bottom-6 right-6 bg-red-500 text-white px-4 py-3 rounded shadow-lg flex flex-col min-w-[250px] animate-fade-in z-50">
-          <span className="font-bold text-sm">Error</span>
-          <span className="text-sm">{toast}</span>
+        <div className={`fixed bottom-6 right-6 ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'} text-white px-4 py-3 rounded shadow-lg flex flex-col min-w-[250px] animate-fade-in z-50`}>
+          <span className="font-bold text-sm">{toast.type === 'error' ? 'Error' : 'Success'}</span>
+          <span className="text-sm">{toast.message}</span>
         </div>
       )}
 

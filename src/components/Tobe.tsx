@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Zap, User, Plus, Sparkles, Target, Save, Trash2 } from "lucide-react";
 
-// 👇 Backend URL
-const API_BASE_URL = "http://localhost:3000";
+const API_BASE_URL = "https://life-api.lockated.com";
 
 function Tobe() {
   // --- STATE ---
@@ -25,7 +24,7 @@ function Tobe() {
 
   const fetchBucketList = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("auth_token"); 
       
       const response = await fetch(`${API_BASE_URL}/be_do_have_exercise`, {
         method: "GET", 
@@ -58,72 +57,40 @@ function Tobe() {
   };
 
   // =========================================
-  // API INTEGRATION: SAVE EXERCISE (POST Method)
+  // API INTEGRATION: SAVE/FETCH EXERCISE (GET Method - No Payload)
   // =========================================
   const saveExerciseToBackend = async () => {
     const selectedGoals = bucketList.filter(g => g.checked);
     
     if (selectedGoals.length === 0) {
-      showError("Please select at least one goal to save");
+      showError("Please select at least one goal");
       return false;
     }
 
     setIsSaving(true);
     
     try {
-      const token = localStorage.getItem("token");
-      const goalIds = selectedGoals.map(goal => goal.id);
+      const token = localStorage.getItem("auth_token");
       
-      // Generate BE and DO from selected goals or use existing analysis
-      let beIdentity = analysisResult?.be || "";
-      let doActions = analysisResult?.do || "";
-      
-      // If no analysis result, generate basic ones
-      if (!beIdentity || !doActions) {
-        const goals = selectedGoals.map(g => g.title.toLowerCase());
-        
-        if (goals.some(g => g.includes("beach") || g.includes("house") || g.includes("property"))) {
-          beIdentity = "Real Estate Investor & Property Owner";
-          doActions = "Research property markets, save for down payment, learn about property management";
-        } else if (goals.some(g => g.includes("marathon") || g.includes("run") || g.includes("fitness"))) {
-          beIdentity = "Dedicated Athlete & Health Enthusiast";
-          doActions = "Follow structured training plan, maintain proper nutrition, track progress regularly";
-        } else if (goals.some(g => g.includes("business") || g.includes("company") || g.includes("startup"))) {
-          beIdentity = "Entrepreneur & Business Leader";
-          doActions = "Develop business plan, build network, acquire necessary skills, secure funding";
-        } else {
-          beIdentity = "Goal-Oriented Achiever";
-          doActions = "Break down goals into actionable steps, track progress, stay consistent";
-        }
-      }
-      
-      const payload = {
-        be_do_have_exercise: {
-          be_identity: beIdentity,
-          do_actions: doActions
-        },
-        goal_ids: goalIds
-      };
-
+      // ✅ Method GET hi rakha hai, aur Body (Payload) hata diya hai
       const response = await fetch(`${API_BASE_URL}/be_do_have_exercise`, {
-        method: "POST",
+        method: "GET", 
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
+        }
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save exercise to server");
+        throw new Error("Failed to fetch/save exercise");
       }
 
       const result = await response.json();
-      console.log("Exercise saved successfully:", result);
+      console.log("Action completed successfully:", result);
       
       setToast({
         type: "success",
-        message: "Be-Do-Have Exercise saved successfully!"
+        message: "List fetched successfully!"
       });
       
       setTimeout(() => {
@@ -132,8 +99,8 @@ function Tobe() {
       
       return true;
     } catch (error) {
-      console.error("Error saving exercise:", error);
-      showError("Could not save exercise. Please try again.");
+      console.error("Error with exercise action:", error);
+      showError("Action failed. Please try again.");
       return false;
     } finally {
       setIsSaving(false);
@@ -145,7 +112,7 @@ function Tobe() {
   // =========================================
   const deleteGoalFromBackend = async (goalId) => {
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("auth_token");
       
       const response = await fetch(`${API_BASE_URL}/be_do_have_exercise`, {
         method: "DELETE",
@@ -163,7 +130,6 @@ function Tobe() {
       const result = await response.json();
       console.log("Goal deleted successfully:", result);
       
-      // Remove from local state
       setBucketList(bucketList.filter(goal => goal.id !== goalId));
       
       setToast({
@@ -184,47 +150,38 @@ function Tobe() {
   };
 
   // =========================================
-  // API INTEGRATION: CREATE/UPDATE (POST Method) for Analysis
+  // API INTEGRATION: CREATE/UPDATE ANALYSIS (GET Method - No Payload)
   // =========================================
   const saveAnalysisToBackend = async (beData, doData, goalIds) => {
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("auth_token");
       
-      const payload = {
-        be_do_have_exercise: {
-          be_identity: beData,
-          do_actions: doData
-        },
-        goal_ids: goalIds
-      };
-
+      // ✅ Method GET hi rakha hai, aur Body (Payload) hata diya hai
       const response = await fetch(`${API_BASE_URL}/be_do_have_exercise`, {
-        method: "POST",
+        method: "GET",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
+        }
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save analysis to server");
+        throw new Error("Failed to fetch analysis from server");
       }
 
       const result = await response.json();
-      console.log("Analysis saved successfully:", result);
+      console.log("Analysis action successful:", result);
       
       return result;
     } catch (error) {
-      console.error("Error saving analysis:", error);
-      showError("Could not save analysis. Please try again.");
+      console.error("Error saving/fetching analysis:", error);
+      showError("Could not complete analysis action. Please try again.");
       return null;
     }
   };
 
   // --- HANDLERS ---
   
-  // Show error toast notification
   const showError = (message) => {
     setToast({
       type: "error",
@@ -235,21 +192,18 @@ function Tobe() {
     }, 3000);
   };
 
-  // Toggle checkbox state
   const handleToggleCheck = (id) => {
     setBucketList(bucketList.map(goal => 
       goal.id === id ? { ...goal, checked: !goal.checked } : goal
     ));
   };
 
-  // Handle delete click
   const handleDeleteClick = (goal, e) => {
-    e.stopPropagation(); // Prevent toggle when clicking delete
+    e.stopPropagation(); 
     setSelectedGoalForDelete(goal);
     setShowDeleteConfirm(true);
   };
 
-  // Confirm delete
   const confirmDelete = async () => {
     if (selectedGoalForDelete) {
       setShowDeleteConfirm(false);
@@ -258,13 +212,11 @@ function Tobe() {
     }
   };
 
-  // Cancel delete
   const cancelDelete = () => {
     setShowDeleteConfirm(false);
     setSelectedGoalForDelete(null);
   };
 
-  // Add custom goal
   const handleAddCustomGoal = () => {
     if (!customGoal.trim()) {
       showError("Please enter a goal");
@@ -272,10 +224,10 @@ function Tobe() {
     }
 
     const newGoal = {
-      id: Date.now(), // Temporary ID until saved to backend
+      id: Date.now(), 
       title: customGoal,
       desc: "Custom goal",
-      checked: true // Auto-check newly added goals
+      checked: true 
     };
 
     setBucketList([...bucketList, newGoal]);
@@ -299,7 +251,6 @@ function Tobe() {
     try {
       const goalIds = selectedGoals.map(goal => goal.id);
       
-      // Simulate AI processing
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       const goals = selectedGoals.map(g => g.title.toLowerCase());
@@ -368,7 +319,6 @@ function Tobe() {
             INFO CARDS (HAVE, DO, BE)
         ========================================= */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* HAVE Card */}
           <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm flex flex-col items-center justify-center text-center">
             <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center font-bold text-xl mb-3">
               H
@@ -377,7 +327,6 @@ function Tobe() {
             <p className="text-sm text-gray-500">Your goals</p>
           </div>
 
-          {/* DO Card */}
           <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm flex flex-col items-center justify-center text-center">
             <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center mb-3">
               <Zap size={24} strokeWidth={2.5} />
@@ -386,7 +335,6 @@ function Tobe() {
             <p className="text-sm text-gray-500">Actions & habits</p>
           </div>
 
-          {/* BE Card */}
           <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm flex flex-col items-center justify-center text-center">
             <div className="w-12 h-12 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mb-3">
               <User size={24} strokeWidth={2.5} />
@@ -401,7 +349,6 @@ function Tobe() {
         ========================================= */}
         <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-6">
           
-          {/* Section Header */}
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-lg bg-green-100 text-green-600 flex items-center justify-center font-bold text-lg">
               H
@@ -412,7 +359,6 @@ function Tobe() {
             </div>
           </div>
 
-          {/* Bucket List Items (Scrollable) with Delete Option */}
           <div className="mb-4">
             <p className="text-sm font-semibold text-gray-700 mb-3">From Your Bucket List:</p>
             
@@ -436,7 +382,7 @@ function Tobe() {
                       <input 
                         type="checkbox" 
                         checked={goal.checked}
-                        onChange={() => {}}
+                        onChange={() => handleToggleCheck(goal.id)}
                         className="mt-1 w-4 h-4 text-green-600 rounded border-gray-300 focus:ring-green-500 accent-green-500 cursor-pointer"
                       />
                       <div>
@@ -445,7 +391,6 @@ function Tobe() {
                       </div>
                     </div>
                     
-                    {/* Delete Button */}
                     <button
                       onClick={(e) => handleDeleteClick(goal, e)}
                       className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
@@ -459,7 +404,6 @@ function Tobe() {
             )}
           </div>
 
-          {/* Add Custom Goal Input */}
           <div className="mb-6">
             <p className="text-sm font-semibold text-gray-700 mb-2">Add Custom Goal:</p>
             <div className="flex gap-2">
@@ -481,9 +425,7 @@ function Tobe() {
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3">
-            {/* Analyze AI Button */}
             <button
               onClick={handleAnalyzeAI}
               disabled={isAnalyzing}
@@ -495,7 +437,6 @@ function Tobe() {
               {isAnalyzing ? 'Analyzing...' : 'Analyze with AI'}
             </button>
 
-            {/* Save Be-Do-Have Exercise Button */}
             <button
               onClick={saveExerciseToBackend}
               disabled={isSaving}
@@ -504,7 +445,7 @@ function Tobe() {
               }`}
             >
               <Save size={18} />
-              {isSaving ? 'Saving...' : 'Save Be-Do-Have Exercise'}
+              {isSaving ? 'Fetching...' : 'Fetch List'}
             </button>
           </div>
 
@@ -519,7 +460,6 @@ function Tobe() {
               </h4>
               
               <div className="space-y-4">
-                {/* BE Result */}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-6 h-6 rounded-full bg-purple-200 text-purple-700 flex items-center justify-center text-xs font-bold">
@@ -532,7 +472,6 @@ function Tobe() {
                   </p>
                 </div>
 
-                {/* DO Result */}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-6 h-6 rounded-full bg-blue-200 text-blue-700 flex items-center justify-center text-xs font-bold">
@@ -546,7 +485,7 @@ function Tobe() {
                 </div>
 
                 <p className="text-xs text-gray-500 mt-2">
-                  ✓ Analysis saved to your profile
+                  ✓ Analysis fetched from your profile
                 </p>
               </div>
             </div>

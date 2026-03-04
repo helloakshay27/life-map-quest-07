@@ -12,6 +12,8 @@ import { toast } from "@/hooks/use-toast";
 import WeekStrip from "@/components/journal/WeekStrip";
 import AddAchievementDialog from "@/components/journal/AddAchievementDialog";
 import BucketListProgress from "@/components/BucketListProgress"; // <-- IMPORTED HERE
+import DailyAffirmation from "@/components/DailyAffirmation";
+import LettersSection from "@/components/LettersSection";
 
 // ==========================================
 // MOCK DATA & HELPERS
@@ -307,20 +309,7 @@ const DailyJournal = () => {
               </div>
 
               {/* Daily Affirmation */}
-              <div className="journal-section-pink rounded-xl p-6 shadow-sm border border-pink-100/50 bg-white">
-                <h3 className="mb-4 text-lg font-bold text-gray-900">
-                  Your Daily Affirmation
-                </h3>
-                <Textarea
-                  placeholder="A positive statement about yourself..."
-                  value={affirmation}
-                  onChange={(e) => setAffirmation(e.target.value)}
-                  className="min-h-[80px] resize-none bg-pink-50/30 border-pink-200 focus:bg-white focus:ring-pink-400 focus:border-pink-400 text-gray-800"
-                />
-                <p className="mt-2 text-xs font-medium text-pink-500">
-                  Present tense ("I am"), positive, specific, repeat daily with emotion.
-                </p>
-              </div>
+             <DailyAffirmation/>
 
               {/* 🟢 REPLACED WITH IMPORTED COMPONENT */}
               <BucketListProgress />
@@ -371,53 +360,8 @@ const DailyJournal = () => {
 
           {/* LETTERS TAB CONTENT */}
           <TabsContent value="letters" className="focus:outline-none">
-            <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
-              <div className="mb-6 flex items-center gap-3">
-                <span className="text-2xl">✨</span>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">
-                    Write a Letter to Yourself
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    Share your thoughts, dreams, and reflections
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-semibold text-gray-800 mb-1.5 block">
-                    Subject (Optional)
-                  </label>
-                  <Input
-                    placeholder="e.g., Dear Future Me, A Letter of Gratitude..."
-                    value={letterSubject}
-                    onChange={(e) => setLetterSubject(e.target.value)}
-                    className="bg-gray-50/50 focus:bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-gray-800 mb-1.5 block">
-                    Your Letter
-                  </label>
-                  <Textarea
-                    placeholder={"Dear Self,\n\nWrite your thoughts, feelings, dreams, and reflections here...\n\nWhat do you want to remember? What are you grateful for?"}
-                    value={letterBody}
-                    onChange={(e) => setLetterBody(e.target.value)}
-                    className="min-h-[200px] resize-y bg-gray-50/50 focus:bg-white"
-                  />
-                </div>
-                <div className="flex justify-end pt-2">
-                  <Button
-                    className="gap-2 bg-black hover:bg-gray-800 text-white px-6"
-                    onClick={handleSaveLetter}
-                    disabled={!letterBody.trim()}
-                  >
-                    💾 Save Letter
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
+  <LettersSection />
+</TabsContent>
         </Tabs>
 
       </div>

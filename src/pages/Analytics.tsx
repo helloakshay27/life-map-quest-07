@@ -10,228 +10,154 @@ import {
 } from "lucide-react";
 import LifeBalanceOverview from "@/components/LifeBalanceOverview";
 import ValuesInAction from "@/components/ValuesData";
-// Life Balance Data (Life areas and how many days they were focused on)
-const mockLifeBalanceData = [
-  { area: "Health & Fitness", days: 18 },
-  { area: "Career & Work", days: 15 },
-  { area: "Relationships", days: 12 },
-  { area: "Personal Growth", days: 20 },
-  { area: "Finance", days: 8 },
-];
 
-// Values Data (Core values and how many days they appeared in journals)
-const mockValuesData = [
-  { value: "Gratitude", days: 22 },
-  { value: "Discipline", days: 18 },
-  { value: "Focus", days: 16 },
-  { value: "Peace", days: 14 },
-  { value: "Courage", days: 9 },
-];
-// Types define kar lo API response ke according
-interface AnalyticsMetrics {
-  uniqueDays: number;
-  uniqueDays30d: number;
-  weekly: number;
-  alignment: number;
-  energy: number;
-}
-
-export interface TrendData {
-  date: string;
-  alignment: number;
-  energy: number;
-}
-
-const insights = [
-  "Consider reviewing your mission and daily priorities for better alignment.",
-  "Try to journal more consistently. Aim for at least 3-4 times per week.",
-];
+const ANALYTICS_URL = "https://life-api.lockated.com/analytics";
+const VALUES_URL = "https://life-api.lockated.com/core_values";
 
 const Analytics = () => {
-  // State variables for dynamic data
-  const [metrics, setMetrics] = useState<AnalyticsMetrics | null>(null);
-  const [chartData, setChartData] = useState<TrendData[]>([]);
-
-  // Loading & Error states
+  const [metrics, setMetrics] = useState<any>(null);
+  const [chartData, setChartData] = useState([]);
+  const [lifeBalanceData, setLifeBalanceData] = useState([]);
+  const [valuesData, setValuesData] = useState([]); 
+  const [insights, setInsights] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchAnalyticsData = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
-        setError(null);
+        const token = localStorage.getItem("auth_token");
+        const headers = {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        };
 
-        // 🟢 REPLACE THIS BLOCK WITH YOUR ACTUAL API CALL
-        /* const response = await fetch('/api/your-analytics-endpoint');
-        if (!response.ok) throw new Error('Failed to fetch data');
-        const data = await response.json(); 
-        */
+        const [resA, resV] = await Promise.allSettled([
+          fetch(ANALYTICS_URL, { method: "GET", headers }),
+          fetch(VALUES_URL, { method: "GET", headers })
+        ]);
 
-        // MOCK API DELAY (Remove this in production)
-        const mockData = await new Promise<{
-          metrics: AnalyticsMetrics;
-          trends: TrendData[];
-        }>((resolve) =>
-          setTimeout(
-            () =>
-              resolve({
-                metrics: {
-                  uniqueDays: 42,
-                  uniqueDays30d: 18,
-                  weekly: 5,
-                  alignment: 7.4,
-                  energy: 6.8,
-                },
-                trends: [
-                  { date: "Mon", alignment: 4, energy: 3 },
-                  { date: "Tue", alignment: 6, energy: 5 },
-                  { date: "Wed", alignment: 8, energy: 9 },
-                  { date: "Thu", alignment: 7, energy: 6 },
-                  { date: "Fri", alignment: 8, energy: 7 },
-                ],
-              }),
-            1000,
-          ),
-        );
+        // 1. Analytics Data Processing
+        if (resA.status === "fulfilled" && resA.value.ok) {
+          try {
+            const aData = await resA.value.json();
+            setMetrics({
+              uniqueDays: aData.metrics?.uniqueDays ?? aData.unique_days ?? 0,
+              uniqueDays30d: aData.metrics?.uniqueDays30d ?? aData.unique_days_30d ?? 0,
+              weekly: aData.metrics?.weekly ?? aData.weekly_average ?? 0,
+              alignment: aData.metrics?.alignment ?? aData.alignment_score ?? 0,
+              energy: aData.metrics?.energy ?? aData.energy_score ?? 0,
+            });
+            setChartData(aData.trends ?? aData.trend_data ?? []);
+            setLifeBalanceData(aData.life_balance ?? aData.life_areas ?? []);
+            setInsights(aData.insights ?? aData.key_insights ?? []);
+          } catch (e) {
+            console.error("Analytics parsing failed:", e);
+          }
+        }
 
-        // Set the fetched data
-        setMetrics(mockData.metrics);
-        setChartData(mockData.trends);
-      } catch (err) {
-        setError("Failed to load analytics data. Please try again.");
-        console.error("API Error:", err);
+        // 2. Core Values Data Processing (BULLETPROOF MAPPING)
+        if (resV.status === "fulfilled" && resV.value.ok) {
+          try {
+            const vData = await resV.value.json();
+            console.log("RAW VALUES API RESPONSE:", vData); // <--- YAHAN CHECK KAR CONSOLE MEIN
+            
+            // Agar data direct array nahi hai, toh check karo kahan chhupa hai
+            const rawArray = Array.isArray(vData) ? vData : (vData.data || vData.values || []);
+            
+            if (rawArray.length === 0) {
+              console.warn("Values array khali hai ya galat format mein hai!");
+            }
+
+            // Safe mapping
+            const formattedValues = rawArray.map((item: any) => ({
+              value: item.name || item.value || "Unknown", // API 'name' de rahi thi
+              days: item.priority !== undefined ? item.priority : (item.days || 0) // API 'priority' de rahi thi
+            }));
+
+            console.log("FORMATTED VALUES FOR UI:", formattedValues); // <--- YE BHI CHECK KAR
+            setValuesData(formattedValues);
+            
+          } catch (e) {
+            console.error("Values map karne mein phat gaya:", e);
+          }
+        }
+
+      } catch (err: any) {
+        console.error("Fetch error:", err);
+        setError("API load nahi hui.");
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchAnalyticsData();
+    fetchData();
   }, []);
 
-  // Loading Skeleton / Spinner
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[400px] w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  // Error State
-  if (error) {
-    return (
-      <div className="flex min-h-[400px] w-full items-center justify-center text-destructive">
-        <p>{error}</p>
-      </div>
-    );
-  }
+  if (isLoading) return (
+    <div className="flex h-96 items-center justify-center">
+      <Loader2 className="animate-spin h-10 w-10 text-primary" />
+    </div>
+  );
 
   return (
-    <div className="w-full animate-fade-in space-y-6">
-      {/* Header Section */}
-      <div>
-        <h2 className="mb-1 text-3xl font-bold text-foreground">
-          Analytics & Insights
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Track your progress and discover patterns
-        </p>
-      </div>
+    <div className="w-full space-y-8 p-4 md:p-0 animate-in fade-in duration-500">
+      <header>
+        <h2 className="text-3xl font-bold tracking-tight">Analytics & Insights</h2>
+        <p className="text-muted-foreground">Live data from your metrics and core values.</p>
+      </header>
 
-      {/* Cards Grid */}
+      {/* Metric Cards */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        {/* Card 1: Unique Days */}
-        <div className="flex flex-col rounded-xl border-2 border-emerald-300 bg-emerald-50/50 p-5 shadow-sm transition-all hover:shadow-md dark:border-emerald-800 dark:bg-emerald-950/20">
-          <div className="mb-3 flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-            <FileText className="h-4 w-4" strokeWidth={2} />
-            <span className="text-sm font-medium">Unique Days</span>
-          </div>
-          <div className="text-4xl font-bold tracking-tight text-foreground">
-            {metrics?.uniqueDays || 0}
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            30d: {metrics?.uniqueDays30d || 0}
-          </p>
-        </div>
-
-        {/* Card 2: Weekly */}
-        <div className="flex flex-col rounded-xl border-2 border-purple-300 bg-purple-50/50 p-5 shadow-sm transition-all hover:shadow-md dark:border-purple-800 dark:bg-purple-950/20">
-          <div className="mb-3 flex items-center gap-2 text-purple-600 dark:text-purple-400">
-            <Calendar className="h-4 w-4" strokeWidth={2} />
-            <span className="text-sm font-medium">Weekly</span>
-          </div>
-          <div className="text-4xl font-bold tracking-tight text-foreground">
-            {metrics?.weekly || 0}
-          </div>
-        </div>
-
-        {/* Card 3: Alignment */}
-        <div className="flex flex-col rounded-xl border-2 border-orange-300 bg-orange-50/50 p-5 shadow-sm transition-all hover:shadow-md dark:border-orange-800 dark:bg-orange-950/20">
-          <div className="mb-3 flex items-center gap-2 text-orange-500 dark:text-orange-400">
-            <TrendingUp className="h-4 w-4" strokeWidth={2} />
-            <span className="text-sm font-medium">Alignment</span>
-          </div>
-          <div className="text-4xl font-bold tracking-tight text-foreground">
-            {metrics?.alignment?.toFixed(1) || "0.0"}/10
-          </div>
-        </div>
-
-        {/* Card 4: Energy */}
-        <div className="flex flex-col rounded-xl border-2 border-red-300 bg-red-50/50 p-5 shadow-sm transition-all hover:shadow-md dark:border-red-800 dark:bg-red-950/20">
-          <div className="mb-3 flex items-center gap-2 text-red-500 dark:text-red-400">
-            <Heart className="h-4 w-4" strokeWidth={2} />
-            <span className="text-sm font-medium">Energy</span>
-          </div>
-          <div className="text-4xl font-bold tracking-tight text-foreground">
-            {metrics?.energy?.toFixed(1) || "0.0"}/10
-          </div>
-        </div>
+        <MetricBox icon={FileText} title="Unique Days" value={metrics?.uniqueDays} color="emerald" />
+        <MetricBox icon={Calendar} title="Weekly Avg" value={metrics?.weekly} color="purple" />
+        <MetricBox icon={TrendingUp} title="Alignment" value={metrics?.alignment?.toFixed(1)} isScore color="orange" />
+        <MetricBox icon={Heart} title="Energy" value={metrics?.energy?.toFixed(1)} isScore color="red" />
       </div>
 
-      {/* Dynamic Chart */}
-      <TrendsChart data={chartData} />
-
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <LifeBalanceOverview mockLifeBalanceData={mockLifeBalanceData} />
-        <ValuesInAction mockValuesData={mockValuesData} />
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <h3 className="text-lg font-semibold mb-4">Activity Trends</h3>
+        <TrendsChart data={chartData} />
       </div>
-      <div className="w-full rounded-2xl bg-purple-50/60 p-6 dark:bg-purple-950/20 md:p-8">
-        {/* Header Section */}
-        <div className="mb-6 flex items-center gap-3">
-          <Lightbulb
-            className="h-6 w-6 text-purple-600 dark:text-purple-400"
-            strokeWidth={2}
-          />
-          <h2 className="text-xl font-bold text-foreground sm:text-2xl">
-            Key Insights
-          </h2>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <LifeBalanceOverview mockLifeBalanceData={lifeBalanceData} />
+        {/* Tumhara data yahan UI par jana chahiye */}
+        <ValuesInAction mockValuesData={valuesData} />
+      </div>
+
+      {/* Insights */}
+      <section className="p-6 rounded-2xl bg-purple-50/50 border border-purple-100 dark:bg-purple-900/10">
+        <h3 className="flex items-center gap-2 text-xl font-bold mb-4 text-purple-700">
+          <Lightbulb className="h-5 w-5" /> Key Insights
+        </h3>
+        <div className="space-y-3">
+          {insights.length > 0 ? (
+            insights.map((ins, i) => (
+              <div key={i} className="p-4 bg-background rounded-lg border shadow-sm">{ins}</div>
+            ))
+          ) : (
+            <p className="text-sm italic text-muted-foreground">No insights yet.</p>
+          )}
         </div>
+      </section>
+    </div>
+  );
+};
 
-        {/* Insights List */}
-        {insights.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No insights generated yet. Keep journaling to see patterns!
-          </p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {insights.map((insight, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-4 rounded-xl bg-white px-5 py-4 shadow-sm dark:bg-card"
-              >
-                {/* Purple Bullet Dot */}
-                <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-purple-600 dark:bg-purple-400" />
-
-                {/* Insight Text */}
-                <p className="text-sm font-medium text-foreground/90 sm:text-base">
-                  {insight}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+const MetricBox = ({ icon: Icon, title, value, color, isScore }: any) => {
+  const colors: any = {
+    emerald: "bg-emerald-50 border-emerald-200 text-emerald-700",
+    purple: "bg-purple-50 border-purple-200 text-purple-700",
+    orange: "bg-orange-50 border-orange-200 text-orange-700",
+    red: "bg-red-50 border-red-200 text-red-700",
+  };
+  return (
+    <div className={`p-5 border-2 rounded-xl ${colors[color]} dark:bg-slate-900 dark:border-slate-800`}>
+      <Icon className="mb-2 h-4 w-4" />
+      <div className="text-sm font-medium">{title}</div>
+      <div className="text-3xl font-bold">{value ?? 0}{isScore ? "/10" : ""}</div>
     </div>
   );
 };

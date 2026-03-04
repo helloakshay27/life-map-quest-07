@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Heart, Plus, X, Trash2 } from "lucide-react";
 
-const API_BASE_URL = "http://localhost:3000"; 
+// 👇 Yahan par ab localhost ki jagah .env se aayega
+// 👇 .env ko hata kar humne seedha live URL fix kar diya hai
+const API_BASE_URL = "https://life-api.lockated.com";
 
 function Values() {
   // --- STATE ---
@@ -13,6 +15,9 @@ function Values() {
   const [isSaving, setIsSaving] = useState(false); 
   const [isFetchingDetails, setIsFetchingDetails] = useState(false); // To handle specific GET fetch state
   
+  // 👇 NAYA CODE: Toast Notification ke liye State
+  const [toast, setToast] = useState(null); 
+
   const [formData, setFormData] = useState({
     id: null,
     name: "",
@@ -30,6 +35,12 @@ function Values() {
     orange: { bg: "bg-orange-500", pillBg: "bg-orange-50", text: "text-orange-600" },
   };
 
+  // 👇 NAYA CODE: Toast Dikhane ka Function
+  const showToast = (message, type = "error") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   // =========================================
   // API INTEGRATION: FETCH ALL VALUES (List)
   // =========================================
@@ -39,7 +50,9 @@ function Values() {
 
   const fetchCoreValues = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("auth_token");
+      console.log("🕵️‍♂️ Bheja gaya Token (GET ALL):", token); 
+      
       const response = await fetch(`${API_BASE_URL}/core_values`, {
         method: "GET",
         headers: {
@@ -58,6 +71,7 @@ function Values() {
       }
     } catch (error) {
       console.error("Error fetching list:", error);
+      showToast("Could not load values. Please refresh.");
     } finally {
       setIsLoading(false);
     }
@@ -81,7 +95,7 @@ function Values() {
     setIsFetchingDetails(true);
 
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("auth_token"); // ✅ Fixed "token" to "auth_token"
       
       // Hit specific API: e.g., /core_values/1
       const response = await fetch(`${API_BASE_URL}/core_values/${valueItem.id}`, {
@@ -131,8 +145,9 @@ function Values() {
     setIsSaving(true);
 
     try {
-      const token = localStorage.getItem("token");
-      
+      const token = localStorage.getItem("auth_token");
+      console.log("🕵️‍♂️ Bheja gaya Token (SAVE):", token); 
+
       // Expected payload format { core_value: { ... } }
       const payload = {
         core_value: {
@@ -144,17 +159,26 @@ function Values() {
       };
 
       if (modalMode === "add") {
+      
         const response = await fetch(`${API_BASE_URL}/core_values`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
           body: JSON.stringify(payload)
         });
 
-        if (!response.ok) throw new Error("Failed to save.");
+        // 👇 NAYA CODE: Backend ka actual error read karne ke liye
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          if (errorData && errorData.errors && errorData.errors.length > 0) {
+            throw new Error(errorData.errors[0]); // E.g., "Priority has already been taken"
+          }
+          throw new Error("Failed to save.");
+        }
 
         const newSavedValue = await response.json();
         newSavedValue.meaning = newSavedValue.description || newSavedValue.meaning || "";
         setValues([...values, newSavedValue]);
+        showToast("Core value added successfully!", "success");
         
       } else {
         const response = await fetch(`${API_BASE_URL}/core_values/${formData.id}`, {
@@ -163,17 +187,26 @@ function Values() {
           body: JSON.stringify(payload)
         });
 
-        if (!response.ok) throw new Error("Failed to update.");
+        // 👇 NAYA CODE: Edit ke time bhi actual error read karne ke liye
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          if (errorData && errorData.errors && errorData.errors.length > 0) {
+            throw new Error(errorData.errors[0]); 
+          }
+          throw new Error("Failed to update.");
+        }
 
         const updatedValue = await response.json();
         updatedValue.meaning = updatedValue.description || updatedValue.meaning || "";
         setValues(values.map((v) => (v.id === formData.id ? updatedValue : v)));
+        showToast("Core value updated successfully!", "success");
       }
       
       closeModal();
     } catch (error) {
       console.error("API Error:", error);
-      alert("Something went wrong while saving. Please try again.");
+      // 👇 NAYA CODE: alert() ki jagah Toast
+      showToast(error.message || "Something went wrong while saving. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -184,7 +217,7 @@ function Values() {
   // =========================================
   const handleDeleteValue = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("auth_token"); // ✅ Fixed "token" to "auth_token"
       const response = await fetch(`${API_BASE_URL}/core_values/${formData.id}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
@@ -193,12 +226,13 @@ function Values() {
       if (response.ok) {
         setValues(values.filter((v) => v.id !== formData.id));
         closeModal();
+        showToast("Core value deleted.", "success");
       } else {
         throw new Error("Failed to delete");
       }
     } catch (error) {
       console.error("Delete error:", error);
-      alert("Failed to delete value.");
+      showToast("Failed to delete value.");
     }
   };
 
@@ -211,7 +245,7 @@ function Values() {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf9fc] p-4 md:p-8 font-sans animate-fade-in">
+    <div className="min-h-screen bg-[#faf9fc] p-4 md:p-8 font-sans animate-fade-in relative">
       <div className="max-w-5xl mx-auto space-y-6">
         
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -403,6 +437,14 @@ function Values() {
             </div>
 
           </div>
+        </div>
+      )}
+
+      {/* 👇 NAYA CODE: TOAST NOTIFICATION UI */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'} text-white px-4 py-3 rounded shadow-lg flex flex-col min-w-[250px] animate-fade-in z-50`}>
+          <span className="font-bold text-sm">{toast.type === 'error' ? 'Error' : 'Success'}</span>
+          <span className="text-sm">{toast.message}</span>
         </div>
       )}
     </div>
