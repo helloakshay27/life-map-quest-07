@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, ReactNode } from "react";
 
 interface User {
   id: string;
@@ -15,20 +15,19 @@ interface AuthContextType {
   isAuthenticated: boolean;
 }
 
+// Yeh line miss ho gayi thi aapke code mein
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-
-  useEffect(() => {
-    const savedToken = localStorage.getItem("auth_token");
+  // Lazy Initialization - Page load hone par seedha localStorage read karega
+  const [user, setUser] = useState<User | null>(() => {
     const savedUser = localStorage.getItem("user");
-    if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
-    }
-  }, []);
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
+  const [token, setToken] = useState<string | null>(() => {
+    return localStorage.getItem("auth_token") || null;
+  });
 
   const login = (newToken: string, newUser: User) => {
     setToken(newToken);

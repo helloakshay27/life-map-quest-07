@@ -17,6 +17,14 @@ import Achievements from "./pages/Achievements";
 import Todos from "./pages/Todos";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import NotFound from "./pages/NotFound";
+import LeaderBoard from "./pages/LeaderBoard";
+import Analytics from "./pages/Analytics";
+import People from "./pages/People";
+import VisionAndValues from "./pages/VisionAndValues";
+import BucketList from "@/components/BucketList";
+import SignUp from "./pages/SignUp";
+import KraSelfEvaluation from "./pages/KRA";
+import WeeklyJournal from "./pages/WeeklyJournal";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +38,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
+<<<<<<< HEAD
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/daily-journal" element={<DailyJournal />} />
@@ -47,6 +56,30 @@ const App = () => (
               <Route path="/help" element={<HelpAndResources />} />
               <Route path="/leaderboard" element={<PlaceholderPage />} />
             </Route>
+=======
+            <Route path="/signUp" element={<SignUp />} />
+
+           // ... baaki upar ka imports aur code same rahega ...
+
+            <Route element={<AppLayout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/daily-journal" element={<DailyJournal />} />
+              <Route path="/weekly-journal" element={<WeeklyJournal />} />
+              <Route path="/calendar" element={<PlaceholderPage />} />
+              <Route path="/vision-values" element={<VisionAndValues />} />
+              <Route path="/bucket-list" element={<BucketList />} />
+              <Route path="/goals-habits" element={<PlaceholderPage />} />
+              <Route path="/people" element={<People />} />
+              <Route path="/kra" element={<KraSelfEvaluation />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/achievements" element={<PlaceholderPage />} />
+              <Route path="/learn" element={<PlaceholderPage />} />
+              <Route path="/help" element={<PlaceholderPage />} />
+              <Route path="/leaderboard" element={<LeaderBoard />} />
+            </Route>
+
+// ... baaki niche ka code same rahega ...
+>>>>>>> 78510557ae80df2635b8e854fcda3eaa3bfac0ac
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
