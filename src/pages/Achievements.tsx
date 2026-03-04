@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 
-const API_BASE_URL = "https://life-api.lockated.com";
+const API_BASE_URL = "https://api.lifecompass.lockated.com";
 
 const getAuthHeaders = (): Record<string, string> => {
   const token = localStorage.getItem("auth_token");
@@ -366,27 +366,16 @@ const Achievements = () => {
     { id: "19", title: "Samrat (The Emperor)", subtitle: "Ultimate Rank", description: '"You have mastered discipline, strategy, execution, and balance. You rule your life."', requirement: "Unlock 18 or more other badges.", category: "Ultimate Rank", icon: "✨" },
   ];
 
-  // Load badges from localStorage/API on mount
+  // Load badges from localStorage on mount
   useEffect(() => {
     const loadBadges = async () => {
       try {
         const savedBadges = localStorage.getItem("user_badges");
         if (savedBadges) {
           setBadges(JSON.parse(savedBadges));
-          return;
-        }
-        try {
-          const response = await fetchWithAuth("/badges", { method: "GET" });
-          if (response.ok) {
-            const data = await response.json();
-            setBadges(data);
-            localStorage.setItem("user_badges", JSON.stringify(data));
-          }
-        } catch (apiError) {
-          console.log("API unavailable, using local storage for badges");
         }
       } catch (error) {
-        console.log("Using local storage for badges");
+        console.log("Error loading badges from storage");
       }
     };
     loadBadges();
@@ -396,21 +385,13 @@ const Achievements = () => {
     setIsRefreshing(true);
     toast.loading("Refreshing badges...", { id: "refresh-badges" });
     try {
-      try {
-        const response = await fetchWithAuth("/badges/refresh", { method: "POST" });
-        if (response.ok) {
-          const data = await response.json();
-          setBadges(data);
-          localStorage.setItem("user_badges", JSON.stringify(data));
-          toast.success("Badges refreshed successfully!", { id: "refresh-badges" });
-          setIsRefreshing(false);
-          return;
-        } else {
-          toast.error("Failed to refresh badges. Using cached data.", { id: "refresh-badges" });
-        }
-      } catch (apiError) {
-        console.log("API unavailable for refresh, using local data");
-        toast.info("API unavailable. Showing cached badges.", { id: "refresh-badges" });
+      // Refresh from localStorage
+      const savedBadges = localStorage.getItem("user_badges");
+      if (savedBadges) {
+        setBadges(JSON.parse(savedBadges));
+        toast.success("Badges refreshed successfully!", { id: "refresh-badges" });
+      } else {
+        toast.info("No cached badges found.", { id: "refresh-badges" });
       }
     } catch (error) {
       console.error("Failed to refresh badges:", error);

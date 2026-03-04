@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Copy, Save, Plus, Trash2 } from "lucide-react"; 
 
 // Base URL set kar diya
-const API_BASE_URL = "https://life-api.lockated.com"; 
+const API_BASE_URL = "https://api.lifecompass.lockated.com"; 
 
 function Vision() {
   // --- STATE ---

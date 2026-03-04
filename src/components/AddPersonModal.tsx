@@ -217,7 +217,7 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({ isOpen, onClose, onSucc
     try {
               const token = localStorage.getItem("auth_token");
 
-      const res = await fetch("https://life-api.lockated.com/people", { // 🔁 Replace with your real endpoint
+      const res = await fetch("https://api.lifecompass.lockated.com/people", { // 🔁 Replace with your real endpoint
         method: "POST",
         headers: {
           "Content-Type": "application/json",

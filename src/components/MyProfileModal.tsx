@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Loader2 } from "lucide-react";
 
-const API_BASE_URL = "https://life-api.lockated.com";  // PUT uses same base, endpoint: /users/profile
+const API_BASE_URL = "https://api.lifecompass.lockated.com";  // PUT uses same base, endpoint: /users/profile
 
 interface MyProfileModalProps {
   setIsProfileModalOpen: (isOpen: boolean) => void;
@@ -93,7 +93,7 @@ export default function MyProfileModal({ setIsProfileModalOpen }: MyProfileModal
 
       const token = localStorage.getItem("auth_token");
 
-      const res = await fetch(`https://life-api.lockated.com/users/profile`, {
+      const res = await fetch(`https://api.lifecompass.lockated.com/users/profile`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
