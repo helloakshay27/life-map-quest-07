@@ -1,224 +1,504 @@
 import React, { useState } from "react";
+import { List, LayoutGrid, Sparkles, Plus, Filter, Star } from "lucide-react";
+import { AddDreamDialog } from "@/components/AddDreamDialog";
+import { toast } from "sonner";
+import { getAuthHeaders } from "@/config/api";
 
-// ==========================================
-// 1. MOCK DATA
-// ==========================================
-const defaultBucketList = [
+// Types
+type Category =
+  | "All Categories"
+  | "Travel"
+  | "Career"
+  | "Personal"
+  | "Adventure"
+  | "Learning";
+type Progress =
+  | "Dreaming & Ideas"
+  | "Planning & Research"
+  | "In Progress"
+  | "Achieved";
+
+interface BucketListItem {
+  id: string;
+  title: string;
+  progress: Progress;
+  category: string;
+  description?: string;
+}
+
+const SAMPLE_DATA: BucketListItem[] = [
   {
-    id: 1,
-    title: "Visit Japan",
-    notes: "",
-    progress: "Planning",
-    category: "Personal",
-  },
-  {
-    id: 2,
-    title: "Start a side business",
-    notes: "",
-    progress: "Dreaming",
-    category: "Career",
-  },
-  {
-    id: 3,
-    title: "Write a book",
-    notes: "",
-    progress: "Dreaming",
-    category: "Personal",
-  },
-  {
-    id: 4,
-    title: "Go skydiving",
-    notes: "",
-    progress: "Dreaming",
-    category: "Adventure",
-  },
-  {
-    id: 5,
-    title: "Learn to play guitar",
-    notes: "",
-    progress: "In Progress",
-    category: "Learning",
-  },
-  {
-    id: 6,
-    title: "Travel across Europe",
-    notes: "",
-    progress: "Planning",
+    id: "s1",
+    title: "Travel to Japan",
     category: "Travel",
+    progress: "Dreaming & Ideas",
+    description: "Experience cherry blossoms and traditional culture",
   },
   {
-    id: 7,
-    title: "Run a marathon",
-    notes: "",
-    progress: "Dreaming",
+    id: "s2",
+    title: "Start a side business",
+    category: "Career",
+    progress: "Dreaming & Ideas",
+    description: "Launch an online business",
+  },
+  {
+    id: "s3",
+    title: "Write a book",
     category: "Personal",
+    progress: "Dreaming & Ideas",
+    description: "Publish my first book",
+  },
+  {
+    id: "s4",
+    title: "Skydiving",
+    category: "Adventure",
+    progress: "Dreaming & Ideas",
+    description: "Jump from a plane",
+  },
+  {
+    id: "s5",
+    title: "Learn a new language",
+    category: "Learning",
+    progress: "Planning & Research",
+    description: "Become fluent in Spanish",
+  },
+  {
+    id: "s6",
+    title: "Run a marathon",
+    category: "Personal",
+    progress: "Planning & Research",
+    description: "Complete a full 42km marathon",
   },
 ];
 
-// ==========================================
-// 2. HELPER FUNCTIONS
-// ==========================================
-const getProgressStyle = (progress) => {
-  switch (progress) {
-    case "Dreaming":
-      return "bg-[#f3e8ff] text-[#9333ea]";
-    case "Planning":
-      return "bg-[#e0f2fe] text-[#0284c7]";
-    case "In Progress":
-      return "bg-[#dcfce7] text-[#16a34a]";
-    default:
-      return "bg-gray-100 text-gray-600";
-  }
+const CATEGORY_COLORS: Record<string, string> = {
+  Travel: "bg-[#3b82f6]", // blue
+  Career: "bg-[#a855f7]", // purple
+  Personal: "bg-[#ec4899]", // pink
+  Adventure: "bg-[#f97316]", // orange
+  Learning: "bg-[#14b8a6]", // teal
 };
 
-const getCategoryStyle = (category) => {
-  switch (category) {
-    case "Personal":
-      return "bg-[#fce7f3] text-[#db2777]";
-    case "Career":
-      return "bg-[#ede9fe] text-[#7c3aed]";
-    case "Travel":
-      return "bg-[#e0e7ff] text-[#4f46e5]";
-    case "Adventure":
-      return "bg-[#ffedd5] text-[#ea580c]";
-    case "Learning":
-      return "bg-[#ccfbf1] text-[#0d9488]";
-    default:
-      return "bg-gray-100 text-gray-600";
-  }
-};
+const COLUMNS: {
+  id: Progress;
+  title: string;
+  borderColor: string;
+  bgColor: string;
+}[] = [
+  {
+    id: "Dreaming & Ideas",
+    title: "Dreaming & Ideas",
+    borderColor: "border-blue-200",
+    bgColor: "bg-blue-50/50",
+  },
+  {
+    id: "Planning & Research",
+    title: "Planning & Research",
+    borderColor: "border-purple-200",
+    bgColor: "bg-purple-50/50",
+  },
+  {
+    id: "In Progress",
+    title: "In Progress",
+    borderColor: "border-orange-200",
+    bgColor: "bg-orange-50/50",
+  },
+  {
+    id: "Achieved",
+    title: "Achieved",
+    borderColor: "border-teal-200",
+    bgColor: "bg-teal-50/50",
+  },
+];
 
-// ==========================================
-// 3. MAIN COMPONENT
-// ==========================================
-export default function BucketList({ data = defaultBucketList }) {
-  const [progressFilter, setProgressFilter] = useState("All Progress");
-  const [categoryFilter, setCategoryFilter] = useState("All Categories");
+export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
+  const [items, setItems] = useState<BucketListItem[]>(data);
+  const [samplesLoaded, setSamplesLoaded] = useState(false);
+  const [categoryFilter, setCategoryFilter] =
+    useState<Category>("All Categories");
+  const [viewMode, setViewMode] = useState<"list" | "board">("board");
 
-  const filteredData = data.filter((item) => {
-    const matchProgress =
-      progressFilter === "All Progress" || item.progress === progressFilter;
-    const matchCategory =
-      categoryFilter === "All Categories" || item.category === categoryFilter;
-    return matchProgress && matchCategory;
-  });
+  React.useEffect(() => {
+    const fetchDreams = async () => {
+      try {
+        const response = await fetch("https://life-api.lockated.com/dreams", {
+          headers: getAuthHeaders(),
+        });
+        if (!response.ok) throw new Error("Failed to fetch dreams");
+        const data = await response.json();
+
+        const mappedItems: BucketListItem[] = [];
+
+        const mapCategory = (
+          itemsArray: unknown[],
+          progressLabel: Progress,
+        ) => {
+          if (!Array.isArray(itemsArray)) return;
+          itemsArray.forEach((itemObj: unknown) => {
+            const item = itemObj as {
+              id: string | number;
+              title: string;
+              description?: string;
+              category: string;
+            };
+            mappedItems.push({
+              id: item.id.toString(),
+              title: item.title,
+              description: item.description,
+              category: item.category,
+              progress: progressLabel,
+            });
+          });
+        };
+
+        mapCategory(data.dreaming, "Dreaming & Ideas");
+        mapCategory(data.planning, "Planning & Research");
+        mapCategory(data.in_progress, "In Progress");
+        mapCategory(data.achieved, "Achieved");
+
+        // Merge with existing data (e.g., if props provided data), but typically we just overwrite with API data
+        setItems(mappedItems);
+
+        if (mappedItems.length > 0) {
+          setSamplesLoaded(true); // Auto-hide 'Load Samples' if we have real API data
+        }
+      } catch (error) {
+        console.error("Error fetching dreams:", error);
+      }
+    };
+
+    fetchDreams();
+  }, []);
+
+  const handleDragStart = (e: React.DragEvent, itemId: string) => {
+    e.dataTransfer.setData("text/plain", itemId);
+  };
+
+  const handleDrop = async (e: React.DragEvent, progressLane: Progress) => {
+    e.preventDefault();
+    const itemId = e.dataTransfer.getData("text/plain");
+    if (!itemId) return;
+
+    const itemObj = items.find((i) => i.id === itemId);
+    if (!itemObj || itemObj.progress === progressLane) return;
+
+    // Optimistic UI update
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === itemId ? { ...item, progress: progressLane } : item,
+      ),
+    );
+
+    try {
+      const apiStatus =
+        progressLane === "Dreaming & Ideas"
+          ? "dreaming"
+          : progressLane === "Planning & Research"
+            ? "planning"
+            : progressLane === "In Progress"
+              ? "in_progress"
+              : "achieved";
+
+      const response = await fetch(
+        `https://life-api.lockated.com/dreams/${itemId}/change_status`,
+        {
+          method: "PATCH",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ status: apiStatus }),
+        },
+      );
+
+      if (!response.ok) throw new Error("Failed to change status");
+      toast.success(`Moved to ${progressLane}`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to sync move to API.");
+      // Rollback logic could be added here
+    }
+  };
+
+  const loadSamples = () => {
+    setItems((prev) => [...prev, ...SAMPLE_DATA]);
+    setSamplesLoaded(true);
+  };
+
+  const handleSave = async (
+    itemToSave: Omit<BucketListItem, "id"> & { id?: string },
+  ) => {
+    if (itemToSave.id) {
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === itemToSave.id
+            ? { ...itemToSave, id: itemToSave.id as string }
+            : item,
+        ),
+      );
+
+      try {
+        const apiStatus =
+          itemToSave.progress === "Dreaming & Ideas"
+            ? "dreaming"
+            : itemToSave.progress === "Planning & Research"
+              ? "planning"
+              : itemToSave.progress === "In Progress"
+                ? "in_progress"
+                : "achieved";
+
+        const response = await fetch(
+          `https://life-api.lockated.com/dreams/${itemToSave.id}/change_status`,
+          {
+            method: "PATCH",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ status: apiStatus }),
+          },
+        );
+
+        if (!response.ok) throw new Error("Failed to update status");
+        toast.success("Dream updated successfully!");
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to sync status update to API.");
+      }
+    } else {
+      try {
+        const apiStatus =
+          itemToSave.progress === "Dreaming & Ideas"
+            ? "dreaming"
+            : itemToSave.progress === "Planning & Research"
+              ? "planning"
+              : itemToSave.progress === "In Progress"
+                ? "in_progress"
+                : "achieved";
+
+        const payload = {
+          title: itemToSave.title,
+          description: itemToSave.description || "",
+          category: itemToSave.category,
+          status: apiStatus,
+        };
+
+        const response = await fetch("https://life-api.lockated.com/dreams", {
+          method: "POST",
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to create dream");
+        }
+
+        const data = await response.json();
+
+        const frontendStatus =
+          data.status === "dreaming"
+            ? "Dreaming & Ideas"
+            : data.status === "planning"
+              ? "Planning & Research"
+              : data.status === "in_progress" || data.status === "in progress"
+                ? "In Progress"
+                : "Achieved";
+
+        const newItem: BucketListItem = {
+          id: data.id?.toString() || Math.random().toString(36).substring(2, 9),
+          title: data.title || itemToSave.title,
+          category: data.category || itemToSave.category,
+          progress: frontendStatus as Progress,
+          description: data.description || itemToSave.description,
+        };
+
+        setItems((prev) => [...prev, newItem]);
+        toast.success("Dream created successfully via API!");
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to create Dream via API. Please try again.");
+      }
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    setItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const filteredItems = items.filter(
+    (item) =>
+      categoryFilter === "All Categories" || item.category === categoryFilter,
+  );
 
   return (
-    <div className="w-full max-w-4xl mx-auto border border-[#fde68a] rounded-lg overflow-hidden font-sans bg-[#fffbeb]">
-      {/* --- HEADER SECTION (Fixed / Will not scroll) --- */}
-      <div className="flex items-center justify-between px-6 py-4 bg-[#fffdf5] border-b border-[#fde68a]">
-        <div className="flex items-center gap-2">
-          <h2 className="text-[17px] font-bold text-[#1e293b]">
-            Bucket List Progress
-          </h2>
-
-          <div className="relative group flex items-center justify-center">
-            <div className="w-5 h-5 rounded-full border-[1.5px] border-[#fbbf24] text-[#f59e0b] flex items-center justify-center text-xs font-bold cursor-help">
-              i
-            </div>
-            <div className="absolute top-full mt-2 left-0 hidden group-hover:block bg-[#1e293b] text-white text-xs px-3 py-2 rounded shadow-lg w-48 z-10">
-              Track progress on your dreams and long-term aspirations
-            </div>
-          </div>
+    <div className="w-full mx-auto flex flex-col h-full bg-white font-sans max-w-[1400px] p-4 sm:p-8">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+            Bucket List
+          </h1>
+          <p className="text-[#e11d48] font-medium mt-1 text-sm sm:text-base">
+            What you Seek, is Seeking You !
+          </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <select
-              value={progressFilter}
-              onChange={(e) => setProgressFilter(e.target.value)}
-              className="appearance-none bg-white border border-gray-200 rounded-md py-1.5 pl-3 pr-8 text-sm text-[#334155] font-medium outline-none hover:border-gray-300 cursor-pointer shadow-sm"
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center border border-gray-200 rounded-md p-1 bg-white">
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-1.5 rounded-sm ${viewMode === "list" ? "bg-gray-100 text-gray-900" : "text-gray-400 hover:text-gray-900"}`}
             >
-              <option value="All Progress">All Progress</option>
-              <option value="Dreaming">Dreaming</option>
-              <option value="Planning">Planning</option>
-              <option value="In Progress">In Progress</option>
-            </select>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none"
+              <List className="w-[18px] h-[18px]" strokeWidth={2} />
+            </button>
+            <button
+              onClick={() => setViewMode("board")}
+              className={`p-1.5 rounded-sm ${viewMode === "board" ? "bg-gray-100 text-gray-900" : "text-gray-400 hover:text-gray-900"}`}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-              />
-            </svg>
+              <LayoutGrid className="w-[18px] h-[18px]" strokeWidth={2} />
+            </button>
           </div>
 
-          <div className="relative">
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="appearance-none bg-white border border-gray-200 rounded-md py-1.5 pl-3 pr-8 text-sm text-[#334155] font-medium outline-none hover:border-gray-300 cursor-pointer shadow-sm"
+          {!samplesLoaded && (
+            <button
+              onClick={loadSamples}
+              className="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 rounded-md text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
             >
-              <option value="All Categories">All Categories</option>
-              <option value="Travel">Travel</option>
-              <option value="Career">Career</option>
-              <option value="Personal">Personal</option>
-              <option value="Adventure">Adventure</option>
-              <option value="Learning">Learning</option>
-            </select>
+              <Sparkles className="w-4 h-4" />
+              Load Samples
+            </button>
+          )}
+
+          <AddDreamDialog onSave={handleSave}>
+            <button className="flex items-center gap-1.5 px-4 py-2 bg-[#f97316] text-white rounded-md text-sm font-semibold hover:bg-[#ea580c] transition-colors shadow-sm">
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              Add Dream
+            </button>
+          </AddDreamDialog>
+        </div>
+      </div>
+
+      {/* Info Banner */}
+      <div className="bg-[#eff6ff] border-l-[3px] border-[#3b82f6] p-4 rounded-r-md mb-8">
+        <p className="text-[13px] text-[#475569] leading-relaxed">
+          <span className="font-semibold text-[#1e293b]">
+            💡 What is a Bucket List?
+          </span>{" "}
+          A collection of experiences, achievements, and goals you want to
+          accomplish in your lifetime. Start with dreams (ideas you're
+          exploring), move them to planning (actively researching), then in
+          progress (taking action), and finally achieved (celebrate your wins!).
+          Drag and drop items between columns to track your progress.
+        </p>
+      </div>
+
+      {/* Filters */}
+      <div className="flex items-center gap-3 mb-6">
+        <Filter className="w-5 h-5 text-gray-400" />
+        <div className="relative w-48">
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value as Category)}
+            className="w-full appearance-none bg-white border border-gray-200 rounded-md py-1.5 pl-3 pr-8 text-sm text-gray-700 outline-none hover:border-gray-300 focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6] cursor-pointer shadow-sm"
+          >
+            <option value="All Categories">All Categories</option>
+            <option value="Travel">Travel</option>
+            <option value="Career">Career</option>
+            <option value="Personal">Personal</option>
+            <option value="Adventure">Adventure</option>
+            <option value="Learning">Learning</option>
+          </select>
+          <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500">
             <svg
-              xmlns="http://www.w3.org/2000/svg"
+              className="w-4 h-4"
               fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
               stroke="currentColor"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
             >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-              />
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              ></path>
             </svg>
           </div>
         </div>
       </div>
 
-      {/* --- LIST SECTION (Scrollable) --- */}
-      {/* 🟢 Yahan max-h-[400px] aur overflow-y-auto lagaya hai */}
-      <div className="flex flex-col gap-[6px] p-[6px] max-h-[400px] overflow-y-auto custom-scrollbar">
-        {filteredData.length > 0 ? (
-          filteredData.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white px-5 py-3 rounded-sm shadow-sm shrink-0"
-            >
-              <h3 className="font-bold text-[#0f172a] text-[15px] mb-1">
-                {item.title}
-              </h3>
-              <input
-                type="text"
-                placeholder="..."
-                defaultValue={item.notes}
-                className="w-full outline-none text-sm text-[#64748b] placeholder-gray-400 bg-transparent mb-3"
-              />
-              <div className="flex gap-2">
-                <span
-                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide ${getProgressStyle(item.progress)}`}
-                >
-                  {item.progress}
-                </span>
-                <span
-                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide ${getCategoryStyle(item.category)}`}
-                >
-                  {item.category}
-                </span>
+      {/* Board View */}
+      {viewMode === "board" && (
+        <div className="flex flex-1 gap-4 sm:gap-5 overflow-x-auto min-h-[400px] pb-4 snap-x snap-mandatory">
+          {COLUMNS.map((col) => {
+            const colItems = filteredItems.filter((i) => i.progress === col.id);
+            return (
+              <div
+                key={col.id}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => handleDrop(e, col.id)}
+                className={`flex flex-col flex-1 min-w-[280px] sm:min-w-[250px] shrink-0 snap-center sm:snap-align-none rounded-xl border-2 ${col.borderColor} ${col.bgColor} p-4`}
+              >
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="font-bold text-gray-900 text-[15px]">
+                    {col.title}
+                  </h3>
+                  <span
+                    className={`text-xs font-bold px-2 py-0.5 rounded border border-gray-200 shadow-[0_1px_2px_rgba(0,0,0,0.05)] bg-white text-gray-700`}
+                  >
+                    {colItems.length}
+                  </span>
+                </div>
+
+                <div className="flex-1 flex flex-col">
+                  {colItems.length > 0 ? (
+                    <div className="space-y-3">
+                      {colItems.map((item) => (
+                        <AddDreamDialog
+                          key={item.id}
+                          initialData={item}
+                          onSave={handleSave}
+                          onDelete={handleDelete}
+                        >
+                          <div
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, item.id)}
+                            className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col cursor-pointer hover:shadow-md hover:-translate-y-0.5 hover:border-orange-200 transition-all text-left grab sm:active:cursor-grabbing"
+                          >
+                            <div
+                              className={`w-9 h-9 rounded-md flex items-center justify-center text-white mb-3 shadow-[inset_0_-2px_4px_rgba(0,0,0,0.1)] ${CATEGORY_COLORS[item.category] || "bg-gray-400"}`}
+                            >
+                              <Star className="w-5 h-5 fill-current" />
+                            </div>
+                            <h4 className="font-bold text-[14px] text-gray-900 leading-snug">
+                              {item.title}
+                            </h4>
+                            <div className="mt-2 mb-4">
+                              <span className="inline-block border border-gray-200 text-gray-600 bg-white px-2 py-0.5 rounded text-[11px] font-bold">
+                                {item.category}
+                              </span>
+                            </div>
+                            {item.description && (
+                              <p className="text-[12px] text-gray-500 leading-relaxed max-w-full">
+                                {item.description}
+                              </p>
+                            )}
+                          </div>
+                        </AddDreamDialog>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center text-[#94a3b8] text-sm font-medium">
+                      No items yet
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))
-        ) : (
-          <div className="bg-white px-5 py-8 text-center rounded-sm text-gray-500 text-sm shadow-sm">
-            No bucket list items match your selected filters.
-          </div>
-        )}
-      </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* List View placeholder if needed */}
+      {viewMode === "list" && (
+        <div className="flex-1 flex items-center justify-center text-gray-400 font-medium pb-20">
+          List view coming soon!
+        </div>
+      )}
     </div>
   );
 }

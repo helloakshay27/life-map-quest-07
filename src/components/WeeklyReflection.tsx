@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Info, Plus, Loader2, CheckCircle2, ArrowLeft, Edit, Trash2 } from 'lucide-react';
 
-const API_BASE_URL = "http://localhost:3000";
+const API_BASE_URL = "http://life-api.locakted.com";
 
 function WeeklyReflection() {
   // Views: 'list' | 'form'
@@ -23,12 +23,13 @@ function WeeklyReflection() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<{ type: 'idle' | 'success' | 'error', message: string }>({ type: 'idle', message: '' });
 
+  // Friend's Auto-Calculated Life Balance placeholder data
   const lifeBalanceStats = [
-    { id: 1, emoji: '💼', score: 0 },
-    { id: 2, emoji: '🤝', score: 0 },
-    { id: 3, emoji: '❤️', score: 0 },
-    { id: 4, emoji: '⚖️', score: 0 },
-    { id: 5, emoji: '🔥', score: 0 },
+    { id: 1, emoji: "💼", score: 0 },
+    { id: 2, emoji: "🤝", score: 0 },
+    { id: 3, emoji: "❤️", score: 0 },
+    { id: 4, emoji: "⚖️", score: 0 },
+    { id: 5, emoji: "🔥", score: 0 },
   ];
 
   // =========================================
@@ -43,7 +44,6 @@ function WeeklyReflection() {
       });
       if (res.ok) {
         const data = await res.json();
-        // Assuming API returns array of journals
         setJournals(Array.isArray(data) ? data : (data.user_journals || []));
       }
     } catch (error) {
@@ -142,12 +142,11 @@ function WeeklyReflection() {
     try {
       const token = localStorage.getItem("auth_token");
       
-      // Agar ID hai toh PUT (Update), warna POST (Create)
       const url = currentJournalId 
         ? `${API_BASE_URL}/user_journals/${currentJournalId}` 
         : `${API_BASE_URL}/user_journals`;
       
-      const method = currentJournalId ? "PUT" : "POST"; // Make sure your API expects PUT for updates
+      const method = currentJournalId ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
@@ -162,7 +161,6 @@ function WeeklyReflection() {
 
       setSubmitStatus({ type: 'success', message: currentJournalId ? 'Updated successfully!' : 'Saved successfully!' });
       
-      // Wait a second, then go back to list
       setTimeout(() => setCurrentView('list'), 1500);
       
     } catch (error: any) {
@@ -256,7 +254,9 @@ function WeeklyReflection() {
           </div>
         </div>
         <div className="border-y-2 border-dashed border-orange-200/60 bg-[#fefdfb] py-10 flex flex-col items-center justify-center rounded-sm">
-          <p className="text-[15px] font-medium text-gray-800 mb-3">{wins.length > 0 ? `${wins.length} wins recorded` : 'No wins added yet'}</p>
+          <p className="text-[15px] font-medium text-gray-800 mb-3">
+            {wins.length > 0 ? `${wins.length} wins recorded` : 'No wins added yet'}
+          </p>
           <button className="flex items-center gap-2 bg-white border border-gray-200 shadow-sm px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
             <Plus className="w-4 h-4" /> Add / Edit Wins
           </button>
@@ -266,6 +266,9 @@ function WeeklyReflection() {
       {/* 2. BIGGEST CHALLENGE & CAUSE */}
       <section>
         <h2 className="text-lg font-bold text-gray-900 mb-1">Biggest Challenge & Cause</h2>
+        <p className="text-[15px] text-gray-600 mb-3">
+          What was your biggest challenge this week, perhaps a recurring behavior, and what caused it?
+        </p>
         <textarea
           value={challenge}
           onChange={(e) => setChallenge(e.target.value)}
@@ -288,6 +291,9 @@ function WeeklyReflection() {
 
         <div>
           <h2 className="text-lg font-bold text-gray-900 mb-1">Key Insight</h2>
+          <p className="text-[15px] text-gray-600 mb-3 line-clamp-1">
+            You are the ultimate creator for everything that manifests in your... What were your insights this week?
+          </p>
           <textarea
             value={insight}
             onChange={(e) => setInsight(e.target.value)}
@@ -299,15 +305,42 @@ function WeeklyReflection() {
 
       {/* 4. BALANCE SLIDER */}
       <section>
-        <h2 className="text-lg font-bold text-gray-900 mb-4">Life Balance Rating: {balanceRating}</h2>
-        <input 
-          type="range" 
-          min="1" max="5" step="0.1"
-          value={balanceRating}
-          onChange={(e) => setBalanceRating(parseFloat(e.target.value))}
-          className="w-full h-1.5 appearance-none rounded-full outline-none cursor-pointer bg-gray-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-gray-400"
-          style={{ background: `linear-gradient(to right, #111827 0%, #111827 ${((balanceRating - 1) / 4) * 100}%, #e5e7eb ${((balanceRating - 1) / 4) * 100}%, #e5e7eb 100%)` }}
-        />
+        <div className="flex items-center gap-2 mb-6">
+          <h2 className="text-lg font-bold text-gray-900">Auto-Calculated Life Balance</h2>
+          <Info className="w-4 h-4 text-gray-400 cursor-help" />
+        </div>
+
+        {/* 5 Balance Categories Row */}
+        <div className="flex items-center justify-between gap-4 mb-8">
+          {lifeBalanceStats.map((stat) => (
+            <div key={stat.id} className="flex flex-col items-center flex-1">
+              <div className="w-full h-14 bg-gray-200/70 rounded-xl mb-3"></div>
+              <div className="flex flex-col items-center">
+                <span className="text-lg mb-0.5">{stat.emoji}</span>
+                <span className="text-sm font-bold text-gray-900">{stat.score}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Slider Section */}
+        <div>
+          <h3 className="text-[15px] font-bold text-gray-900 mb-4">Life Balance Rating: {balanceRating}</h3>
+          <div className="px-1 relative">
+            <input
+              type="range"
+              min="1"
+              max="5"
+              step="0.1"
+              value={balanceRating}
+              onChange={(e) => setBalanceRating(parseFloat(e.target.value))}
+              className="w-full h-1.5 appearance-none rounded-full outline-none cursor-pointer bg-gray-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-gray-400 [&::-webkit-slider-thumb]:shadow-md"
+              style={{
+                background: `linear-gradient(to right, #111827 0%, #111827 ${((balanceRating - 1) / 4) * 100}%, #e5e7eb ${((balanceRating - 1) / 4) * 100}%, #e5e7eb 100%)`,
+              }}
+            />
+          </div>
+        </div>
       </section>
 
       {/* 5. SUBMIT ACTIONS */}

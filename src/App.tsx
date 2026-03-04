@@ -15,7 +15,7 @@ import LeaderBoard from "./pages/LeaderBoard";
 import Analytics from "./pages/Analytics";
 import People from "./pages/People";
 import VisionAndValues from "./pages/VisionAndValues";
-import BucketList from "./components/BucketList";
+import BucketList from "@/components/BucketList";
 import SignUp from "./pages/SignUp";
 import KraSelfEvaluation from "./pages/KRA";
 import WeeklyJournal from "./pages/WeeklyJournal";
@@ -32,25 +32,28 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
-                        <Route path="/signUp" element={<SignUp />} />
+            <Route path="/signUp" element={<SignUp />} />
 
-            <Route element={<AppLayout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/daily-journal" element={<DailyJournal />} />
-              <Route path="/weekly-journal" element={<WeeklyJournal />} />
-              <Route path="/calendar" element={<PlaceholderPage />} />
-              <Route path="/vision-values" element={<VisionAndValues/>} />
-              <Route path="/bucket-list" element={<PlaceholderPage/>} />
-              <Route path="/goals-habits" element={<PlaceholderPage />} />
-              <Route path="/todos" element={<PlaceholderPage />} />
-              <Route path="/people" element={<People />} />
-              <Route path="/kra" element={<KraSelfEvaluation/>} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/achievements" element={<PlaceholderPage />} />
-              <Route path="/learn" element={<PlaceholderPage />} />
-              <Route path="/help" element={<PlaceholderPage />} />
-              <Route path="/leaderboard" element={<LeaderBoard />} />
-            </Route>
+           // ... baaki upar ka imports aur code same rahega ...
+
+            <Route element={<AppLayout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/daily-journal" element={<DailyJournal />} />
+              <Route path="/weekly-journal" element={<WeeklyJournal />} />
+              <Route path="/calendar" element={<PlaceholderPage />} />
+              <Route path="/vision-values" element={<VisionAndValues />} />
+              <Route path="/bucket-list" element={<BucketList />} />
+              <Route path="/goals-habits" element={<PlaceholderPage />} />
+              <Route path="/people" element={<People />} />
+              <Route path="/kra" element={<KraSelfEvaluation />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/achievements" element={<PlaceholderPage />} />
+              <Route path="/learn" element={<PlaceholderPage />} />
+              <Route path="/help" element={<PlaceholderPage />} />
+              <Route path="/leaderboard" element={<LeaderBoard />} />
+            </Route>
+
+// ... baaki niche ka code same rahega ...
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
