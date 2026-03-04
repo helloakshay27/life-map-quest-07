@@ -1,6 +1,32 @@
-import { useState } from "react";
-import { Card } from "@/components/ui/card";
-import { BookOpen, HelpCircle, FileText, Clock, ChevronDown, ChevronRight, Play } from "lucide-react";
+import { useState, useMemo } from "react";
+import {
+  BookOpen,
+  FileText,
+  HelpCircle,
+  MessageCircle,
+  Users,
+  ChevronRight,
+  ChevronDown,
+  ExternalLink,
+  Search,
+  Video,
+  Download,
+  Play,
+  Clock,
+  Calendar,
+  Star,
+  CheckCircle,
+  ArrowRight,
+  Mail,
+  MessageSquare,
+  Phone,
+  Globe,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 interface Tutorial {
   id: string;
@@ -1128,30 +1154,33 @@ const HelpAndResources = () => {
   ];
 
   return (
-    <div className="animate-fade-in space-y-8">
+    <div className="animate-fade-in space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div>
-        <h1 className="text-heading text-foreground">Help & Resources</h1>
-        <p className="text-body-4 text-muted-foreground">Learn how to use Life Compass effectively</p>
+      <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
+        <div className="text-center sm:text-left">
+          <h1 className="text-2xl sm:text-3xl text-foreground">Help & Resources</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-2">Learn how to use Life Compass effectively</p>
+        </div>
       </div>
 
       {/* Tab Navigation */}
-      <div className="border-b border-border">
-        <div className="flex gap-8">
+      <div className="border-b border-border overflow-x-auto">
+        <div className="flex gap-2 sm:gap-6 lg:gap-8 min-w-max">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as "tutorial" | "guide" | "faq")}
-                className={`flex items-center gap-2 py-3 px-1 border-b-2 transition-colors ${
+                className={`flex items-center gap-1 sm:gap-2 py-3 px-3 sm:px-4 border-b-2 transition-colors whitespace-nowrap text-xs sm:text-sm ${
                   activeTab === tab.id
                     ? "border-blue-500 text-foreground"
                     : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <Icon className="w-4 h-4" />
-                <span className="text-sm font-medium">{tab.label}</span>
+                <Icon className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span className="font-medium hidden xs:inline sm:inline">{tab.label}</span>
+                <span className="font-medium xs:hidden sm:hidden">{tab.label.charAt(0)}</span>
               </button>
             );
           })}
@@ -1160,10 +1189,12 @@ const HelpAndResources = () => {
 
       {/* Tab Content */}
       {activeTab === "tutorial" && (
-        <div className="space-y-4">
-          <h2 className="text-title-1 text-foreground">App Tutorials</h2>
-          <p className="text-body-5 text-muted-foreground">Learn how to use Life Compass effectively</p>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-6">
+          <div className="text-center sm:text-left">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl text-foreground">App Tutorials</h2>
+            <p className="text-sm sm:text-base text-muted-foreground mt-2">Learn how to use Life Compass effectively</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
             {tutorials.map((tutorial) => (
               <TutorialCard key={tutorial.id} tutorial={tutorial} />
             ))}
@@ -1173,11 +1204,11 @@ const HelpAndResources = () => {
 
       {activeTab === "guide" && (
         <div className="space-y-6">
-          <div>
-            <h2 className="text-title-1 text-foreground">Complete App Guide</h2>
-            <p className="text-body-5 text-muted-foreground">Your comprehensive guide to mastering Life Compass and accelerating your personal growth journey</p>
+          <div className="text-center sm:text-left">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl text-foreground">Complete App Guide</h2>
+            <p className="text-sm sm:text-base text-muted-foreground mt-2">Your comprehensive guide to mastering Life Compass and accelerating your personal growth journey</p>
           </div>
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {guideSections.map((section) => (
               <GuideSection key={section.id} section={section} />
             ))}
@@ -1187,39 +1218,39 @@ const HelpAndResources = () => {
 
       {activeTab === "faq" && (
         <div className="space-y-6">
-          <div>
-            <h2 className="text-title-1 text-foreground">Frequently Asked Questions</h2>
-            <p className="text-body-5 text-muted-foreground">Find answers to common questions about Life Compass</p>
+          <div className="text-center sm:text-left">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl text-foreground">Frequently Asked Questions</h2>
+            <p className="text-sm sm:text-base text-muted-foreground mt-2">Find answers to common questions about Life Compass</p>
           </div>
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {faqCategories.map((category) => (
               <FAQCategorySection key={category.id} category={category} />
             ))}
           </div>
 
           {/* Still Have Questions Section */}
-          <div className="mt-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-8 text-white">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="text-4xl">❓</div>
-              <h2 className="text-2xl font-bold">Still Have Questions?</h2>
+          <div className="mt-8 sm:mt-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-4 sm:p-6 lg:p-8 text-white">
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 mb-4">
+              <div className="text-3xl sm:text-4xl">❓</div>
+              <h2 className="text-xl sm:text-2xl font-bold text-center sm:text-left">Still Have Questions?</h2>
             </div>
-            <p className="text-lg mb-6 opacity-90">
+            <p className="text-base sm:text-lg mb-6 opacity-90 text-center sm:text-left">
               Can't find what you're looking for? Our support team is here to help.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors text-left">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <button className="bg-white text-blue-600 px-4 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors text-left">
                 📧 Email Support
                 <div className="text-sm opacity-75">support@lifecompass.com</div>
               </button>
-              <button className="bg-white/20 border-2 border-white px-6 py-3 rounded-lg font-semibold hover:bg-white/30 transition-colors text-left">
+              <button className="bg-white/20 border-2 border-white px-4 py-3 rounded-lg font-semibold hover:bg-white/30 transition-colors text-left">
                 💬 Live Chat
                 <div className="text-sm opacity-75">Chat with us Monday-Friday 9am-5pm EST</div>
               </button>
-              <button className="bg-white/20 border-2 border-white px-6 py-3 rounded-lg font-semibold hover:bg-white/30 transition-colors text-left">
+              <button className="bg-white/20 border-2 border-white px-4 py-3 rounded-lg font-semibold hover:bg-white/30 transition-colors text-left">
                 🎯 Schedule a Call
                 <div className="text-sm opacity-75">Book a 30-min consultation with our team</div>
               </button>
-              <button className="bg-white/20 border-2 border-white px-6 py-3 rounded-lg font-semibold hover:bg-white/30 transition-colors text-left">
+              <button className="bg-white/20 border-2 border-white px-4 py-3 rounded-lg font-semibold hover:bg-white/30 transition-colors text-left">
                 🤝 Community Forum
                 <div className="text-sm opacity-75">Connect with other Life Compass users</div>
               </button>
