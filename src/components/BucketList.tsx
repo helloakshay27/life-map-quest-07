@@ -121,7 +121,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
   React.useEffect(() => {
     const fetchDreams = async () => {
       try {
-        const response = await fetch("https://life-api.lockated.com/dreams", {
+        const response = await fetch("https://api.lifecompass.lockated.com/dreams", {
           headers: getAuthHeaders(),
         });
         if (!response.ok) throw new Error("Failed to fetch dreams");
@@ -200,7 +200,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
               : "achieved";
 
       const response = await fetch(
-        `https://life-api.lockated.com/dreams/${itemId}/change_status`,
+        `https://api.lifecompass.lockated.com/dreams/${itemId}/change_status`,
         {
           method: "PATCH",
           headers: getAuthHeaders(),
@@ -245,7 +245,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
                 : "achieved";
 
         const response = await fetch(
-          `https://life-api.lockated.com/dreams/${itemToSave.id}/change_status`,
+          `https://api.lifecompass.lockated.com/dreams/${itemToSave.id}/change_status`,
           {
             method: "PATCH",
             headers: getAuthHeaders(),
@@ -277,7 +277,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
           status: apiStatus,
         };
 
-        const response = await fetch("https://life-api.lockated.com/dreams", {
+        const response = await fetch("https://api.lifecompass.lockated.com/dreams", {
           method: "POST",
           headers: getAuthHeaders(),
           body: JSON.stringify(payload),

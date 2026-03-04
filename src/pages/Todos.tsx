@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import CreateToDoDialog, { TodoItem } from "@/components/journal/CreateToDoDialog";
 
-const API_BASE_URL = "https://life-api.lockated.com";
+const API_BASE_URL = "https://api.lifecompass.lockated.com";
 
 const getAuthHeaders = (): Record<string, string> => {
   const token = localStorage.getItem("auth_token");

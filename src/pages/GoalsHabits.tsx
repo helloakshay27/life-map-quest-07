@@ -20,28 +20,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-
-const API_BASE_URL = "https://life-api.lockated.com";
-
-const getAuthHeaders = (): Record<string, string> => {
-  const token = localStorage.getItem("auth_token");
-  return token
-    ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
-    : { "Content-Type": "application/json" };
-};
-
-const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      ...getAuthHeaders(),
-      ...options.headers,
-    },
-  });
-
-  return response;
-};
-
+import { apiRequest } from "@/config/api";
+const API_BASE_URL = "https://api.lifecompass.lockated.com";
 interface Goal {
   id: string;
   title: string;
@@ -139,26 +119,13 @@ const GoalsHabits = () => {
   useEffect(() => {
     const loadGoals = async () => {
       try {
-        // Load from localStorage first
+        // Load from localStorage only
         const savedGoals = localStorage.getItem("user_goals");
         if (savedGoals) {
           setGoals(JSON.parse(savedGoals));
-          return;
-        }
-
-        // Try API call
-        try {
-          const response = await fetchWithAuth("/goals", { method: "GET" });
-          if (response.ok) {
-            const data = await response.json();
-            setGoals(data);
-            localStorage.setItem("user_goals", JSON.stringify(data));
-          }
-        } catch (apiError) {
-          console.log("API unavailable, using local storage for goals");
         }
       } catch (error) {
-        console.log("Using local storage for goals");
+        console.log("Error loading goals from storage");
       }
     };
 
@@ -168,88 +135,44 @@ const GoalsHabits = () => {
   // Load beliefs, patterns, affirmations, habits
   useEffect(() => {
     const loadData = async () => {
-      // Load Beliefs
+      // Load Beliefs (localStorage only)
       try {
         const savedBeliefs = localStorage.getItem("user_beliefs");
         if (savedBeliefs) {
           setBeliefs(JSON.parse(savedBeliefs));
-        } else {
-          try {
-            const response = await fetchWithAuth("/beliefs", { method: "GET" });
-            if (response.ok) {
-              const data = await response.json();
-              setBeliefs(data);
-              localStorage.setItem("user_beliefs", JSON.stringify(data));
-            }
-          } catch (e) {
-            console.log("API unavailable for beliefs");
-          }
         }
       } catch (e) {
-        console.log("Using local storage for beliefs");
+        console.log("Error loading beliefs from storage");
       }
 
-      // Load Patterns
+      // Load Patterns (localStorage only)
       try {
         const savedPatterns = localStorage.getItem("user_patterns");
         if (savedPatterns) {
           setPatterns(JSON.parse(savedPatterns));
-        } else {
-          try {
-            const response = await fetchWithAuth("/patterns", { method: "GET" });
-            if (response.ok) {
-              const data = await response.json();
-              setPatterns(data);
-              localStorage.setItem("user_patterns", JSON.stringify(data));
-            }
-          } catch (e) {
-            console.log("API unavailable for patterns");
-          }
         }
       } catch (e) {
-        console.log("Using local storage for patterns");
+        console.log("Error loading patterns from storage");
       }
 
-      // Load Affirmations
+      // Load Affirmations (localStorage only)
       try {
         const savedAffirmations = localStorage.getItem("user_affirmations");
         if (savedAffirmations) {
           setAffirmations(JSON.parse(savedAffirmations));
-        } else {
-          try {
-            const response = await fetchWithAuth("/affirmations", { method: "GET" });
-            if (response.ok) {
-              const data = await response.json();
-              setAffirmations(data);
-              localStorage.setItem("user_affirmations", JSON.stringify(data));
-            }
-          } catch (e) {
-            console.log("API unavailable for affirmations");
-          }
         }
       } catch (e) {
-        console.log("Using local storage for affirmations");
+        console.log("Error loading affirmations from storage");
       }
 
-      // Load Habits
+      // Load Habits (localStorage only)
       try {
         const savedHabits = localStorage.getItem("user_habits");
         if (savedHabits) {
           setHabits(JSON.parse(savedHabits));
-        } else {
-          try {
-            const response = await fetchWithAuth("/habits", { method: "GET" });
-            if (response.ok) {
-              const data = await response.json();
-              setHabits(data);
-              localStorage.setItem("user_habits", JSON.stringify(data));
-            }
-          } catch (e) {
-            console.log("API unavailable for habits");
-          }
         }
       } catch (e) {
-        console.log("Using local storage for habits");
+        console.log("Error loading habits from storage");
       }
     };
 
@@ -268,20 +191,7 @@ const GoalsHabits = () => {
     };
 
     try {
-      // Try API first
-      try {
-        const response = await fetchWithAuth("/goals", {
-          method: "POST",
-          body: JSON.stringify(newGoal),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          newGoal.id = data.id || newGoal.id;
-        }
-      } catch (apiError) {
-        console.log("API unavailable, saving locally");
-      }
-
+      // Save to localStorage only
       setGoals((prev) => {
         const updated = [...prev, newGoal];
         localStorage.setItem("user_goals", JSON.stringify(updated));
@@ -304,13 +214,7 @@ const GoalsHabits = () => {
 
   const handleDeleteGoal = async (id: string) => {
     try {
-      // Try API first
-      try {
-        await fetchWithAuth(`/goals/${id}`, { method: "DELETE" });
-      } catch (apiError) {
-        console.log("API unavailable, deleting locally");
-      }
-
+      // Delete from localStorage only
       setGoals((prev) => {
         const updated = prev.filter((goal) => goal.id !== id);
         localStorage.setItem("user_goals", JSON.stringify(updated));
@@ -334,19 +238,7 @@ const GoalsHabits = () => {
     };
 
     try {
-      try {
-        const response = await fetchWithAuth("/beliefs", {
-          method: "POST",
-          body: JSON.stringify(newBelief),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          newBelief.id = data.id || newBelief.id;
-        }
-      } catch (apiError) {
-        console.log("API unavailable, saving locally");
-      }
-
+      // Save to localStorage only
       setBeliefs((prev) => {
         const updated = [...prev, newBelief];
         localStorage.setItem("user_beliefs", JSON.stringify(updated));
@@ -365,12 +257,7 @@ const GoalsHabits = () => {
 
   const handleDeleteBelief = async (id: string) => {
     try {
-      try {
-        await fetchWithAuth(`/beliefs/${id}`, { method: "DELETE" });
-      } catch (apiError) {
-        console.log("API unavailable, deleting locally");
-      }
-
+      // Delete from localStorage only
       setBeliefs((prev) => {
         const updated = prev.filter((b) => b.id !== id);
         localStorage.setItem("user_beliefs", JSON.stringify(updated));
@@ -394,19 +281,7 @@ const GoalsHabits = () => {
     };
 
     try {
-      try {
-        const response = await fetchWithAuth("/patterns", {
-          method: "POST",
-          body: JSON.stringify(newPattern),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          newPattern.id = data.id || newPattern.id;
-        }
-      } catch (apiError) {
-        console.log("API unavailable, saving locally");
-      }
-
+      // Save to localStorage only
       setPatterns((prev) => {
         const updated = [...prev, newPattern];
         localStorage.setItem("user_patterns", JSON.stringify(updated));
@@ -425,12 +300,7 @@ const GoalsHabits = () => {
 
   const handleDeletePattern = async (id: string) => {
     try {
-      try {
-        await fetchWithAuth(`/patterns/${id}`, { method: "DELETE" });
-      } catch (apiError) {
-        console.log("API unavailable, deleting locally");
-      }
-
+      // Delete from localStorage only
       setPatterns((prev) => {
         const updated = prev.filter((p) => p.id !== id);
         localStorage.setItem("user_patterns", JSON.stringify(updated));
@@ -453,19 +323,7 @@ const GoalsHabits = () => {
     };
 
     try {
-      try {
-        const response = await fetchWithAuth("/affirmations", {
-          method: "POST",
-          body: JSON.stringify(newAffirmation),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          newAffirmation.id = data.id || newAffirmation.id;
-        }
-      } catch (apiError) {
-        console.log("API unavailable, saving locally");
-      }
-
+      // Save to localStorage only
       setAffirmations((prev) => {
         const updated = [...prev, newAffirmation];
         localStorage.setItem("user_affirmations", JSON.stringify(updated));
@@ -483,12 +341,7 @@ const GoalsHabits = () => {
 
   const handleDeleteAffirmation = async (id: string) => {
     try {
-      try {
-        await fetchWithAuth(`/affirmations/${id}`, { method: "DELETE" });
-      } catch (apiError) {
-        console.log("API unavailable, deleting locally");
-      }
-
+      // Delete from localStorage only
       setAffirmations((prev) => {
         const updated = prev.filter((a) => a.id !== id);
         localStorage.setItem("user_affirmations", JSON.stringify(updated));
@@ -515,19 +368,7 @@ const GoalsHabits = () => {
     };
 
     try {
-      try {
-        const response = await fetchWithAuth("/habits", {
-          method: "POST",
-          body: JSON.stringify(newHabit),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          newHabit.id = data.id || newHabit.id;
-        }
-      } catch (apiError) {
-        console.log("API unavailable, saving locally");
-      }
-
+      // Save to localStorage only
       setHabits((prev) => {
         const updated = [...prev, newHabit];
         localStorage.setItem("user_habits", JSON.stringify(updated));
@@ -549,12 +390,7 @@ const GoalsHabits = () => {
 
   const handleDeleteHabit = async (id: string) => {
     try {
-      try {
-        await fetchWithAuth(`/habits/${id}`, { method: "DELETE" });
-      } catch (apiError) {
-        console.log("API unavailable, deleting locally");
-      }
-
+      // Delete from localStorage only
       setHabits((prev) => {
         const updated = prev.filter((h) => h.id !== id);
         localStorage.setItem("user_habits", JSON.stringify(updated));

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Zap, User, Plus, Sparkles, Target, Save, Trash2 } from "lucide-react";
 
-const API_BASE_URL = "https://life-api.lockated.com";
+const API_BASE_URL = "https://api.lifecompass.lockated.com";
 
 function Tobe() {
   // --- STATE ---

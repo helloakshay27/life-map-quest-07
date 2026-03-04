@@ -71,7 +71,7 @@ export function AddDreamDialog({
           setIsLoadingDetails(true);
           try {
             const response = await fetch(
-              `https://life-api.lockated.com/dreams/${initialData.id}`,
+              `https://api.lifecompass.lockated.com/dreams/${initialData.id}`,
               { headers: getAuthHeaders() },
             );
             if (response.ok) {
@@ -126,7 +126,7 @@ export function AddDreamDialog({
     setIsAddingNote(true);
     try {
       const response = await fetch(
-        `https://life-api.lockated.com/dreams/${initialData.id}/add_note`,
+        `https://api.lifecompass.lockated.com/dreams/${initialData.id}/add_note`,
         {
           method: "POST",
           headers: getAuthHeaders(),
@@ -153,7 +153,7 @@ export function AddDreamDialog({
     setIsDeletingNoteId(noteId);
     try {
       const response = await fetch(
-        `https://life-api.lockated.com/dreams/${initialData.id}/notes/${noteId}`,
+        `https://api.lifecompass.lockated.com/dreams/${initialData.id}/notes/${noteId}`,
         {
           method: "DELETE",
           headers: getAuthHeaders(),

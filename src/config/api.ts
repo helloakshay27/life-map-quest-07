@@ -10,20 +10,26 @@ export const getAuthHeaders = (): Record<string, string> => {
 };
 
 export const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
-  const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      ...getAuthHeaders(),
-      ...options.headers,
-    },
-  });
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        ...getAuthHeaders(),
+        ...options.headers,
+      },
+    });
 
-  if (response.status === 401) {
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("user");
-    window.location.href = "/login";
-    throw new Error("Unauthorized");
+    if (response.status === 401) {
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
+      throw new Error("Unauthorized");
+    }
+
+    return response;
+  } catch (error) {
+    // Handle network errors gracefully
+    console.warn(`API request to ${endpoint} failed:`, error);
+    throw error;
   }
-
-  return response;
 };
