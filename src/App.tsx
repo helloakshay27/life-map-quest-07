@@ -42,7 +42,6 @@ const App = () => (
               <Route path="/vision-values" element={<VisionAndValues />} />
               <Route path="/bucket-list" element={<BucketList />} />
               <Route path="/goals-habits" element={<PlaceholderPage />} />
-              <Route path="/todos" element={<PlaceholderPage />} />
               <Route path="/people" element={<People />} />
               <Route path="/kra" element={<KraSelfEvaluation />} />
               <Route path="/analytics" element={<Analytics />} />

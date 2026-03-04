@@ -1,32 +1,47 @@
-import React, { useState } from 'react';
-import { Info, Plus } from 'lucide-react';
+import React from "react";
+import { Info, Plus } from "lucide-react";
 
- function WeeklyReflection() {
-  // State for the form fields
-  const [challenge, setChallenge] = useState('');
-  const [gratitude, setGratitude] = useState('');
-  const [insight, setInsight] = useState('');
-  const [balanceRating, setBalanceRating] = useState(3);
+interface WeeklyReflectionProps {
+  challenge: string;
+  setChallenge: (val: string) => void;
+  gratitude: string;
+  setGratitude: (val: string) => void;
+  insight: string;
+  setInsight: (val: string) => void;
+  balanceRating: number;
+  setBalanceRating: (val: number) => void;
+}
 
+function WeeklyReflection({
+  challenge,
+  setChallenge,
+  gratitude,
+  setGratitude,
+  insight,
+  setInsight,
+  balanceRating,
+  setBalanceRating,
+}: WeeklyReflectionProps) {
   // Auto-Calculated Life Balance placeholder data matching the video
   const lifeBalanceStats = [
-    { id: 1, emoji: '💼', score: 0 },
-    { id: 2, emoji: '🤝', score: 0 },
-    { id: 3, emoji: '❤️', score: 0 },
-    { id: 4, emoji: '⚖️', score: 0 },
-    { id: 5, emoji: '🔥', score: 0 },
+    { id: 1, emoji: "💼", score: 0 },
+    { id: 2, emoji: "🤝", score: 0 },
+    { id: 3, emoji: "❤️", score: 0 },
+    { id: 4, emoji: "⚖️", score: 0 },
+    { id: 5, emoji: "🔥", score: 0 },
   ];
 
   return (
     <div className="max-w-5xl  p-6 md:p-8 font-sans space-y-10 bg-[#fdfbf9] min-h-screen">
-      
       {/* =========================================
           1. WINS OF PAST WEEK
       ========================================= */}
       <section>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-gray-900">Wins of Past Week</h2>
+            <h2 className="text-lg font-bold text-gray-900">
+              Wins of Past Week
+            </h2>
             <Info className="w-4 h-4 text-gray-400 cursor-help" />
           </div>
           <button className="flex items-center gap-1 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors">
@@ -36,7 +51,9 @@ import { Info, Plus } from 'lucide-react';
 
         {/* Dashed Empty State Box */}
         <div className="border-y-2 border-dashed border-orange-200/60 bg-[#fefdfb] py-10 flex flex-col items-center justify-center rounded-sm">
-          <p className="text-[15px] font-medium text-gray-800 mb-3">No wins added yet</p>
+          <p className="text-[15px] font-medium text-gray-800 mb-3">
+            No wins added yet
+          </p>
           <button className="flex items-center gap-2 bg-white border border-gray-200 shadow-sm px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
             <Plus className="w-4 h-4" /> Add Your First Win
           </button>
@@ -47,9 +64,12 @@ import { Info, Plus } from 'lucide-react';
           2. BIGGEST CHALLENGE & CAUSE
       ========================================= */}
       <section>
-        <h2 className="text-lg font-bold text-gray-900 mb-1">Biggest Challenge & Cause</h2>
+        <h2 className="text-lg font-bold text-gray-900 mb-1">
+          Biggest Challenge & Cause
+        </h2>
         <p className="text-[15px] text-gray-600 mb-3">
-          What was your biggest challenge this week, perhaps a recurring behavior, and what caused it?
+          What was your biggest challenge this week, perhaps a recurring
+          behavior, and what caused it?
         </p>
         <textarea
           value={challenge}
@@ -81,7 +101,8 @@ import { Info, Plus } from 'lucide-react';
         <div>
           <h2 className="text-lg font-bold text-gray-900 mb-1">Key Insight</h2>
           <p className="text-[15px] text-gray-600 mb-3 line-clamp-1">
-            You are the ultimate creator for everything that manifests in your... What were your insights this week?
+            You are the ultimate creator for everything that manifests in
+            your... What were your insights this week?
           </p>
           <textarea
             value={insight}
@@ -97,7 +118,9 @@ import { Info, Plus } from 'lucide-react';
       ========================================= */}
       <section>
         <div className="flex items-center gap-2 mb-6">
-          <h2 className="text-lg font-bold text-gray-900">Auto-Calculated Life Balance</h2>
+          <h2 className="text-lg font-bold text-gray-900">
+            Auto-Calculated Life Balance
+          </h2>
           <Info className="w-4 h-4 text-gray-400 cursor-help" />
         </div>
 
@@ -108,7 +131,9 @@ import { Info, Plus } from 'lucide-react';
               <div className="w-full h-14 bg-gray-200/70 rounded-xl mb-3"></div>
               <div className="flex flex-col items-center">
                 <span className="text-lg mb-0.5">{stat.emoji}</span>
-                <span className="text-sm font-bold text-gray-900">{stat.score}</span>
+                <span className="text-sm font-bold text-gray-900">
+                  {stat.score}
+                </span>
               </div>
             </div>
           ))}
@@ -116,12 +141,16 @@ import { Info, Plus } from 'lucide-react';
 
         {/* Slider Section */}
         <div>
-          <h3 className="text-[15px] font-bold text-gray-900 mb-4">Life Balance Rating</h3>
-          
+          <h3 className="text-[15px] font-bold text-gray-900 mb-4">
+            Life Balance Rating
+          </h3>
+
           <div className="px-1 relative">
-             <input 
-              type="range" 
-              min="1" max="5" step="0.1"
+            <input
+              type="range"
+              min="1"
+              max="5"
+              step="0.1"
               value={balanceRating}
               onChange={(e) => setBalanceRating(parseFloat(e.target.value))}
               className="w-full h-1.5 appearance-none rounded-full outline-none cursor-pointer
@@ -131,13 +160,12 @@ import { Info, Plus } from 'lucide-react';
                          [&::-webkit-slider-thumb]:border-gray-400 [&::-webkit-slider-thumb]:shadow-md"
               style={{
                 // Custom gradient to fill the track with black up to the current value
-                background: `linear-gradient(to right, #111827 0%, #111827 ${((balanceRating - 1) / 4) * 100}%, #e5e7eb ${((balanceRating - 1) / 4) * 100}%, #e5e7eb 100%)`
+                background: `linear-gradient(to right, #111827 0%, #111827 ${((balanceRating - 1) / 4) * 100}%, #e5e7eb ${((balanceRating - 1) / 4) * 100}%, #e5e7eb 100%)`,
               }}
             />
           </div>
         </div>
       </section>
-
     </div>
   );
 }
