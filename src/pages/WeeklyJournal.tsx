@@ -26,7 +26,7 @@ import FocusAndBoundaries from "@/components/FocusAndBoundaries";
 import ReviewToDos from "@/components/ReviewToDos";
 import BucketListProgress from "@/components/BucketListProgress";
 
-const API_BASE_URL = "http://localhost:3000";
+const API_BASE_URL = "https://life-api.lockated.com";
 
 const WeeklyJournal = () => {
   const navigate = useNavigate();
@@ -74,6 +74,7 @@ const WeeklyJournal = () => {
       weekly_story?: string;
       mission_connection?: string;
       biggest_challenge?: string;
+      challenge_cause?: string;
       life_balance_rating?: number;
       wins?: {
         day: string;
@@ -100,6 +101,9 @@ const WeeklyJournal = () => {
     subDays(new Date(), 4), // 4 days ago
   ];
 
+  // ==========================================
+  // 🚨 FIXED SAVE PLAN LOGIC
+  // ==========================================
   const handleSavePlan = async () => {
     setIsSaving(true);
     try {
@@ -113,7 +117,8 @@ const WeeklyJournal = () => {
       );
 
       const payload = {
-        journal: {
+        user_journal: {
+          // <-- FIXED KEY (was "journal")
           user_id: user?.id ? parseInt(user.id, 10) : 1,
           journal_type: "weekly",
           start_date: startDate,
@@ -122,7 +127,7 @@ const WeeklyJournal = () => {
           gratitude_note: gratitude,
           alignment_score: balanceRating,
           data: {
-            weekly_story: habitsText, // Mapping narrative blocks
+            weekly_story: habitsText,
             wins: [],
             biggest_challenge: challenge,
             challenge_cause: challenge,
@@ -147,11 +152,23 @@ const WeeklyJournal = () => {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("Failed to save weekly journal");
+      // 🚨 ADVANCED LOGGING TRIGGER
+      if (!res.ok) {
+        const errorData = await res.text();
+        console.error("🚨 BACKEND REJECTED THE DATA:", errorData);
+        console.error("🚨 PAYLOAD SENT WAS:", JSON.stringify(payload, null, 2));
+        throw new Error(`Failed to save weekly journal: ${res.status}`);
+      }
 
       const responseData = await res.json();
+
+      // Handle different possible response structures
       if (responseData.journal?.id) {
         setJournalId(responseData.journal.id);
+      } else if (responseData.user_journal?.id) {
+        setJournalId(responseData.user_journal.id);
+      } else if (responseData.id) {
+        setJournalId(responseData.id);
       }
 
       toast({
@@ -162,7 +179,8 @@ const WeeklyJournal = () => {
       console.error("Save weekly journal error:", error);
       toast({
         title: "Error",
-        description: "There was a problem saving your weekly plan.",
+        description:
+          "Check the console (F12) to see why the API rejected the data.",
         variant: "destructive",
       });
     } finally {
@@ -189,7 +207,6 @@ const WeeklyJournal = () => {
           if (res.ok) {
             const data = await res.json();
 
-            // Handle both object structure (Friend's logic) and array structure (Your logic)
             if (Array.isArray(data) || data.insights || data.data) {
               const rawInsights = Array.isArray(data)
                 ? data
@@ -206,7 +223,7 @@ const WeeklyJournal = () => {
               );
               setInsights(formattedInsights);
             } else {
-              setInsightsData(data); // Using Friend's object structure
+              setInsightsData(data);
             }
           } else {
             console.error("Failed to fetch insights");
@@ -220,7 +237,7 @@ const WeeklyJournal = () => {
 
       fetchInsights();
     }
-  }, [activeTab, token]); // Jab bhi activeTab change hoga, ye run karega
+  }, [activeTab, token]);
 
   useEffect(() => {
     if (activeTab === "past") {

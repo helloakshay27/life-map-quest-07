@@ -19,7 +19,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import WeekStrip from "@/components/journal/WeekStrip";
 import AddAchievementDialog from "@/components/journal/AddAchievementDialog";
-import BucketListProgress from "@/components/BucketListProgress"; // <-- IMPORTED HERE
+import BucketListProgress from "@/components/BucketListProgress";
 import DailyAffirmation from "@/components/DailyAffirmation";
 import LettersSection from "@/components/LettersSection";
 
@@ -180,7 +180,7 @@ const DailyJournal = () => {
           );
           setSelectedMoods(data.journal.mood_tags || []);
           setAchievements(
-            data.journal.accomplishments?.map((a) => ({
+            data.journal.accomplishments?.map((a: any) => ({
               title: a.title,
               points: a.points || 10,
             })) || [],
@@ -317,7 +317,7 @@ const DailyJournal = () => {
   };
 
   const handleDeletePastJournal = async (id: number, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent opening the modal
+    e.stopPropagation();
     if (!window.confirm("Are you sure you want to delete this journal entry?"))
       return;
 
@@ -339,10 +339,8 @@ const DailyJournal = () => {
         description: "Journal entry removed successfully.",
       });
 
-      // Update local state by filtering out the deleted journal
       setPastJournals((prev) => prev.filter((j) => j.id !== id));
 
-      // If we just deleted the entry we currently have selected for editing, clear it
       if (journalId === id) {
         setJournalId(null);
       }
@@ -383,11 +381,15 @@ const DailyJournal = () => {
     setPriorities(priorities.filter((_, i) => i !== index));
   };
 
+  // ==========================================
+  // 🚨 FIXED SAVE ENTRY LOGIC
+  // ==========================================
   const handleSaveEntry = async () => {
     setIsSaving(true);
     try {
       const payload = {
-        journal: {
+        user_journal: {
+          // FIXED KEY HERE
           user_id: user?.id ? parseInt(user.id, 10) : 1,
           journal_type: "daily",
           start_date: format(selectedDate, "yyyy-MM-dd"),
@@ -420,12 +422,21 @@ const DailyJournal = () => {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save journal");
+        const errorData = await response.text();
+        console.error("🚨 BACKEND REJECTED THE DATA:", errorData);
+        console.error("🚨 PAYLOAD SENT WAS:", JSON.stringify(payload, null, 2));
+        throw new Error(`Failed to save journal: ${response.status}`);
       }
 
       const responseData = await response.json();
+
+      // Handle different possible response structures
       if (responseData.journal?.id) {
         setJournalId(responseData.journal.id);
+      } else if (responseData.user_journal?.id) {
+        setJournalId(responseData.user_journal.id);
+      } else if (responseData.id) {
+        setJournalId(responseData.id);
       }
 
       toast({
@@ -433,7 +444,7 @@ const DailyJournal = () => {
         description: `Entry for ${format(selectedDate, "MMMM d, yyyy")} saved successfully.`,
       });
     } catch (error) {
-      console.error(error);
+      console.error("Save Entry Error:", error);
       toast({
         title: "Error saving entry",
         description: "There was a problem saving your journal entry.",
@@ -823,7 +834,7 @@ const DailyJournal = () => {
               {/* Daily Affirmation */}
               <DailyAffirmation />
 
-              {/* 🟢 REPLACED WITH IMPORTED COMPONENT */}
+              {/* Bucket List */}
               <BucketListProgress />
 
               {/* Empty People Section */}
