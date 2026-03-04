@@ -48,7 +48,7 @@ export function AppHeader() {
   
 const handleLogout = async () => {
     try {
-      await fetch("https://api.lifecompass.lockated.com/logout", { 
+      await fetch("https://life-api.lockated.com/logout", { 
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",

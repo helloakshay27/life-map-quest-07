@@ -3,7 +3,7 @@ import { Heart, Plus, X, Trash2 } from "lucide-react";
 
 // 👇 Yahan par ab localhost ki jagah .env se aayega
 // 👇 .env ko hata kar humne seedha live URL fix kar diya hai
-const API_BASE_URL = "https://api.lifecompass.lockated.com";
+const API_BASE_URL = "https://life-api.lockated.com";
 
 function Values() {
   // --- STATE ---

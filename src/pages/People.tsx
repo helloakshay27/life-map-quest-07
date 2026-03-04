@@ -14,7 +14,7 @@ import {
 import MyProfileModal from "@/components/MyProfileModal";
 import AddPersonModal from "@/components/AddPersonModal";
 
-const API_BASE_URL = "https://api.lifecompass.lockated.com";
+const API_BASE_URL = "https://life-api.lockated.com";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

@@ -5,7 +5,7 @@ import {
   Trash2, Plus, Edit2, X 
 } from "lucide-react";
 
-const API_BASE_URL = "https://api.lifecompass.lockated.com";
+const API_BASE_URL = "https://life-api.lockated.com";
 
 interface Affirmation {
   id: number;

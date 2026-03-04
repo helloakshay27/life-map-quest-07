@@ -11,8 +11,8 @@ import {
 import LifeBalanceOverview from "@/components/LifeBalanceOverview";
 import ValuesInAction from "@/components/ValuesData";
 
-const ANALYTICS_URL = "https://api.lifecompass.lockated.com/analytics";
-const VALUES_URL = "https://api.lifecompass.lockated.com/core_values";
+const ANALYTICS_URL = "https://life-api.lockated.com/analytics";
+const VALUES_URL = "https://life-api.lockated.com/core_values";
 
 const Analytics = () => {
   const [metrics, setMetrics] = useState<any>(null);

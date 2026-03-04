@@ -155,7 +155,7 @@ const DailyJournal = () => {
       try {
         const d = format(selectedDate, "yyyy-MM-dd");
         const res = await fetch(
-          `https://api.lifecompass.lockated.com/dashboard/daily?date=${d}`,
+          `https://life-api.lockated.com/dashboard/daily?date=${d}`,
           {
             headers: {
               Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
@@ -220,7 +220,7 @@ const DailyJournal = () => {
         setIsLoadingPast(true);
         try {
           const res = await fetch(
-            "https://api.lifecompass.lockated.com/user_journals",
+            "https://life-api.lockated.com/user_journals",
             {
               headers: {
                 Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
@@ -245,7 +245,7 @@ const DailyJournal = () => {
         setIsLoadingLetters(true);
         try {
           const res = await fetch(
-            "https://api.lifecompass.lockated.com/user_letters",
+            "https://life-api.lockated.com/user_letters",
             {
               headers: {
                 Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
@@ -270,7 +270,7 @@ const DailyJournal = () => {
         setIsLoadingInsights(true);
         try {
           const res = await fetch(
-            "https://api.lifecompass.lockated.com/user_journals/daily_journals_insights",
+            "https://life-api.lockated.com/user_journals/daily_journals_insights",
             {
               headers: {
                 Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
@@ -295,7 +295,7 @@ const DailyJournal = () => {
     setSelectedPastJournal(null);
     try {
       const res = await fetch(
-        `https://api.lifecompass.lockated.com/user_journals/${id}`,
+        `https://life-api.lockated.com/user_journals/${id}`,
         {
           headers: {
             Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
@@ -323,7 +323,7 @@ const DailyJournal = () => {
 
     try {
       const res = await fetch(
-        `https://api.lifecompass.lockated.com/user_journals/${id}`,
+        `https://life-api.lockated.com/user_journals/${id}`,
         {
           method: "DELETE",
           headers: {
@@ -406,8 +406,8 @@ const DailyJournal = () => {
       };
 
       const url = journalId
-        ? `https://api.lifecompass.lockated.com/user_journals/${journalId}`
-        : "https://api.lifecompass.lockated.com/user_journals";
+        ? `https://life-api.lockated.com/user_journals/${journalId}`
+        : "https://life-api.lockated.com/user_journals";
       const method = journalId ? "PUT" : "POST";
 
       const response = await fetch(url, {
@@ -458,7 +458,7 @@ const DailyJournal = () => {
       };
 
       const response = await fetch(
-        "https://api.lifecompass.lockated.com/user_letters",
+        "https://life-api.lockated.com/user_letters",
         {
           method: "POST",
           headers: {
@@ -502,7 +502,7 @@ const DailyJournal = () => {
 
     try {
       const response = await fetch(
-        `https://api.lifecompass.lockated.com/user_letters/${id}`,
+        `https://life-api.lockated.com/user_letters/${id}`,
         {
           method: "DELETE",
           headers: {

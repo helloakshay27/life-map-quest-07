@@ -80,7 +80,7 @@ const Dashboard = () => {
     const fetchSummary = async () => {
       try {
         const res = await fetch(
-          "https://api.lifecompass.lockated.com/dashboard/summary",
+          "https://life-api.lockated.com/dashboard/summary",
           {
             headers: {
               Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
@@ -102,7 +102,7 @@ const Dashboard = () => {
     const fetchInsights = async () => {
       try {
         const res = await fetch(
-          "https://api.lifecompass.lockated.com/dashboard/insights",
+          "https://life-api.lockated.com/dashboard/insights",
           {
             headers: {
               Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
@@ -131,7 +131,7 @@ const Dashboard = () => {
     const fetchPreview = async () => {
       try {
         const res = await fetch(
-          "https://api.lifecompass.lockated.com/dashboard/preview",
+          "https://life-api.lockated.com/dashboard/preview",
           {
             headers: {
               Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
