@@ -269,7 +269,7 @@ const WeeklyJournal = () => {
     setIsLoadingJournal(true);
     try {
       const res = await fetch(
-        `https://api.lifecompass.lockated.com/user_journals/${id}?journal_type=weekly`,
+        `https://life-api.lockated.com/user_journals/${id}?journal_type=weekly`,
         {
           headers: {
             Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
@@ -301,7 +301,7 @@ const WeeklyJournal = () => {
 
     try {
       const res = await fetch(
-        `https://api.lifecompass.lockated.com/user_journals/${id}`,
+        `https://life-api.lockated.com/user_journals/${id}`,
         {
           method: "DELETE",
           headers: {

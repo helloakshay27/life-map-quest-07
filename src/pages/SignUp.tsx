@@ -46,7 +46,7 @@ const SignUp = () => {
     setLoading(true);
     try {
       // Replace with your actual signup API endpoint
-      const response = await fetch("https://api.lifecompass.lockated.com/signup", {
+      const response = await fetch("https://life-api.lockated.com/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
 
-const API_BASE_URL = "https://api.lifecompass.lockated.com";
+const API_BASE_URL = "https://life-api.lockated.com";
 
 const getAuthHeaders = (): Record<string, string> => {
   const token = localStorage.getItem("auth_token");

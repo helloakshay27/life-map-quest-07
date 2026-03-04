@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { apiRequest } from "@/config/api";
-const API_BASE_URL = "https://api.lifecompass.lockated.com";
+const API_BASE_URL = "https://life-api.lockated.com";
 interface Goal {
   id: string;
   title: string;

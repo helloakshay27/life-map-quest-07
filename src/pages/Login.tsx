@@ -26,7 +26,7 @@ const Login = () => {
 
     setLoading(true);
     try {
-      const response = await fetch("https://api.lifecompass.lockated.com/login", {
+      const response = await fetch("https://life-api.lockated.com/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
