@@ -278,6 +278,10 @@ const Achievements = () => {
   const [badges,       setBadges]       = useState<Badge[]>(DEFAULT_BADGES);
   const [stats,        setStats]        = useState<AchievementStats>(DEFAULT_STATS);
   const [apiError,     setApiError]     = useState<ApiErrorType>(null);
+  const [activeTab,    setActiveTab]    = useState("earned");
+  const [requirementsLoading, setRequirementsLoading] = useState(false);
+  const [badgeRequirements, setBadgeRequirements] = useState(BADGE_REQUIREMENTS);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   // ── Core fetch (single endpoint, no wild guessing) ─────────────────────────
   const fetchAchievements = useCallback(async (silent = false) => {
@@ -374,6 +378,64 @@ const Achievements = () => {
     if (!silent) setIsLoading(false);
   }, []);
 
+  // ── Fetch Badge Requirements ──────────────────────────────────────────────
+  const fetchBadgeRequirements = useCallback(async () => {
+    console.log("[Achievements API] fetchBadgeRequirements called");
+    
+    const token = getToken();
+    if (!token) {
+      console.warn("[Achievements API] No auth token found for requirements fetch.");
+      // Still show default data if no token
+      setBadgeRequirements(BADGE_REQUIREMENTS);
+      return;
+    }
+
+    setRequirementsLoading(true);
+    console.log("[Achievements API] Fetching badge requirements from /achievements...");
+
+    // Use the main achievements endpoint which already works
+    const { ok, status, data } = await safeFetch("/achievements");
+
+    if (ok && data) {
+      const raw = data as Record<string, unknown>;
+      console.log("[Achievements API] Badge requirements response:", raw);
+
+      // Extract requirements array from response - check multiple possible locations
+      const requirementsList: Record<string, unknown>[] =
+        (Array.isArray(raw.requirements) ? raw.requirements : null) ??
+        (Array.isArray(raw.badge_requirements) ? raw.badge_requirements : null) ??
+        (Array.isArray(raw.how_to_earn) ? raw.how_to_earn : null) ??
+        [];
+
+      if (requirementsList.length > 0) {
+        // Map API response to our badge requirements format
+        const mappedRequirements = BADGE_REQUIREMENTS.map((localReq) => {
+          const apiReq = requirementsList.find(
+            (r) => String(r.id ?? r.badge_id ?? r.badge_number ?? "") === localReq.id
+          );
+          if (!apiReq) return localReq;
+
+          return {
+            ...localReq,
+            requirement: (apiReq.requirement ?? apiReq.description ?? localReq.requirement) as string,
+            description: (apiReq.hint ?? apiReq.details ?? localReq.description) as string,
+          };
+        });
+        setBadgeRequirements(mappedRequirements);
+        console.log("[Achievements API] Badge requirements updated from API");
+      } else {
+        console.log("[Achievements API] No requirements data in response, using defaults.");
+        setBadgeRequirements(BADGE_REQUIREMENTS);
+      }
+    } else {
+      console.warn(`[Achievements API] Failed to fetch requirements. Status: ${status}`);
+      // Use default data on error
+      setBadgeRequirements(BADGE_REQUIREMENTS);
+    }
+
+    setRequirementsLoading(false);
+  }, []);
+
   // ── Mount: show cache instantly, then hit API ─────────────────────────────
   useEffect(() => {
     try {
@@ -390,6 +452,16 @@ const Achievements = () => {
     fetchAchievements(false);
   }, [fetchAchievements]);
 
+  // ── Fetch requirements when 'how-to-earn' tab is clicked ──────────────────
+  useEffect(() => {
+    console.log("[Achievements] Active tab changed to:", activeTab);
+    if (activeTab === "how-to-earn" && !hasLoadedOnce) {
+      console.log("[Achievements] Triggering API call for badge requirements...");
+      setHasLoadedOnce(true);
+      fetchBadgeRequirements();
+    }
+  }, [activeTab, hasLoadedOnce, fetchBadgeRequirements]);
+
   // ── Refresh ───────────────────────────────────────────────────────────────
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -399,6 +471,12 @@ const Achievements = () => {
     if (apiError) toast.error("Could not refresh — check console for details.");
     else          toast.success("Badges refreshed!");
     setIsRefreshing(false);
+  };
+
+  // ── Handle tab change ─────────────────────────────────────────────────────
+  const handleTabChange = (value: string) => {
+    console.log("[Achievements] Tab change handler called with value:", value);
+    setActiveTab(value);
   };
 
   // ── Derived ───────────────────────────────────────────────────────────────
@@ -470,7 +548,7 @@ const Achievements = () => {
 
       {/* Tabs */}
       <Card className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-        <Tabs defaultValue="earned" className="space-y-4">
+        <Tabs defaultValue="earned" className="space-y-4" onValueChange={handleTabChange}>
           <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="earned"     className="flex-1 sm:flex-none text-sm">My Badges ({earnedBadges.length})</TabsTrigger>
             <TabsTrigger value="how-to-earn" className="flex-1 sm:flex-none text-sm">How to Earn</TabsTrigger>
@@ -499,8 +577,24 @@ const Achievements = () => {
               <h3 className="text-sm sm:text-base font-semibold text-foreground">How to Earn Badges</h3>
               <p className="text-xs sm:text-sm text-muted-foreground mt-1">Complete the following activities to unlock each badge.</p>
             </div>
+            {requirementsLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Card key={i} className="p-3 sm:p-4 border border-border">
+                    <div className="flex items-start gap-3">
+                      <Pulse className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex-shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <Pulse className="w-32 h-4" />
+                        <Pulse className="w-full h-3" />
+                        <Pulse className="w-3/4 h-3" />
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
             <div className="space-y-3">
-              {BADGE_REQUIREMENTS.map((b) => (
+              {badgeRequirements.map((b) => (
                 <Card key={b.id} className="p-3 sm:p-4 border border-border hover:border-primary/50 transition-colors">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 mt-0.5"><BadgeSVG id={b.id} locked={true} /></div>
@@ -522,6 +616,7 @@ const Achievements = () => {
                 </Card>
               ))}
             </div>
+            )}
           </TabsContent>
         </Tabs>
       </Card>
