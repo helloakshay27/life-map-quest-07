@@ -40,7 +40,7 @@ interface Goal {
 }
 interface Belief      { id: string; belief: string; origin?: string; evidence?: string; alternative: string; }
 interface Pattern     { id: string; name: string; trigger?: string; consequence?: string; alternative: string; }
-interface Affirmation { id: string; text: string; category?: string; linkedBelief?: string; }
+interface Affirmation { id: string; statement: string; priority?: number; }
 interface Habit       { id: string; name: string; description?: string; frequency: "daily" | "weekly" | "custom"; category?: string; time?: string; place?: string; startDate?: string; }
 interface DragState   { goalId: string; startX: number; startY: number; currentX: number; currentY: number; cardWidth: number; cardHeight: number; isDragging: boolean; }
 
@@ -84,9 +84,8 @@ const GoalsHabits = () => {
   const [patternAlternative, setPatternAlternative] = useState("");
 
   // Affirmation form
-  const [affirmationText,     setAffirmationText]     = useState("");
-  const [affirmationCategory, setAffirmationCategory] = useState("");
-  const [affirmationBelief,   setAffirmationBelief]   = useState("");
+  const [affirmationStatement, setAffirmationStatement] = useState("");
+  const [affirmationPriority,  setAffirmationPriority]  = useState(5);
 
   // Habit form
   const [habitName,        setHabitName]        = useState("");
@@ -378,45 +377,114 @@ const GoalsHabits = () => {
 
   // ─── AFFIRMATIONS CRUD ────────────────────────────────────────────────────
   const handleCreateAffirmation = async () => {
-    if (!affirmationText.trim()) return;
-    const payload = { text: affirmationText, category: affirmationCategory, linkedBelief: affirmationBelief };
-    const newAffirmation: Affirmation = { id: crypto.randomUUID(), ...payload };
+    if (!affirmationStatement.trim()) return;
+    const payload = { affirmation: { statement: affirmationStatement, priority: affirmationPriority } };
+    
+    console.log("Creating affirmation with payload:", JSON.stringify(payload));
+    
     try {
-      try {
-        const res = await fetchWithAuth("/affirmations", { method: "POST", body: JSON.stringify(payload) });
-        if (res.ok) {
-          const d = await res.json();
-          newAffirmation.id = d.id || d._id || d.data?.id || newAffirmation.id;
-          console.log("Affirmation created:", d);
-        } else {
-          try {
-            const errorText = await res.text();
-            console.error("Affirmations API error:", res.status, errorText);
-          } catch {
-            console.error("Affirmations API error:", res.status, res.statusText);
+      const res = await fetchWithAuth("/affirmations", { method: "POST", body: JSON.stringify(payload) });
+      console.log("Affirmation API response status:", res.status);
+      
+      if (res.ok) {
+        const d = await res.json();
+        console.log("Affirmation created successfully:", d);
+        
+        // Fetch updated list from server
+        try {
+          const listRes = await fetchWithAuth("/affirmations");
+          if (listRes.ok) {
+            const data = await listRes.json();
+            const list = Array.isArray(data) ? data : data.affirmations ?? data.data ?? [];
+            setAffirmations(list);
+            save("user_affirmations", list);
+            console.log("Affirmations list refreshed:", list);
           }
+        } catch (err) {
+          console.error("Failed to refresh affirmations list:", err);
         }
-      } catch (err) { console.error("Affirmations API unavailable:", err); }
-      setAffirmations(prev => { const u = [...prev, newAffirmation]; save("user_affirmations", u); return u; });
-    } catch (e) { console.error("Failed to create affirmation:", e); }
-    setAffirmationText(""); setAffirmationCategory(""); setAffirmationBelief(""); setIsAffirmationDialogOpen(false);
+        
+        setAffirmationStatement(""); 
+        setAffirmationPriority(5); 
+        setIsAffirmationDialogOpen(false);
+      } else {
+        try {
+          const errorText = await res.text();
+          console.error("Affirmations API error:", res.status, errorText);
+          alert(`Failed to create affirmation: ${res.status}`);
+        } catch {
+          console.error("Affirmations API error:", res.status, res.statusText);
+          alert(`Failed to create affirmation: ${res.status} ${res.statusText}`);
+        }
+      }
+    } catch (err) { 
+      console.error("Affirmations API request failed:", err);
+      alert("Failed to create affirmation. Please check your connection.");
+    }
+  };
+
+  const handleUpdateAffirmation = async (id: string, statement: string, priority: number) => {
+    const payload = { affirmation: { statement, priority } };
+    try {
+      const res = await fetchWithAuth(`/affirmations/${id}`, { method: "PUT", body: JSON.stringify(payload) });
+      if (res.ok) {
+        const d = await res.json();
+        console.log("Affirmation updated:", d);
+        setAffirmations(prev => {
+          const u = prev.map(a => a.id === id ? { ...a, statement, priority } : a);
+          save("user_affirmations", u);
+          return u;
+        });
+      } else {
+        try {
+          const errorText = await res.text();
+          console.error("Affirmations update API error:", res.status, errorText);
+        } catch {
+          console.error("Affirmations update API error:", res.status, res.statusText);
+        }
+      }
+    } catch (err) {
+      console.error("Affirmations update failed:", err);
+    }
   };
 
   const handleDeleteAffirmation = async (id: string) => {
+    console.log("Deleting affirmation with id:", id);
+    
     try {
-      try {
-        const res = await fetchWithAuth(`/affirmations/${id}`, { method: "DELETE" });
-        if (!res.ok) {
-          try {
-            const errorText = await res.text();
-            console.log("Affirmations delete API error:", res.status, errorText);
-          } catch {
-            console.log("Affirmations delete API error:", res.status, res.statusText);
+      const res = await fetchWithAuth(`/affirmations/${id}`, { method: "DELETE" });
+      console.log("Delete affirmation API response status:", res.status);
+      
+      if (res.ok) {
+        console.log("Affirmation deleted successfully");
+        
+        // Fetch updated list from server
+        try {
+          const listRes = await fetchWithAuth("/affirmations");
+          if (listRes.ok) {
+            const data = await listRes.json();
+            const list = Array.isArray(data) ? data : data.affirmations ?? data.data ?? [];
+            setAffirmations(list);
+            save("user_affirmations", list);
+            console.log("Affirmations list refreshed after delete:", list);
           }
+        } catch (err) {
+          console.error("Failed to refresh affirmations list:", err);
         }
-      } catch (err) { console.log("API unavailable, deleting locally", err); }
-      setAffirmations(prev => { const u = prev.filter(a => a.id !== id); save("user_affirmations", u); return u; });
-    } catch (e) { console.error("Failed to delete affirmation:", e); }
+      } else {
+        try {
+          const errorText = await res.text();
+          console.error("Affirmations delete API error:", res.status, errorText);
+          alert(`Failed to delete affirmation: ${res.status}`);
+        } catch {
+          console.error("Affirmations delete API error:", res.status, res.statusText);
+          alert(`Failed to delete affirmation: ${res.status} ${res.statusText}`);
+        }
+      }
+    } catch (err) { 
+      console.error("Affirmations delete request failed:", err);
+      alert("Failed to delete affirmation. Please check your connection.");
+    }
   };
 
   // ─── HABITS CRUD ──────────────────────────────────────────────────────────
@@ -729,7 +797,7 @@ const GoalsHabits = () => {
             <div className={`rounded-lg border-2 border-dashed border-gray-300 p-4 ${affirmations.length === 0 ? "flex flex-col items-center justify-center py-16" : ""}`}>
               {affirmations.length === 0
                 ? <><Sparkles className="mb-3 h-12 w-12 text-muted-foreground/30" /><p className="text-sm text-muted-foreground text-center">No affirmations yet.</p></>
-                : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">{affirmations.map(a => <Card key={a.id} className="p-3 sm:p-4 relative group bg-purple-50 border-purple-200"><p className="text-sm text-foreground pr-8 italic">"{a.text}"</p>{a.category && <p className="text-xs text-purple-600 mt-2">✨ {a.category}</p>}<DelBtn onClick={() => handleDeleteAffirmation(a.id)} /></Card>)}</div>
+                : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">{affirmations.map(a => <Card key={a.id} className="p-3 sm:p-4 relative group bg-purple-50 border-purple-200"><p className="text-sm text-foreground pr-8 italic">"{a.statement}"</p>{a.priority && <p className="text-xs text-purple-600 mt-2">⭐ Priority: {a.priority}</p>}<DelBtn onClick={() => handleDeleteAffirmation(a.id)} /></Card>)}</div>
               }
             </div>
           </div>
@@ -842,9 +910,8 @@ const GoalsHabits = () => {
         <DialogContent className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-xl sm:text-2xl">✨ Create Affirmation</DialogTitle><DialogDescription className="text-purple-600">Craft positive statements that empower you daily</DialogDescription></DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2"><Label>Affirmation *</Label><Textarea placeholder='"I am confident and capable"' rows={3} value={affirmationText} onChange={e => setAffirmationText(e.target.value)} /></div>
-            <div className="space-y-2"><Label>Category</Label><Select value={affirmationCategory} onValueChange={setAffirmationCategory}><SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger><SelectContent><SelectItem value="confidence">Confidence</SelectItem><SelectItem value="abundance">Abundance</SelectItem><SelectItem value="health">Health</SelectItem><SelectItem value="success">Success</SelectItem><SelectItem value="relationships">Relationships</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select></div>
-            <div className="space-y-2"><Label>Linked to Belief (Optional)</Label><Input placeholder="Which limiting belief does this counter?" value={affirmationBelief} onChange={e => setAffirmationBelief(e.target.value)} /></div>
+            <div className="space-y-2"><Label>Statement *</Label><Textarea placeholder='"I am confident and capable"' rows={3} value={affirmationStatement} onChange={e => setAffirmationStatement(e.target.value)} /></div>
+            <div className="space-y-2"><Label>Priority (1-10)</Label><Input type="number" min="1" max="10" placeholder="5" value={affirmationPriority} onChange={e => setAffirmationPriority(parseInt(e.target.value) || 5)} /></div>
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-4"><Button variant="outline" onClick={() => setIsAffirmationDialogOpen(false)}>Cancel</Button><Button className="bg-purple-500 hover:bg-purple-600 text-white" onClick={handleCreateAffirmation}>Add Affirmation</Button></div>
           </div>
         </DialogContent>
