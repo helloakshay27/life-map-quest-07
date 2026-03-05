@@ -282,13 +282,17 @@ const GoalsHabits = () => {
   // ─── LOAD BELIEFS ─────────────────────────────────────────────────────────
   useEffect(() => {
     const saved = localStorage.getItem("user_beliefs");
-    if (saved) { setBeliefs(JSON.parse(saved)); }
+    if (saved) {
+      setBeliefs(JSON.parse(saved));
+    }
   }, []);
 
   // ─── LOAD PATTERNS ────────────────────────────────────────────────────────
   useEffect(() => {
     const saved = localStorage.getItem("user_patterns");
-    if (saved) { setPatterns(JSON.parse(saved)); }
+    if (saved) {
+      setPatterns(JSON.parse(saved));
+    }
   }, []);
 
   // ─── LOAD AFFIRMATIONS ────────────────────────────────────────────────────
@@ -404,27 +408,34 @@ const GoalsHabits = () => {
   };
 
   const handleDeleteGoal = async (id: string) => {
+    // Optimistic removal
+    const removed = goals.find((g) => g.id === id);
+    setGoals((prev) => {
+      const u = prev.filter((g) => g.id !== id);
+      save("user_goals", u);
+      return u;
+    });
+
     try {
-      try {
-        const res = await fetchWithAuth(`/goals/${id}`, { method: "DELETE" });
-        if (!res.ok) {
-          try {
-            const errorText = await res.text();
-            console.log("Goals delete API error:", res.status, errorText);
-          } catch {
-            console.log("Goals delete API error:", res.status, res.statusText);
-          }
-        }
-      } catch (err) {
-        console.log("API unavailable, deleting locally", err);
+      const res = await fetchWithAuth(`/goals/${id}`, { method: "DELETE" });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("DELETE /goals failed:", res.status, errText);
+        throw new Error(`Server error: ${res.status}`);
       }
-      setGoals((prev) => {
-        const u = prev.filter((g) => g.id !== id);
-        save("user_goals", u);
-        return u;
-      });
-    } catch (e) {
-      console.error("Failed to delete goal:", e);
+      // Success — API returns { message: "Goal deleted successfully" }
+      console.log("Goal deleted successfully");
+    } catch (error) {
+      console.error("Failed to delete goal:", error);
+      // Roll back — restore the removed goal
+      if (removed) {
+        setGoals((prev) => {
+          const u = [...prev, removed];
+          save("user_goals", u);
+          return u;
+        });
+      }
     }
   };
 
