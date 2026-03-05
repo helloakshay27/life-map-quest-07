@@ -1,43 +1,84 @@
 import React from "react";
 
-// ==========================================
-// MAIN COMPONENT
-// ==========================================
+// Dost ka banaya hua TypeScript Interface (thoda update kiya gaya tumhare checks support karne ke liye)
+interface Submission {
+  id?: number;
+  name?: string;
+  userName?: string;
+  time?: string;
+  submittedAt?: string;
+}
+
+interface DailyJournalSubmissionsProps {
+  submissions?: Submission[];
+  loading?: boolean;
+  date?: string; // e.g. "2026-03-05"
+  data?: any; // Tumhara purana data prop support karne ke liye
+}
+
 export default function DailyJournalSubmissions({
-  // Parent component 'data' prop bhej raha hai
-  data
-}) {
-  
-  // 1. Data Parsing & Safety Checks
-  // API se aane wale data ke structure par depend karta hai.
-  let submissions = [];
-  
-  if (Array.isArray(data)) {
-    submissions = data; // Agar API seedha array bhejti hai
-  } else if (data && data.submissions && Array.isArray(data.submissions)) {
-    submissions = data.submissions; // Agar API object bhejti hai jisme 'submissions' key hai
-  } else if (data && data.users && Array.isArray(data.users)) {
-    submissions = data.users; // Agar API object bhejti hai jisme 'users' key hai
+  submissions = [],
+  loading = false,
+  date,
+  data,
+}: DailyJournalSubmissionsProps) {
+  // 1. Tumhare Data Parsing & Safety Checks
+  let finalSubmissions = submissions;
+
+  if (!finalSubmissions || finalSubmissions.length === 0) {
+    if (Array.isArray(data)) {
+      finalSubmissions = data;
+    } else if (data && data.submissions && Array.isArray(data.submissions)) {
+      finalSubmissions = data.submissions;
+    } else if (data && data.users && Array.isArray(data.users)) {
+      finalSubmissions = data.users;
+    }
   }
 
-  // 2. Date Formatting
-  const getTodayDateString = () => {
-    if (data?.date) return data.date; // Agar API date de rahi hai
-    
-    return new Intl.DateTimeFormat("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    }).format(new Date());
-  };
+  // 2. Date Formatting (Dost ka clean logic + Tumhara fallback)
+  const todayDate = date
+    ? new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }).format(new Date(date + "T00:00:00")) // force local parse
+    : new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }).format(new Date());
 
-  const todayDate = getTodayDateString();
+  // ---- Dost ka Loading skeleton ----
+  if (loading) {
+    return (
+      <div className="w-full max-w-4xl mx-auto bg-[#f2fcf5] border border-[#bbf7d0] rounded-xl p-5 md:p-6 font-sans animate-pulse">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-6 h-6 rounded-full bg-green-200" />
+          <div className="h-4 bg-green-200 rounded w-64" />
+        </div>
+        <div className="h-3 bg-green-100 rounded w-72 mb-8" />
+        <div className="flex flex-col gap-3">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between p-4 bg-white border border-[#dcfce7] rounded-lg"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-slate-200" />
+                <div className="h-4 bg-slate-200 rounded w-36" />
+              </div>
+              <div className="h-6 bg-slate-100 rounded-full w-20" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto bg-[#f2fcf5] border border-[#bbf7d0] rounded-xl p-5 md:p-6 font-sans text-left">
-      {/* --- 1. Header Section --- */}
+      {/* --- Header Section --- */}
       <div className="flex items-center gap-2 mb-4">
-        {/* Green Check Icon */}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -57,16 +98,16 @@ export default function DailyJournalSubmissions({
         </h2>
       </div>
 
-      {/* --- 2. Subtitle Section --- */}
+      {/* --- Subtitle Section --- */}
       <p className="text-[15px] text-[#475569] mb-8">
-        {submissions.length} people have submitted their daily journal for{" "}
-        {todayDate}
+        {finalSubmissions.length}{" "}
+        {finalSubmissions.length === 1 ? "person has" : "people have"} submitted
+        their daily journal for {todayDate}
       </p>
 
-      {/* --- 3. Dynamic Content Section (Empty vs Filled) --- */}
-
-      {(!submissions || submissions.length === 0) ? (
-        // 🔴 EMPTY STATE (Jab array empty ho ya null ho)
+      {/* --- Dynamic Content Section --- */}
+      {!finalSubmissions || finalSubmissions.length === 0 ? (
+        // Empty state
         <div className="flex flex-col items-center justify-center py-8">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -87,17 +128,17 @@ export default function DailyJournalSubmissions({
           </p>
         </div>
       ) : (
-        // 🟢 FILLED STATE (Jab array me data ho)
+        // Filled state
         <div className="flex flex-col gap-3">
-          {submissions.map((user, index) => {
-            
-            // Safety check: API se keys fetch karne ke liye
+          {finalSubmissions.map((user, index) => {
+            // Tumhare banaye hue safety checks
             const userName = user.name || user.userName || "Unknown User";
-            const submissionTime = user.time || user.submittedAt || "Time not specified";
-            
-            // Get initial safely
-            const userInitial = userName !== "Unknown User" && userName.length > 0 
-                ? userName.charAt(0).toUpperCase() 
+            const submissionTime =
+              user.time || user.submittedAt || "Time not specified";
+
+            const userInitial =
+              userName !== "Unknown User" && userName.length > 0
+                ? userName.charAt(0).toUpperCase()
                 : "?";
 
             return (

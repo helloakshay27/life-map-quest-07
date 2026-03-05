@@ -160,7 +160,10 @@ function Leaderboard() {
                 <Rankings mockMyStats={rankingsData.myStats} />
               )}
               {rankingsData.leaderboard.length > 0 ? (
-                <RankingsList leaderboardData={rankingsData.leaderboard} />
+                <RankingsList
+                  leaderboardData={rankingsData.leaderboard}
+                  loading={isLoading}
+                />
               ) : (
                 <p className="text-center text-gray-500 py-4">
                   No ranking data available.

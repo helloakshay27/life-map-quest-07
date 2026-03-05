@@ -1,27 +1,62 @@
-import React, { useState, useEffect } from 'react';
-import { Info, Plus, Loader2, CheckCircle2, ArrowLeft, Edit, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import {
+  Info,
+  Plus,
+  Loader2,
+  CheckCircle2,
+  ArrowLeft,
+  Edit,
+  Trash2,
+} from "lucide-react";
+import { apiRequest } from "@/config/api";
+import { format, startOfWeek, endOfWeek } from "date-fns";
 
-const API_BASE_URL = "http://life-api.locakted.com";
+interface Win {
+  description: string;
+  day: string;
+  category: string;
+  completed: boolean;
+}
+
+interface JournalEntry {
+  id: number;
+  start_date: string;
+  end_date: string;
+  gratitude_note?: string | null;
+  alignment_score?: number | null;
+  data?: {
+    biggest_challenge?: string;
+    key_insight?: string;
+    wins?: Win[];
+    life_balance_rating?: number;
+    weekly_story?: string;
+    mission_connection?: string;
+    challenge_cause?: string;
+  };
+}
 
 function WeeklyReflection() {
   // Views: 'list' | 'form'
-  const [currentView, setCurrentView] = useState<'list' | 'form'>('list');
-  
+  const [currentView, setCurrentView] = useState<"list" | "form">("list");
+
   // List State
-  const [journals, setJournals] = useState<any[]>([]);
+  const [journals, setJournals] = useState<JournalEntry[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(true);
 
   // Form fields state
   const [currentJournalId, setCurrentJournalId] = useState<number | null>(null);
-  const [challenge, setChallenge] = useState('');
-  const [gratitude, setGratitude] = useState('');
-  const [insight, setInsight] = useState('');
+  const [challenge, setChallenge] = useState("");
+  const [gratitude, setGratitude] = useState("");
+  const [insight, setInsight] = useState("");
   const [balanceRating, setBalanceRating] = useState(3);
-  const [wins, setWins] = useState<any[]>([]);
+  const [wins, setWins] = useState<Win[]>([]);
 
   // API Submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<{ type: 'idle' | 'success' | 'error', message: string }>({ type: 'idle', message: '' });
+  const [submitStatus, setSubmitStatus] = useState<{
+    type: "idle" | "success" | "error";
+    message: string;
+  }>({ type: "idle", message: "" });
 
   // Friend's Auto-Calculated Life Balance placeholder data
   const lifeBalanceStats = [
@@ -38,13 +73,10 @@ function WeeklyReflection() {
   const fetchJournals = async () => {
     setIsLoadingList(true);
     try {
-      const token = localStorage.getItem("auth_token");
-      const res = await fetch(`${API_BASE_URL}/user_journals?journal_type=weekly`, {
-        headers: { ...(token && { "Authorization": `Bearer ${token}` }) }
-      });
+      const res = await apiRequest("/user_journals?journal_type=weekly");
       if (res.ok) {
         const data = await res.json();
-        setJournals(Array.isArray(data) ? data : (data.user_journals || []));
+        setJournals(Array.isArray(data) ? data : data.user_journals || []);
       }
     } catch (error) {
       console.error("Failed to fetch journals", error);
@@ -54,7 +86,7 @@ function WeeklyReflection() {
   };
 
   useEffect(() => {
-    if (currentView === 'list') {
+    if (currentView === "list") {
       fetchJournals();
     }
   }, [currentView]);
@@ -63,17 +95,14 @@ function WeeklyReflection() {
   // 2. DELETE (DELETE)
   // =========================================
   const handleDelete = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this reflection?")) return;
-    
+    if (!window.confirm("Are you sure you want to delete this reflection?"))
+      return;
     try {
-      const token = localStorage.getItem("auth_token");
-      const res = await fetch(`${API_BASE_URL}/user_journals/${id}`, {
+      const res = await apiRequest(`/user_journals/${id}`, {
         method: "DELETE",
-        headers: { ...(token && { "Authorization": `Bearer ${token}` }) }
       });
-      
       if (res.ok) {
-        setJournals(prev => prev.filter(j => j.id !== id));
+        setJournals((prev) => prev.filter((j) => j.id !== id));
       } else {
         alert("Failed to delete.");
       }
@@ -85,26 +114,26 @@ function WeeklyReflection() {
   // =========================================
   // 3. EDIT POPULATION
   // =========================================
-  const handleEdit = (journal: any) => {
+  const handleEdit = (journal: JournalEntry) => {
     setCurrentJournalId(journal.id);
-    setGratitude(journal.gratitude_note || '');
+    setGratitude(journal.gratitude_note || "");
     setBalanceRating(journal.alignment_score || 3);
-    setChallenge(journal.data?.biggest_challenge || '');
-    setInsight(journal.data?.key_insight || '');
+    setChallenge(journal.data?.biggest_challenge || "");
+    setInsight(journal.data?.key_insight || "");
     setWins(journal.data?.wins || []);
-    setCurrentView('form');
+    setCurrentView("form");
   };
 
   // Open empty form for new entry
   const handleAddNew = () => {
     setCurrentJournalId(null);
-    setGratitude('');
+    setGratitude("");
     setBalanceRating(3);
-    setChallenge('');
-    setInsight('');
+    setChallenge("");
+    setInsight("");
     setWins([]);
-    setSubmitStatus({ type: 'idle', message: '' });
-    setCurrentView('form');
+    setSubmitStatus({ type: "idle", message: "" });
+    setCurrentView("form");
   };
 
   // =========================================
@@ -112,60 +141,71 @@ function WeeklyReflection() {
   // =========================================
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    setSubmitStatus({ type: 'idle', message: '' });
+    setSubmitStatus({ type: "idle", message: "" });
 
     const today = new Date();
-    const nextWeek = new Date(today);
-    nextWeek.setDate(today.getDate() + 7);
+    const startDate = format(
+      startOfWeek(today, { weekStartsOn: 0 }),
+      "yyyy-MM-dd",
+    );
+    const endDate = format(endOfWeek(today, { weekStartsOn: 0 }), "yyyy-MM-dd");
 
     const payload = {
       user_journal: {
         journal_type: "weekly",
-        start_date: today.toISOString().split('T')[0],
-        end_date: nextWeek.toISOString().split('T')[0],
-        gratitude_note: gratitude || "Grateful for family support",
+        start_date: startDate,
+        end_date: endDate,
+        gratitude_note: gratitude,
         alignment_score: balanceRating,
         data: {
-          weekly_story: "Strong execution week",
-          wins: wins.length > 0 ? wins : [
-            { description: "Closed enterprise deal", day: "Monday", category: "career", completed: true }
-          ],
-          biggest_challenge: challenge || "Distractions",
-          challenge_cause: "Phone usage",
-          key_insight: insight || "Focus creates momentum",
-          mission_connection: "Strong alignment",
-          life_balance_rating: balanceRating
-        }
-      }
+          weekly_story: "",
+          wins: wins,
+          biggest_challenge: challenge,
+          challenge_cause: challenge, // same field for now; extend if UI adds separate cause input
+          key_insight: insight,
+          mission_connection: "",
+          life_balance_rating: balanceRating,
+        },
+      },
     };
 
     try {
-      const token = localStorage.getItem("auth_token");
-      
-      const url = currentJournalId 
-        ? `${API_BASE_URL}/user_journals/${currentJournalId}` 
-        : `${API_BASE_URL}/user_journals`;
-      
+      const url = currentJournalId
+        ? `/user_journals/${currentJournalId}`
+        : "/user_journals";
       const method = currentJournalId ? "PUT" : "POST";
 
-      const response = await fetch(url, {
+      const response = await apiRequest(url, {
         method,
-        headers: {
-          "Content-Type": "application/json",
-          ...(token && { "Authorization": `Bearer ${token}` })
-        },
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) throw new Error(`Failed: ${response.status}`);
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("Backend error:", errText);
+        throw new Error(`Failed: ${response.status}`);
+      }
 
-      setSubmitStatus({ type: 'success', message: currentJournalId ? 'Updated successfully!' : 'Saved successfully!' });
-      
-      setTimeout(() => setCurrentView('list'), 1500);
-      
-    } catch (error: any) {
+      const responseData = await response.json();
+      // Capture newly created journal id for subsequent PUT
+      if (!currentJournalId) {
+        const newId =
+          responseData.journal?.id ??
+          responseData.user_journal?.id ??
+          responseData.id;
+        if (newId) setCurrentJournalId(newId);
+      }
+
+      setSubmitStatus({
+        type: "success",
+        message: currentJournalId
+          ? "Updated successfully!"
+          : "Saved successfully!",
+      });
+      setTimeout(() => setCurrentView("list"), 1500);
+    } catch (error: unknown) {
       console.error("Submission error:", error);
-      setSubmitStatus({ type: 'error', message: 'Failed to save reflection.' });
+      setSubmitStatus({ type: "error", message: "Failed to save reflection." });
     } finally {
       setIsSubmitting(false);
     }
@@ -174,12 +214,14 @@ function WeeklyReflection() {
   // =========================================
   // RENDER: LIST VIEW
   // =========================================
-  if (currentView === 'list') {
+  if (currentView === "list") {
     return (
       <div className="max-w-5xl mx-auto p-6 md:p-8 font-sans space-y-6 bg-[#fdfbf9] min-h-screen">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Weekly Reflections</h1>
-          <button 
+          <h1 className="text-2xl font-bold text-gray-900">
+            Weekly Reflections
+          </h1>
+          <button
             onClick={handleAddNew}
             className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors"
           >
@@ -188,29 +230,40 @@ function WeeklyReflection() {
         </div>
 
         {isLoadingList ? (
-          <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>
+          <div className="flex justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+          </div>
         ) : journals.length === 0 ? (
           <div className="text-center py-20 text-gray-500 border-2 border-dashed border-gray-200 rounded-xl">
             No reflections found. Start writing your first one!
           </div>
         ) : (
           <div className="grid gap-4">
-            {journals.map((journal: any) => (
-              <div key={journal.id} className="bg-white border border-gray-200 p-5 rounded-xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            {journals.map((journal: JournalEntry) => (
+              <div
+                key={journal.id}
+                className="bg-white border border-gray-200 p-5 rounded-xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
+              >
                 <div>
-                  <p className="text-sm text-gray-500 font-medium">{journal.start_date} to {journal.end_date}</p>
-                  <h3 className="text-lg font-bold text-gray-900 mt-1 line-clamp-1">{journal.gratitude_note || 'Weekly Reflection'}</h3>
-                  <p className="text-sm text-gray-600 mt-1">Alignment Score: {journal.alignment_score}/5</p>
+                  <p className="text-sm text-gray-500 font-medium">
+                    {journal.start_date} to {journal.end_date}
+                  </p>
+                  <h3 className="text-lg font-bold text-gray-900 mt-1 line-clamp-1">
+                    {journal.gratitude_note || "Weekly Reflection"}
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Alignment Score: {journal.alignment_score}/5
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button 
+                  <button
                     onClick={() => handleEdit(journal)}
                     className="p-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                     title="Edit"
                   >
                     <Edit className="w-4 h-4" />
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleDelete(journal.id)}
                     className="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                     title="Delete"
@@ -231,17 +284,18 @@ function WeeklyReflection() {
   // =========================================
   return (
     <div className="max-w-5xl mx-auto p-6 md:p-8 font-sans space-y-10 bg-[#fdfbf9] min-h-screen">
-      
       {/* Form Header with Back Button */}
       <div className="flex items-center justify-between pb-4 border-b border-gray-200">
-        <button 
-          onClick={() => setCurrentView('list')}
+        <button
+          onClick={() => setCurrentView("list")}
           className="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" /> Back to List
         </button>
         <h1 className="text-xl font-bold text-gray-900">
-          {currentJournalId ? 'Edit Weekly Reflection' : 'New Weekly Reflection'}
+          {currentJournalId
+            ? "Edit Weekly Reflection"
+            : "New Weekly Reflection"}
         </h1>
       </div>
 
@@ -249,13 +303,17 @@ function WeeklyReflection() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-gray-900">Wins of Past Week</h2>
+            <h2 className="text-lg font-bold text-gray-900">
+              Wins of Past Week
+            </h2>
             <Info className="w-4 h-4 text-gray-400 cursor-help" />
           </div>
         </div>
         <div className="border-y-2 border-dashed border-orange-200/60 bg-[#fefdfb] py-10 flex flex-col items-center justify-center rounded-sm">
           <p className="text-[15px] font-medium text-gray-800 mb-3">
-            {wins.length > 0 ? `${wins.length} wins recorded` : 'No wins added yet'}
+            {wins.length > 0
+              ? `${wins.length} wins recorded`
+              : "No wins added yet"}
           </p>
           <button className="flex items-center gap-2 bg-white border border-gray-200 shadow-sm px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
             <Plus className="w-4 h-4" /> Add / Edit Wins
@@ -265,9 +323,12 @@ function WeeklyReflection() {
 
       {/* 2. BIGGEST CHALLENGE & CAUSE */}
       <section>
-        <h2 className="text-lg font-bold text-gray-900 mb-1">Biggest Challenge & Cause</h2>
+        <h2 className="text-lg font-bold text-gray-900 mb-1">
+          Biggest Challenge & Cause
+        </h2>
         <p className="text-[15px] text-gray-600 mb-3">
-          What was your biggest challenge this week, perhaps a recurring behavior, and what caused it?
+          What was your biggest challenge this week, perhaps a recurring
+          behavior, and what caused it?
         </p>
         <textarea
           value={challenge}
@@ -292,7 +353,8 @@ function WeeklyReflection() {
         <div>
           <h2 className="text-lg font-bold text-gray-900 mb-1">Key Insight</h2>
           <p className="text-[15px] text-gray-600 mb-3 line-clamp-1">
-            You are the ultimate creator for everything that manifests in your... What were your insights this week?
+            You are the ultimate creator for everything that manifests in
+            your... What were your insights this week?
           </p>
           <textarea
             value={insight}
@@ -306,7 +368,9 @@ function WeeklyReflection() {
       {/* 4. BALANCE SLIDER */}
       <section>
         <div className="flex items-center gap-2 mb-6">
-          <h2 className="text-lg font-bold text-gray-900">Auto-Calculated Life Balance</h2>
+          <h2 className="text-lg font-bold text-gray-900">
+            Auto-Calculated Life Balance
+          </h2>
           <Info className="w-4 h-4 text-gray-400 cursor-help" />
         </div>
 
@@ -317,7 +381,9 @@ function WeeklyReflection() {
               <div className="w-full h-14 bg-gray-200/70 rounded-xl mb-3"></div>
               <div className="flex flex-col items-center">
                 <span className="text-lg mb-0.5">{stat.emoji}</span>
-                <span className="text-sm font-bold text-gray-900">{stat.score}</span>
+                <span className="text-sm font-bold text-gray-900">
+                  {stat.score}
+                </span>
               </div>
             </div>
           ))}
@@ -325,7 +391,9 @@ function WeeklyReflection() {
 
         {/* Slider Section */}
         <div>
-          <h3 className="text-[15px] font-bold text-gray-900 mb-4">Life Balance Rating: {balanceRating}</h3>
+          <h3 className="text-[15px] font-bold text-gray-900 mb-4">
+            Life Balance Rating: {balanceRating}
+          </h3>
           <div className="px-1 relative">
             <input
               type="range"
@@ -345,19 +413,30 @@ function WeeklyReflection() {
 
       {/* 5. SUBMIT ACTIONS */}
       <section className="pt-6 border-t border-gray-200 flex flex-col items-end gap-3">
-        {submitStatus.type === 'error' && <p className="text-sm text-red-600 font-medium">{submitStatus.message}</p>}
-        {submitStatus.type === 'success' && <p className="text-sm text-emerald-600 font-medium flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> {submitStatus.message}</p>}
-        
-        <button 
+        {submitStatus.type === "error" && (
+          <p className="text-sm text-red-600 font-medium">
+            {submitStatus.message}
+          </p>
+        )}
+        {submitStatus.type === "success" && (
+          <p className="text-sm text-emerald-600 font-medium flex items-center gap-1">
+            <CheckCircle2 className="w-4 h-4" /> {submitStatus.message}
+          </p>
+        )}
+
+        <button
           onClick={handleSubmit}
           disabled={isSubmitting}
           className="bg-gray-900 text-white px-8 py-3 rounded-xl font-semibold hover:bg-gray-800 transition-colors disabled:opacity-70 flex items-center gap-2"
         >
           {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-          {isSubmitting ? 'Saving...' : currentJournalId ? 'Update Reflection' : 'Save Reflection'}
+          {isSubmitting
+            ? "Saving..."
+            : currentJournalId
+              ? "Update Reflection"
+              : "Save Reflection"}
         </button>
       </section>
-
     </div>
   );
 }

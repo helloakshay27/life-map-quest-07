@@ -1,42 +1,88 @@
 import React from "react";
 
-// ==========================================
-// MAIN COMPONENT
-// ==========================================
-export default function YesterdaySubmissions({
-  // Parent component 'data' prop bhej raha hai
-  data,
-}) {
-  // 1. Data Parsing & Safety Checks
-  // API se aane wale data ke structure par depend karta hai.
-  // Hum maan rahe hain ki API ek array bhej rahi hai ya object jisme array hai.
-  // Ensure that 'submissions' is always an array.
-  let submissions = [];
+// Dost ka banaya hua TypeScript Interface (updated for your safety checks)
+interface Submission {
+  id?: number;
+  name?: string;
+  userName?: string;
+  time?: string;
+  submittedAt?: string;
+}
 
-  if (Array.isArray(data)) {
-    submissions = data; // Agar API seedha array bhejti hai
-  } else if (data && data.submissions && Array.isArray(data.submissions)) {
-    submissions = data.submissions; // Agar API object bhejti hai jisme 'submissions' key hai
-  } else if (data && data.users && Array.isArray(data.users)) {
-    submissions = data.users; // Agar API object bhejti hai jisme 'users' key hai
+interface YesterdaySubmissionsProps {
+  submissions?: Submission[];
+  loading?: boolean;
+  date?: string; // e.g. "2026-03-04"
+  data?: any; // Tumhara purana data prop support karne ke liye
+}
+
+export default function YesterdaySubmissions({
+  submissions = [],
+  loading = false,
+  date,
+  data,
+}: YesterdaySubmissionsProps) {
+  
+  // 1. Tumhare Data Parsing & Safety Checks
+  let finalSubmissions = submissions;
+
+  if (!finalSubmissions || finalSubmissions.length === 0) {
+    if (Array.isArray(data)) {
+      finalSubmissions = data;
+    } else if (data && data.submissions && Array.isArray(data.submissions)) {
+      finalSubmissions = data.submissions;
+    } else if (data && data.users && Array.isArray(data.users)) {
+      finalSubmissions = data.users;
+    }
   }
 
-  // 2. Date Formatting
-  // Ideal tarika yeh hai ki API se date aaye, par agar nahi aati toh manually calculate kar sakte hain.
-  const getYesterdayDateString = () => {
-    if (data?.date) return data.date; // Agar API date de rahi hai
-
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    return yesterday.toLocaleDateString("en-US", {
+  // 2. Date Formatting (Dost ka logic + Fallback to yesterday)
+  const yesterdayDate = (() => {
+    if (date) {
+      return new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }).format(new Date(date + "T00:00:00"));
+    }
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return new Intl.DateTimeFormat("en-US", {
       month: "long",
       day: "numeric",
       year: "numeric",
-    });
-  };
+    }).format(d);
+  })();
 
-  const yesterdayDate = getYesterdayDateString();
+  // ---- Dost ka Loading skeleton ----
+  if (loading) {
+    return (
+      <div className="w-full max-w-4xl mx-auto bg-[#f4f7ff] border border-[#d1ddf7] rounded-2xl p-5 md:p-4 font-sans animate-pulse">
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-6 h-6 rounded-full bg-blue-200" />
+          <div className="h-4 bg-blue-200 rounded w-72" />
+        </div>
+        <div className="h-3 bg-blue-100 rounded w-64 mb-6" />
+        <div className="flex flex-col gap-3">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between p-4 bg-white border border-white rounded-xl shadow-sm"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-11 h-11 rounded-full bg-slate-200 shrink-0" />
+                <div>
+                  <div className="h-4 bg-slate-200 rounded w-36 mb-2" />
+                  <div className="h-3 bg-slate-100 rounded w-24" />
+                </div>
+              </div>
+              <div className="h-8 w-20 bg-blue-100 rounded-lg" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto bg-[#f4f7ff] border border-[#d1ddf7] rounded-2xl p-5 md:p-4 font-sans text-left">
@@ -64,14 +110,14 @@ export default function YesterdaySubmissions({
 
       {/* --- 2. Subtitle Section --- */}
       <p className="text-[15px] text-[#475569] mb-6 font-medium">
-        {submissions.length} people submitted their daily journal for{" "}
-        {yesterdayDate}
+        {finalSubmissions.length}{" "}
+        {finalSubmissions.length === 1 ? "person submitted" : "people submitted"}{" "}
+        their daily journal for {yesterdayDate}
       </p>
 
       {/* --- 3. Dynamic Content Section (Empty vs Filled) --- */}
-
-      {!submissions || submissions.length === 0 ? (
-        // 🔴 EMPTY STATE (Jab array empty ho ya null ho)
+      {!finalSubmissions || finalSubmissions.length === 0 ? (
+        // Empty state
         <div className="flex flex-col items-center justify-center py-10">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -92,14 +138,12 @@ export default function YesterdaySubmissions({
           </p>
         </div>
       ) : (
-        // 🟢 FILLED STATE (Jab array me data ho)
+        // Filled state
         <div className="flex flex-col gap-3">
-          {submissions.map((user, index) => {
-            // Safety check: API se exact keys match karna zaroori hai
-            // yaha hum maan rahe hai property 'name' ya 'userName' hai
+          {finalSubmissions.map((user, index) => {
+            // Tumhare safety checks API fallback ke liye
             const userName = user.name || user.userName || "Unknown User";
-            const submissionTime =
-              user.time || user.submittedAt || "Time not specified";
+            const submissionTime = user.time || user.submittedAt || "Time not specified";
 
             return (
               <div
@@ -108,12 +152,11 @@ export default function YesterdaySubmissions({
               >
                 {/* Left Side: Number, Name & Time */}
                 <div className="flex items-center gap-4">
-                  {/* Number Circle (Light Blue bg, Dark Blue text) */}
+                  {/* Number Circle */}
                   <div className="w-11 h-11 rounded-full bg-[#e0e7ff] text-[#3b82f6] flex items-center justify-center font-bold text-lg shrink-0">
                     {index + 1}
                   </div>
-
-                  <div className="flex flex-col">
+                  <div className="flex flex-col text-left">
                     <span className="font-bold text-[#1e293b] text-[16px]">
                       {userName}
                     </span>
@@ -146,4 +189,4 @@ export default function YesterdaySubmissions({
       )}
     </div>
   );
-}
+}``
