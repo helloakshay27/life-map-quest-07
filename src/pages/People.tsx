@@ -9,6 +9,8 @@ import {
   Star,
   Phone,
   Mail,
+  Edit2,
+  Trash2, // 🟢 Added Trash icon for delete
 } from "lucide-react";
 import MyProfileModal from "@/components/MyProfileModal";
 import AddPersonModal from "@/components/AddPersonModal";
@@ -16,28 +18,6 @@ import AddPersonModal from "@/components/AddPersonModal";
 const API_BASE_URL = "https://life-api.lockated.com";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-interface UpcomingDate {
-  id: string;
-  title: string;
-  date: string;
-}
-interface ReachOut {
-  id: string;
-  name: string;
-  reason: string;
-}
-interface HealthStat {
-  id: string;
-  name: string;
-  score: number;
-}
-
-interface PeopleData {
-  upcomingDates: UpcomingDate[];
-  reachOuts: ReachOut[];
-  healthStats: HealthStat[];
-}
 
 interface Person {
   id: number;
@@ -49,53 +29,33 @@ interface Person {
   contact_info: { phone?: string; email?: string; social?: string } | null;
   relationship_health: number;
   last_meaningful_interaction: string | null;
+  [key: string]: any;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const People = () => {
-  const [data, setData] = useState<PeopleData | null>(null);
   const [people, setPeople] = useState<Person[]>([]);
   const [isPeopleLoading, setIsPeopleLoading] = useState(true);
   const [peopleError, setPeopleError] = useState<string | null>(null);
 
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isRelationshipOpen, setIsRelationshipOpen] = useState(false);
   const [isPriorityOpen, setIsPriorityOpen] = useState(false);
   const [activeSort, setActiveSort] = useState("Priority");
+
+  // Modal states
   const [isAddPersonModalOpen, setIsAddPersonModalOpen] = useState(false);
+  const [personToEdit, setPersonToEdit] = useState<Person | null>(null);
+
+  // Deleting state
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const [relationshipFilter, setRelationshipFilter] =
     useState("All Relationships");
   const [priorityFilter, setPriorityFilter] = useState("All Priorities");
 
-  // ── Mock summary cards ────────────────────────────────────────────────────
-  useEffect(() => {
-    const fetchPeopleData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const mockData = await new Promise<PeopleData>((resolve) =>
-          setTimeout(
-            () =>
-              resolve({ upcomingDates: [], reachOuts: [], healthStats: [] }),
-            800,
-          ),
-        );
-        setData(mockData);
-      } catch (err) {
-        setError("Failed to load people data. Please try again.");
-        console.error("API Error:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchPeopleData();
-  }, []);
-
-  // ── Fetch people list ─────────────────────────────────────────────────────
+  // ── 1. Fetch people list (GET) ────────────────────────────────────────────
   const fetchPeople = async () => {
     try {
       setIsPeopleLoading(true);
@@ -103,7 +63,7 @@ const People = () => {
 
       const token = localStorage.getItem("auth_token");
 
-      const res = await fetch(`${API_BASE_URL}/people/3`, {
+      const res = await fetch(`${API_BASE_URL}/people`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -117,7 +77,6 @@ const People = () => {
       }
 
       const responseData = await res.json();
-      // Handle array or { people: [...] } or { data: [...] } shaped responses
       const list: Person[] = Array.isArray(responseData)
         ? responseData
         : (responseData.people ?? responseData.data ?? []);
@@ -136,6 +95,49 @@ const People = () => {
   useEffect(() => {
     fetchPeople();
   }, []);
+
+  // ── 2. Delete Person (DELETE) ────────────────────────────────────────────
+  const handleDeletePerson = async (
+    id: number,
+    name: string,
+    e: React.MouseEvent,
+  ) => {
+    e.preventDefault(); // Stop navigation if wrapped in <a>
+    e.stopPropagation();
+
+    if (
+      !window.confirm(
+        `Are you sure you want to delete ${name}? This action cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setDeletingId(id);
+      const token = localStorage.getItem("auth_token");
+
+      const res = await fetch(`${API_BASE_URL}/people/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to delete (${res.status})`);
+      }
+
+      // Success
+      alert(`${name} deleted successfully.`);
+      fetchPeople(); // Refresh the list
+    } catch (err: unknown) {
+      alert("Failed to delete person. Check console.");
+      console.error("Delete people error:", err);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   // ── Filter + Sort ─────────────────────────────────────────────────────────
   const filteredPeople = people
@@ -178,31 +180,34 @@ const People = () => {
     Acquaintance: "bg-gray-100 text-gray-600",
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[400px] w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex min-h-[400px] w-full items-center justify-center text-destructive">
-        <p>{error}</p>
-      </div>
-    );
-  }
+  // ── Dynamic Top Cards Logic ────────────────────────────────
+  const peopleWithBirthdays = people.filter((p) => p.birthday);
+  const peopleNeedingReachOut = people.filter(
+    (p) => p.relationship_health < 3 || p.importance_level >= 4,
+  );
+  const avgHealthScore =
+    people.length > 0
+      ? (
+          people.reduce((sum, p) => sum + (p.relationship_health || 0), 0) /
+          people.length
+        ).toFixed(1)
+      : "0";
 
   return (
     <>
       {isProfileModalOpen && (
         <MyProfileModal setIsProfileModalOpen={setIsProfileModalOpen} />
       )}
+
+      {/* 🟢 Modal connected with Edit State */}
       <AddPersonModal
         isOpen={isAddPersonModalOpen}
-        onClose={() => setIsAddPersonModalOpen(false)}
+        onClose={() => {
+          setIsAddPersonModalOpen(false);
+          setPersonToEdit(null); // Clear state when closing
+        }}
         onSuccess={fetchPeople}
+        initialData={personToEdit as any} // Pass data for edit mode
       />
 
       <div className="relative w-full animate-fade-in space-y-8">
@@ -223,7 +228,10 @@ const People = () => {
               My Profile
             </button>
             <button
-              onClick={() => setIsAddPersonModalOpen(true)}
+              onClick={() => {
+                setPersonToEdit(null);
+                setIsAddPersonModalOpen(true);
+              }}
               className="flex items-center gap-2 rounded-md bg-[#e83e8c] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#d63384]"
             >
               <Plus className="h-4 w-4" />
@@ -232,41 +240,74 @@ const People = () => {
           </div>
         </div>
 
-        {/* SUMMARY CARDS */}
+        {/* 100% DYNAMIC SUMMARY CARDS */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <div className="flex min-h-[200px] flex-col rounded-2xl bg-white p-6 dark:bg-purple-950/20 shadow-sm border border-gray-100">
-            <div className="mb-6 flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+          <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm border border-gray-100 min-h-[140px] justify-between">
+            <div className="flex items-center gap-2 mb-2">
+              <Calendar className="h-5 w-5 text-purple-600" />
               <h3 className="text-lg font-bold text-foreground">
                 Upcoming Dates
               </h3>
             </div>
-            <div className="flex flex-1 items-center justify-center">
-              <p className="text-sm text-muted-foreground">No upcoming dates</p>
+            <div>
+              {peopleWithBirthdays.length > 0 ? (
+                <p className="text-2xl font-extrabold text-purple-700">
+                  {peopleWithBirthdays.length}{" "}
+                  <span className="text-sm font-medium text-gray-500">
+                    Birthdays Recorded
+                  </span>
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  No upcoming dates found in records.
+                </p>
+              )}
             </div>
           </div>
 
-          <div className="flex min-h-[200px] flex-col rounded-2xl bg-white p-6 dark:bg-orange-950/20 shadow-sm border border-gray-100">
-            <div className="mb-6 flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-orange-500 dark:text-orange-400" />
+          <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm border border-gray-100 min-h-[140px] justify-between">
+            <div className="flex items-center gap-2 mb-2">
+              <MessageSquare className="h-5 w-5 text-orange-500" />
               <h3 className="text-lg font-bold text-foreground">
                 Reach Out To
               </h3>
             </div>
-            <div className="flex flex-1 items-center justify-center">
-              <p className="text-sm text-muted-foreground">All caught up! 🎉</p>
+            <div>
+              {peopleNeedingReachOut.length > 0 ? (
+                <p className="text-2xl font-extrabold text-orange-600">
+                  {peopleNeedingReachOut.length}{" "}
+                  <span className="text-sm font-medium text-gray-500">
+                    Priority Contacts
+                  </span>
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  All caught up! 🎉
+                </p>
+              )}
             </div>
           </div>
 
-          <div className="flex min-h-[200px] flex-col rounded-2xl bg-white p-6 dark:bg-emerald-950/20 shadow-sm border border-gray-100">
-            <div className="mb-6 flex items-center gap-2">
-              <Heart className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+          <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm border border-gray-100 min-h-[140px] justify-between">
+            <div className="flex items-center gap-2 mb-2">
+              <Heart className="h-5 w-5 text-emerald-600" />
               <h3 className="text-lg font-bold text-foreground">
-                Relationship Health
+                Avg. Relationship Health
               </h3>
             </div>
-            <div className="flex flex-1 items-center justify-center">
-              <p className="text-sm text-muted-foreground">No data yet</p>
+            <div>
+              {people.length > 0 ? (
+                <p className="text-2xl font-extrabold text-emerald-600">
+                  {avgHealthScore}{" "}
+                  <span className="text-sm font-medium text-gray-500">
+                    / 5.0
+                  </span>
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  Add people to see stats.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -419,7 +460,7 @@ const People = () => {
             </div>
           </div>
 
-          {/* ── STATES ── */}
+          {/* STATES */}
 
           {/* Loading */}
           {isPeopleLoading && (
@@ -471,36 +512,57 @@ const People = () => {
                   onClick={() => setIsAddPersonModalOpen(true)}
                   className="flex items-center gap-2 px-5 py-2.5 bg-[#e83e8c] text-white text-sm font-medium rounded-md hover:bg-[#d63384] transition-colors shadow-sm"
                 >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
+                  <Plus className="w-5 h-5" />
                   Add Your First Person
                 </button>
               )}
             </div>
           )}
 
-          {/* ── PEOPLE CARDS GRID ── */}
+          {/* PEOPLE CARDS GRID */}
           {!isPeopleLoading && !peopleError && filteredPeople.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
               {filteredPeople.map((person) => (
                 <a
                   key={person.id}
                   href={`/people/${person.id}`}
-                  className="group bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-pink-100 transition-all flex flex-col gap-3"
+                  className="group relative bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-pink-100 transition-all flex flex-col gap-3"
                 >
-                  {/* Avatar + Name */}
-                  <div className="flex items-center gap-3">
+                  {/* 🟢 ACTION BUTTONS CONTAINER */}
+                  <div className="absolute top-4 right-4 flex items-center gap-1.5 z-10">
+                    {/* EDIT BUTTON */}
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setPersonToEdit(person);
+                        setIsAddPersonModalOpen(true);
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                      title="Edit Person"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+
+                    {/* DELETE BUTTON */}
+                    <button
+                      onClick={(e) =>
+                        handleDeletePerson(person.id, person.name, e)
+                      }
+                      disabled={deletingId === person.id}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                      title="Delete Person"
+                    >
+                      {deletingId === person.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-3 pr-16">
+                    {" "}
+                    {/* pr-16 ensures text doesn't overlap with buttons */}
                     {person.person_image_base64 ? (
                       <img
                         src={person.person_image_base64}
@@ -524,7 +586,6 @@ const People = () => {
                     </div>
                   </div>
 
-                  {/* Stars */}
                   <div className="flex gap-0.5">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <Star
@@ -534,7 +595,6 @@ const People = () => {
                     ))}
                   </div>
 
-                  {/* Contact */}
                   {(person.contact_info?.phone ||
                     person.contact_info?.email) && (
                     <div className="flex flex-col gap-1">
@@ -557,7 +617,6 @@ const People = () => {
                     </div>
                   )}
 
-                  {/* Last interaction */}
                   {person.last_meaningful_interaction && (
                     <p className="text-xs text-gray-400 border-t border-gray-50 pt-2 mt-auto">
                       Last contact:{" "}

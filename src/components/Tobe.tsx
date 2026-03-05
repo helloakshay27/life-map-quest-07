@@ -16,7 +16,26 @@ function Tobe() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // =========================================
-  // API INTEGRATION: FETCH LIST (GET Method)
+  // TOAST TIMER FIX
+  // =========================================
+  useEffect(() => {
+    let timer;
+    if (toast) {
+      timer = setTimeout(() => setToast(null), 3000);
+    }
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const showError = (message) => {
+    setToast({ type: "error", message });
+  };
+
+  const showSuccess = (message) => {
+    setToast({ type: "success", message });
+  };
+
+  // =========================================
+  // API INTEGRATION: FETCH BUCKET LIST (DREAMS)
   // =========================================
   useEffect(() => {
     fetchBucketList();
@@ -26,40 +45,67 @@ function Tobe() {
     try {
       const token = localStorage.getItem("auth_token");
 
-      const response = await fetch(`${API_BASE_URL}/be_do_have_exercise`, {
+      const response = await fetch(`${API_BASE_URL}/dreams`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json",
           Authorization: `Bearer ${token}`,
         },
       });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch data from server");
+        throw new Error("Failed to fetch dreams from server");
       }
 
       const data = await response.json();
+      console.log("Fetched Dreams API Data:", data);
 
-      const mappedData = Array.isArray(data)
-        ? data.map((item) => ({
-            id: item.id,
-            title: item.title || item.name || "",
-            desc: item.desc || item.description || "",
-            checked: item.checked || false,
-          }))
-        : [];
+      // 🚀 NEW LOGIC: Extract arrays from dreaming, planning, in_progress, achieved
+      let allGoals = [];
+
+      if (data && typeof data === "object" && !Array.isArray(data)) {
+        const categories = ["dreaming", "planning", "in_progress", "achieved"];
+
+        categories.forEach((category) => {
+          if (Array.isArray(data[category])) {
+            // Har category ke items nikalo aur array me jod do
+            allGoals = [...allGoals, ...data[category]];
+          }
+        });
+
+        // Fallback agar koi aur structure hua toh
+        if (allGoals.length === 0 && Array.isArray(data.dreams))
+          allGoals = data.dreams;
+        if (allGoals.length === 0 && Array.isArray(data.data))
+          allGoals = data.data;
+      } else if (Array.isArray(data)) {
+        allGoals = data;
+      }
+
+      // 🛠 MAPPING
+      const mappedData = allGoals.map((item, index) => {
+        return {
+          id: item.id || `dream_${index}`,
+          // Agar title empty string "" hai, toh fallback "Untitled Goal" use karo
+          title: item.title || item.name || item.goal || "Untitled Goal",
+          desc: item.desc || item.description || "",
+          status: item.status || "", // "planning", "dreaming" etc. dikhane ke liye
+          checked: false, // Default un-checked rakhna theek hai analysis ke liye
+        };
+      });
 
       setBucketList(mappedData);
     } catch (error) {
-      console.error("Error fetching bucket list:", error);
-      showError("Could not load your list. Please try again.");
+      console.error("Error fetching bucket list (dreams):", error);
+      showError("Could not load your dreams. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
   // =========================================
-  // API INTEGRATION: SAVE/FETCH EXERCISE (GET Method - No Payload)
+  // API INTEGRATION: SAVE EXERCISE (POST Method)
   // =========================================
   const saveExerciseToBackend = async () => {
     const selectedGoals = bucketList.filter((g) => g.checked);
@@ -73,36 +119,38 @@ function Tobe() {
 
     try {
       const token = localStorage.getItem("auth_token");
+      const goalIds = selectedGoals.map((g) => g.id);
 
-      // ✅ Method GET hi rakha hai, aur Body (Payload) hata diya hai
+      const payload = {
+        be_do_have_exercise: {
+          be_identity: analysisResult?.be || "",
+          do_actions: analysisResult?.do || "",
+        },
+        goal_ids: goalIds,
+      };
+
       const response = await fetch(`${API_BASE_URL}/be_do_have_exercise`, {
-        method: "GET",
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json",
           Authorization: `Bearer ${token}`,
         },
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch/save exercise");
+        throw new Error("Failed to save exercise");
       }
 
       const result = await response.json();
       console.log("Action completed successfully:", result);
-
-      setToast({
-        type: "success",
-        message: "List fetched successfully!",
-      });
-
-      setTimeout(() => {
-        setToast(null);
-      }, 3000);
+      showSuccess("Goals saved successfully!");
 
       return true;
     } catch (error) {
       console.error("Error with exercise action:", error);
-      showError("Action failed. Please try again.");
+      showError("Failed to save goals. Please try again.");
       return false;
     } finally {
       setIsSaving(false);
@@ -120,6 +168,7 @@ function Tobe() {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ goal_id: goalId }),
@@ -129,19 +178,9 @@ function Tobe() {
         throw new Error("Failed to delete goal from server");
       }
 
-      const result = await response.json();
-      console.log("Goal deleted successfully:", result);
-
+      console.log("Goal deleted successfully");
       setBucketList(bucketList.filter((goal) => goal.id !== goalId));
-
-      setToast({
-        type: "success",
-        message: "Goal deleted successfully!",
-      });
-
-      setTimeout(() => {
-        setToast(null);
-      }, 3000);
+      showSuccess("Goal deleted successfully!");
 
       return true;
     } catch (error) {
@@ -152,47 +191,45 @@ function Tobe() {
   };
 
   // =========================================
-  // API INTEGRATION: CREATE/UPDATE ANALYSIS (GET Method - No Payload)
+  // API INTEGRATION: SAVE ANALYSIS (POST Method)
   // =========================================
   const saveAnalysisToBackend = async (beData, doData, goalIds) => {
     try {
       const token = localStorage.getItem("auth_token");
 
-      // ✅ Method GET hi rakha hai, aur Body (Payload) hata diya hai
+      const payload = {
+        be_do_have_exercise: {
+          be_identity: beData,
+          do_actions: doData,
+        },
+        goal_ids: goalIds,
+      };
+
       const response = await fetch(`${API_BASE_URL}/be_do_have_exercise`, {
-        method: "GET",
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json",
           Authorization: `Bearer ${token}`,
         },
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch analysis from server");
+        throw new Error("Failed to save analysis to server");
       }
 
       const result = await response.json();
-      console.log("Analysis action successful:", result);
+      console.log("Analysis saved successfully:", result);
 
       return result;
     } catch (error) {
-      console.error("Error saving/fetching analysis:", error);
-      showError("Could not complete analysis action. Please try again.");
+      console.error("Error saving analysis:", error);
       return null;
     }
   };
 
   // --- HANDLERS ---
-
-  const showError = (message) => {
-    setToast({
-      type: "error",
-      message: message,
-    });
-    setTimeout(() => {
-      setToast(null);
-    }, 3000);
-  };
 
   const handleToggleCheck = (id) => {
     setBucketList(
@@ -231,6 +268,7 @@ function Tobe() {
       id: Date.now(),
       title: customGoal,
       desc: "Custom goal",
+      status: "custom",
       checked: true,
     };
 
@@ -317,6 +355,7 @@ function Tobe() {
         do: doActions,
       });
 
+      // API Call
       await saveAnalysisToBackend(beIdentity, doActions, goalIds);
     } catch (error) {
       console.error("Error in AI analysis:", error);
@@ -330,7 +369,7 @@ function Tobe() {
     return (
       <div className="min-h-screen bg-[#faf9fc] flex items-center justify-center">
         <p className="text-gray-500 font-medium animate-pulse">
-          Loading your Exercise...
+          Loading your Dreams...
         </p>
       </div>
     );
@@ -402,23 +441,24 @@ function Tobe() {
             </div>
           </div>
 
+          {/* DREAMS / BUCKET LIST RENDER SECTION */}
           <div className="mb-4">
             <p className="text-sm font-semibold text-gray-700 mb-3">
               From Your Bucket List:
             </p>
 
             {bucketList.length === 0 ? (
-              <div className="p-4 border border-dashed border-gray-200 rounded-lg text-center text-gray-400 text-sm">
+              <div className="p-4 border border-dashed border-gray-200 rounded-lg text-center text-gray-400 text-sm bg-gray-50">
                 No items in your bucket list yet. Add a custom goal below!
               </div>
             ) : (
-              <div className="max-h-[260px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+              <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
                 {bucketList.map((goal) => (
                   <div
                     key={goal.id}
                     className={`flex items-start gap-3 p-3 border rounded-lg transition-colors ${
                       goal.checked
-                        ? "border-green-400 bg-green-50/30"
+                        ? "border-green-400 bg-green-50/50 shadow-sm"
                         : "border-gray-200 hover:border-green-200 bg-white"
                     }`}
                   >
@@ -433,11 +473,17 @@ function Tobe() {
                         className="mt-1 w-4 h-4 text-green-600 rounded border-gray-300 focus:ring-green-500 accent-green-500 cursor-pointer"
                       />
                       <div>
-                        <h4 className="text-sm font-bold text-gray-800">
+                        {/* Title with Status Badge */}
+                        <h4 className="text-sm font-bold text-gray-800 flex items-center flex-wrap gap-2">
                           {goal.title}
+                          {goal.status && (
+                            <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] rounded-full uppercase tracking-wider font-semibold border border-gray-200">
+                              {goal.status.replace("_", " ")}
+                            </span>
+                          )}
                         </h4>
                         {goal.desc && (
-                          <p className="text-xs text-gray-500 mt-0.5">
+                          <p className="text-xs text-gray-500 mt-1">
                             {goal.desc}
                           </p>
                         )}
@@ -457,6 +503,56 @@ function Tobe() {
             )}
           </div>
 
+          {/* =========================================
+              AI ANALYSIS RESULTS
+          ========================================= */}
+          {analysisResult && (
+            <div className="mb-6 p-5 bg-purple-50 border border-purple-100 rounded-xl shadow-sm animate-fade-in">
+              <h4 className="font-bold text-purple-900 mb-4 flex items-center gap-2 text-lg">
+                <Sparkles size={20} className="text-purple-600" />
+                AI Analysis Results
+              </h4>
+
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 rounded-full bg-purple-200 text-purple-800 flex items-center justify-center text-xs font-bold shadow-sm">
+                      BE
+                    </div>
+                    <span className="text-sm font-bold text-gray-800">
+                      Who you need to BE:
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-800 bg-white p-3.5 rounded-lg border border-purple-100 shadow-sm">
+                    {analysisResult.be}
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 rounded-full bg-blue-200 text-blue-800 flex items-center justify-center text-xs font-bold shadow-sm">
+                      DO
+                    </div>
+                    <span className="text-sm font-bold text-gray-800">
+                      What you need to DO:
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-800 bg-white p-3.5 rounded-lg border border-blue-100 shadow-sm">
+                    {analysisResult.do}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-purple-100 text-xs text-purple-600 font-medium">
+                  <Sparkles size={12} />
+                  <span>Analysis fetched based on your selected goals</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* =========================================
+              ADD CUSTOM GOAL SECTION
+          ========================================= */}
           <div className="mb-6">
             <p className="text-sm font-semibold text-gray-700 mb-2">
               Add Custom Goal:
@@ -480,6 +576,9 @@ function Tobe() {
             </div>
           </div>
 
+          {/* =========================================
+              ACTION BUTTONS
+          ========================================= */}
           <div className="flex flex-col sm:flex-row gap-3">
             <button
               onClick={handleAnalyzeAI}
@@ -500,55 +599,9 @@ function Tobe() {
               }`}
             >
               <Save size={18} />
-              {isSaving ? "Fetching..." : "Fetch List"}
+              {isSaving ? "Saving..." : "Save Goals"}
             </button>
           </div>
-
-          {/* =========================================
-              AI ANALYSIS RESULTS
-          ========================================= */}
-          {analysisResult && (
-            <div className="mt-6 p-4 bg-purple-50 border border-purple-100 rounded-lg animate-fade-in">
-              <h4 className="font-bold text-purple-800 mb-3 flex items-center gap-2">
-                <Sparkles size={18} />
-                AI Analysis Results
-              </h4>
-
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-6 h-6 rounded-full bg-purple-200 text-purple-700 flex items-center justify-center text-xs font-bold">
-                      BE
-                    </div>
-                    <span className="text-sm font-semibold text-gray-700">
-                      Who you need to BE:
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-800 bg-white p-3 rounded border border-purple-200">
-                    {analysisResult.be}
-                  </p>
-                </div>
-
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-6 h-6 rounded-full bg-blue-200 text-blue-700 flex items-center justify-center text-xs font-bold">
-                      DO
-                    </div>
-                    <span className="text-sm font-semibold text-gray-700">
-                      What you need to DO:
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-800 bg-white p-3 rounded border border-blue-200">
-                    {analysisResult.do}
-                  </p>
-                </div>
-
-                <p className="text-xs text-gray-500 mt-2">
-                  ✓ Analysis fetched from your profile
-                </p>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -588,7 +641,9 @@ function Tobe() {
       ========================================= */}
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 ${toast.type === "error" ? "bg-red-500" : "bg-green-500"} text-white px-4 py-3 rounded shadow-lg flex flex-col min-w-[250px] animate-fade-in z-50`}
+          className={`fixed bottom-6 right-6 ${
+            toast.type === "error" ? "bg-red-500" : "bg-green-500"
+          } text-white px-4 py-3 rounded shadow-lg flex flex-col min-w-[250px] animate-fade-in z-50`}
         >
           <span className="font-bold text-sm">
             {toast.type === "error" ? "Error" : "Success"}

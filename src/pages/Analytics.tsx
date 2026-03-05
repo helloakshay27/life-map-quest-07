@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import TrendsChart from "@/components/TrendsChart";
+import TrendsChart from "@/components/TrendsChart"; // Ise alag hi rehne dena kyunki ye chart component hai
 import {
   FileText,
   Calendar,
@@ -8,18 +8,26 @@ import {
   Loader2,
   Lightbulb,
 } from "lucide-react";
-import LifeBalanceOverview from "@/components/LifeBalanceOverview";
-import ValuesInAction from "@/components/ValuesData";
 
 const ANALYTICS_URL = "https://life-api.lockated.com/analytics";
 const VALUES_URL = "https://life-api.lockated.com/core_values";
 
+// ==========================================
+// 1. MAIN ANALYTICS COMPONENT
+// ==========================================
 const Analytics = () => {
-  const [metrics, setMetrics] = useState<any>(null);
+  const [metrics, setMetrics] = useState({
+    uniqueDays: 0,
+    weekly: 0,
+    alignment: 0,
+    energy: 0,
+  });
+
   const [chartData, setChartData] = useState([]);
-  const [lifeBalanceData, setLifeBalanceData] = useState([]);
+  const [lifeBalanceData, setLifeBalanceData] = useState({});
   const [valuesData, setValuesData] = useState([]);
   const [insights, setInsights] = useState([]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,69 +46,45 @@ const Analytics = () => {
           fetch(VALUES_URL, { method: "GET", headers }),
         ]);
 
-        // 1. Analytics Data Processing
-        if (resA.status === "fulfilled") {
-          if (resA.value.ok) {
-            try {
-              const aData = await resA.value.json();
-              setMetrics({
-                uniqueDays: aData.metrics?.uniqueDays ?? aData.unique_days ?? 0,
-                uniqueDays30d:
-                  aData.metrics?.uniqueDays30d ?? aData.unique_days_30d ?? 0,
-                weekly: aData.metrics?.weekly ?? aData.weekly_average ?? 0,
-                alignment:
-                  aData.metrics?.alignment ?? aData.alignment_score ?? 0,
-                energy: aData.metrics?.energy ?? aData.energy_score ?? 0,
-              });
-              setChartData(aData.trends ?? aData.trend_data ?? []);
-              setLifeBalanceData(aData.life_balance ?? aData.life_areas ?? []);
-              setInsights(aData.insights ?? aData.key_insights ?? []);
-            } catch (e) {
-              console.error("Analytics parsing failed:", e);
-            }
-          } else {
-            // 🚨 ADVANCED ERROR LOGGING
-            const errText = await resA.value.text();
-            console.error(
-              `🚨 ANALYTICS API FAILED (${resA.value.status}):`,
-              errText,
-            );
+        // Analytics Data Processing
+        if (resA.status === "fulfilled" && resA.value.ok) {
+          try {
+            const aData = await resA.value.json();
+            const summary = aData.summary || {};
+
+            setMetrics({
+              uniqueDays: summary.unique_days ?? aData.unique_days ?? 0,
+              weekly: summary.weekly_count ?? aData.weekly_count ?? 0,
+              alignment: summary.avg_alignment ?? aData.avg_alignment ?? 0,
+              energy: summary.avg_energy ?? aData.avg_energy ?? 0,
+            });
+
+            setChartData(aData.trends || []);
+            setLifeBalanceData(aData.life_balance || {});
+            setInsights(aData.insights || []);
+          } catch (e) {
+            console.error("Analytics parsing failed:", e);
           }
         }
 
-        // 2. Core Values Data Processing
-        if (resV.status === "fulfilled") {
-          if (resV.value.ok) {
-            try {
-              const vData = await resV.value.json();
-              console.log("RAW VALUES API RESPONSE:", vData);
+        // Core Values Data Processing
+        if (resV.status === "fulfilled" && resV.value.ok) {
+          try {
+            const vData = await resV.value.json();
+            const rawArray = Array.isArray(vData)
+              ? vData
+              : vData.data || vData.values || [];
 
-              const rawArray = Array.isArray(vData)
-                ? vData
-                : vData.data || vData.values || [];
+            const formattedValues = rawArray.map((item: any) => ({
+              id: item.id || Math.random(),
+              value: item.name || item.value || "Unknown",
+              days: item.priority || item.days || 0,
+              color: item.color || "purple",
+            }));
 
-              if (rawArray.length === 0) {
-                console.warn("Values array is empty or wrong format!");
-              }
-
-              const formattedValues = rawArray.map((item: any) => ({
-                value: item.name || item.value || "Unknown",
-                days:
-                  item.priority !== undefined ? item.priority : item.days || 0,
-              }));
-
-              console.log("FORMATTED VALUES FOR UI:", formattedValues);
-              setValuesData(formattedValues);
-            } catch (e) {
-              console.error("Values mapping failed:", e);
-            }
-          } else {
-            // 🚨 ADVANCED ERROR LOGGING
-            const errText = await resV.value.text();
-            console.error(
-              `🚨 CORE VALUES API FAILED (${resV.value.status}):`,
-              errText,
-            );
+            setValuesData(formattedValues);
+          } catch (e) {
+            console.error("Values mapping failed:", e);
           }
         }
       } catch (err: any) {
@@ -140,31 +124,39 @@ const Analytics = () => {
         </p>
       </header>
 
-      {/* Metric Cards — 2 col on mobile, 4 on md+ */}
+      {/* Metric Cards */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
         <MetricBox
           icon={FileText}
           title="Unique Days"
-          value={metrics?.uniqueDays}
+          value={metrics.uniqueDays}
           color="emerald"
         />
         <MetricBox
           icon={Calendar}
           title="Weekly Avg"
-          value={metrics?.weekly}
+          value={metrics.weekly}
           color="purple"
         />
         <MetricBox
           icon={TrendingUp}
           title="Alignment"
-          value={metrics?.alignment?.toFixed(1)}
+          value={
+            typeof metrics.alignment === "number"
+              ? metrics.alignment.toFixed(1)
+              : "0.0"
+          }
           isScore
           color="orange"
         />
         <MetricBox
           icon={Heart}
           title="Energy"
-          value={metrics?.energy?.toFixed(1)}
+          value={
+            typeof metrics.energy === "number"
+              ? metrics.energy.toFixed(1)
+              : "0.0"
+          }
           isScore
           color="red"
         />
@@ -175,15 +167,20 @@ const Analytics = () => {
         <h3 className="text-base sm:text-lg font-semibold mb-4">
           Activity Trends
         </h3>
-        {/* Horizontal scroll wrapper for small screens */}
         <div className="w-full overflow-x-auto">
           <div className="min-w-[300px]">
-            <TrendsChart data={chartData} />
+            {chartData.length > 0 ? (
+              <TrendsChart data={chartData} />
+            ) : (
+              <p className="text-sm text-gray-400">
+                No chart data available yet.
+              </p>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Life Balance + Values — stacked on mobile, side-by-side on lg+ */}
+      {/* Life Balance + Values */}
       <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
         <LifeBalanceOverview mockLifeBalanceData={lifeBalanceData} />
         <ValuesInAction mockValuesData={valuesData} />
@@ -216,25 +213,29 @@ const Analytics = () => {
   );
 };
 
+export default Analytics;
+
+// ==========================================
+// 2. HELPER COMPONENTS (ALL IN ONE FILE)
+// ==========================================
+
+// --- Metric Box ---
 const MetricBox = ({ icon: Icon, title, value, color, isScore }: any) => {
   const colors: any = {
-    emerald:
-      "bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400",
-    purple:
-      "bg-purple-50 border-purple-200 text-purple-700 dark:bg-purple-900/20 dark:border-purple-800 dark:text-purple-400",
-    orange:
-      "bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-400",
-    red: "bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400",
+    emerald: "bg-emerald-50 border-emerald-200 text-emerald-700",
+    purple: "bg-purple-50 border-purple-200 text-purple-700",
+    orange: "bg-orange-50 border-orange-200 text-orange-700",
+    red: "bg-red-50 border-red-200 text-red-700",
   };
 
   return (
     <div
-      className={`p-4 sm:p-5 border-2 rounded-xl ${colors[color]} transition-all`}
+      className={`p-4 sm:p-5 border-2 rounded-xl ${colors[color] || colors.purple} transition-all`}
     >
       <Icon className="mb-2 h-4 w-4 flex-shrink-0" />
       <div className="text-xs sm:text-sm font-medium truncate">{title}</div>
       <div className="text-2xl sm:text-3xl font-bold mt-0.5">
-        {value ?? 0}
+        {value !== undefined ? value : 0}
         {isScore && (
           <span className="text-base sm:text-lg font-medium opacity-70">
             /10
@@ -245,4 +246,112 @@ const MetricBox = ({ icon: Icon, title, value, color, isScore }: any) => {
   );
 };
 
-export default Analytics;
+// --- Values in Action ---
+const ValuesInAction = ({ mockValuesData = [] }: any) => {
+  const getColorClass = (colorName: string) => {
+    const colorMap: any = {
+      purple: "bg-purple-500",
+      teal: "bg-teal-500",
+      red: "bg-red-500",
+      blue: "bg-blue-500",
+      green: "bg-green-500",
+      orange: "bg-orange-500",
+      yellow: "bg-yellow-500",
+    };
+    return colorMap[colorName] || "bg-gray-500";
+  };
+
+  return (
+    <div className="rounded-xl border bg-white p-4 sm:p-6 shadow-sm flex flex-col h-full font-sans">
+      <div className="mb-5">
+        <h3 className="text-[1.125rem] font-bold text-gray-900">
+          Values in Action
+        </h3>
+        <p className="text-sm text-gray-500 mt-1">
+          Days each value appeared (Last 30 days)
+        </p>
+      </div>
+
+      <div className="flex-1 flex flex-col gap-3">
+        {mockValuesData.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-32 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+            <p className="text-sm text-gray-400 font-medium">
+              No values recorded yet.
+            </p>
+          </div>
+        ) : (
+          mockValuesData.map((item: any) => (
+            <div
+              key={item.id}
+              className="flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-gray-50 hover:bg-gray-100 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <span
+                  className={`w-3 h-3 rounded-full shadow-sm ${getColorClass(item.color)}`}
+                ></span>
+                <span className="font-semibold text-gray-700 capitalize">
+                  {item.value}
+                </span>
+              </div>
+              <span className="text-sm font-bold text-gray-600 bg-white px-2.5 py-1 rounded-md border shadow-sm">
+                {item.days} {item.days === 1 ? "day" : "days"}
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+// --- Life Balance Overview ---
+const LifeBalanceOverview = ({ mockLifeBalanceData = {} }: any) => {
+  const dataArray = Object.entries(mockLifeBalanceData || {}).map(
+    ([key, val]) => ({
+      name: key,
+      days: Number(val) || 0,
+    }),
+  );
+
+  const maxDays = Math.max(...dataArray.map((d) => d.days), 1);
+
+  return (
+    <div className="rounded-xl border bg-white p-4 sm:p-6 shadow-sm flex flex-col h-full font-sans">
+      <div className="mb-5">
+        <h3 className="text-[1.125rem] font-bold text-gray-900">
+          Life Balance Overview
+        </h3>
+        <p className="text-sm text-gray-500 mt-1">
+          Based on unique days in each life area (Last 30 days)
+        </p>
+      </div>
+
+      <div className="flex-1 flex flex-col justify-center gap-4">
+        {dataArray.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-32 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+            <p className="text-sm text-gray-400 font-medium">
+              No life balance data found yet.
+            </p>
+          </div>
+        ) : (
+          dataArray.map((item, index) => (
+            <div key={index} className="space-y-1.5 group">
+              <div className="flex justify-between items-center text-sm">
+                <span className="font-semibold text-gray-700">{item.name}</span>
+                <span className="text-gray-500 font-medium">
+                  {item.days} days
+                </span>
+              </div>
+              <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                <div
+                  className="bg-blue-500 h-2.5 rounded-full transition-all duration-1000 ease-out group-hover:bg-blue-600"
+                  style={{ width: `${(item.days / maxDays) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
