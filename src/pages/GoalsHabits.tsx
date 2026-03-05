@@ -125,6 +125,45 @@ interface DragState {
   cardHeight: number;
   isDragging: boolean;
 }
+interface Belief {
+  id: string;
+  belief: string;
+  origin?: string;
+  evidence?: string;
+  alternative: string;
+}
+interface Pattern {
+  id: string;
+  name: string;
+  trigger?: string;
+  consequence?: string;
+  alternative: string;
+}
+interface Affirmation {
+  id: string;
+  statement: string;
+  priority?: number;
+}
+interface Habit {
+  id: string;
+  name: string;
+  description?: string;
+  frequency: "daily" | "weekly" | "custom";
+  category?: string;
+  time?: string;
+  place?: string;
+  startDate?: string;
+}
+interface DragState {
+  goalId: string;
+  startX: number;
+  startY: number;
+  currentX: number;
+  currentY: number;
+  cardWidth: number;
+  cardHeight: number;
+  isDragging: boolean;
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 const GoalsHabits = () => {
@@ -193,6 +232,8 @@ const GoalsHabits = () => {
   const [affirmationText, setAffirmationText] = useState("");
   const [affirmationCategory, setAffirmationCategory] = useState("");
   const [affirmationBelief, setAffirmationBelief] = useState("");
+  const [affirmationStatement, setAffirmationStatement] = useState("");
+  const [affirmationPriority, setAffirmationPriority] = useState(5);
 
   // Habit form
   const [habitName, setHabitName] = useState("");
@@ -1003,84 +1044,156 @@ const GoalsHabits = () => {
 
   // ─── AFFIRMATIONS CRUD ────────────────────────────────────────────────────
   const handleCreateAffirmation = async () => {
-    if (!affirmationText.trim()) return;
+    if (!affirmationStatement.trim()) return;
     const payload = {
-      text: affirmationText,
-      category: affirmationCategory,
-      linkedBelief: affirmationBelief,
+      affirmation: {
+        statement: affirmationStatement,
+        priority: affirmationPriority,
+      },
     };
-    const newAffirmation: Affirmation = { id: crypto.randomUUID(), ...payload };
+
+    console.log("Creating affirmation with payload:", JSON.stringify(payload));
+
     try {
-      try {
-        const res = await fetchWithAuth("/affirmations", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
-        if (res.ok) {
-          const d = await res.json();
-          newAffirmation.id = d.id || d._id || d.data?.id || newAffirmation.id;
-          console.log("Affirmation created:", d);
-        } else {
-          try {
-            const errorText = await res.text();
-            console.error("Affirmations API error:", res.status, errorText);
-          } catch {
-            console.error(
-              "Affirmations API error:",
-              res.status,
-              res.statusText,
-            );
-          }
-        }
-      } catch (err) {
-        console.error("Affirmations API unavailable:", err);
-      }
-      setAffirmations((prev) => {
-        const u = [...prev, newAffirmation];
-        save("user_affirmations", u);
-        return u;
+      const res = await fetchWithAuth("/affirmations", {
+        method: "POST",
+        body: JSON.stringify(payload),
       });
-    } catch (e) {
-      console.error("Failed to create affirmation:", e);
+      console.log("Affirmation API response status:", res.status);
+
+      if (res.ok) {
+        const d = await res.json();
+        console.log("Affirmation created successfully:", d);
+
+        // Fetch updated list from server
+        try {
+          const listRes = await fetchWithAuth("/affirmations");
+          if (listRes.ok) {
+            const data = await listRes.json();
+            const list = Array.isArray(data)
+              ? data
+              : (data.affirmations ?? data.data ?? []);
+            setAffirmations(list);
+            save("user_affirmations", list);
+            console.log("Affirmations list refreshed:", list);
+          }
+        } catch (err) {
+          console.error("Failed to refresh affirmations list:", err);
+        }
+
+        setAffirmationStatement("");
+        setAffirmationPriority(5);
+        setIsAffirmationDialogOpen(false);
+      } else {
+        try {
+          const errorText = await res.text();
+          console.error("Affirmations API error:", res.status, errorText);
+          alert(`Failed to create affirmation: ${res.status}`);
+        } catch {
+          console.error("Affirmations API error:", res.status, res.statusText);
+          alert(
+            `Failed to create affirmation: ${res.status} ${res.statusText}`,
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Affirmations API request failed:", err);
+      alert("Failed to create affirmation. Please check your connection.");
     }
-    setAffirmationText("");
-    setAffirmationCategory("");
-    setAffirmationBelief("");
-    setIsAffirmationDialogOpen(false);
+  };
+
+  const handleUpdateAffirmation = async (
+    id: string,
+    statement: string,
+    priority: number,
+  ) => {
+    const payload = { affirmation: { statement, priority } };
+    try {
+      const res = await fetchWithAuth(`/affirmations/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        console.log("Affirmation updated:", d);
+        setAffirmations((prev) => {
+          const u = prev.map((a) =>
+            a.id === id ? { ...a, statement, priority } : a,
+          );
+          save("user_affirmations", u);
+          return u;
+        });
+      } else {
+        try {
+          const errorText = await res.text();
+          console.error(
+            "Affirmations update API error:",
+            res.status,
+            errorText,
+          );
+        } catch {
+          console.error(
+            "Affirmations update API error:",
+            res.status,
+            res.statusText,
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Affirmations update failed:", err);
+    }
   };
 
   const handleDeleteAffirmation = async (id: string) => {
+    console.log("Deleting affirmation with id:", id);
+
     try {
-      try {
-        const res = await fetchWithAuth(`/affirmations/${id}`, {
-          method: "DELETE",
-        });
-        if (!res.ok) {
-          try {
-            const errorText = await res.text();
-            console.log(
-              "Affirmations delete API error:",
-              res.status,
-              errorText,
-            );
-          } catch {
-            console.log(
-              "Affirmations delete API error:",
-              res.status,
-              res.statusText,
-            );
-          }
-        }
-      } catch (err) {
-        console.log("API unavailable, deleting locally", err);
-      }
-      setAffirmations((prev) => {
-        const u = prev.filter((a) => a.id !== id);
-        save("user_affirmations", u);
-        return u;
+      const res = await fetchWithAuth(`/affirmations/${id}`, {
+        method: "DELETE",
       });
-    } catch (e) {
-      console.error("Failed to delete affirmation:", e);
+      console.log("Delete affirmation API response status:", res.status);
+
+      if (res.ok) {
+        console.log("Affirmation deleted successfully");
+
+        // Fetch updated list from server
+        try {
+          const listRes = await fetchWithAuth("/affirmations");
+          if (listRes.ok) {
+            const data = await listRes.json();
+            const list = Array.isArray(data)
+              ? data
+              : (data.affirmations ?? data.data ?? []);
+            setAffirmations(list);
+            save("user_affirmations", list);
+            console.log("Affirmations list refreshed after delete:", list);
+          }
+        } catch (err) {
+          console.error("Failed to refresh affirmations list:", err);
+        }
+      } else {
+        try {
+          const errorText = await res.text();
+          console.error(
+            "Affirmations delete API error:",
+            res.status,
+            errorText,
+          );
+          alert(`Failed to delete affirmation: ${res.status}`);
+        } catch {
+          console.error(
+            "Affirmations delete API error:",
+            res.status,
+            res.statusText,
+          );
+          alert(
+            `Failed to delete affirmation: ${res.status} ${res.statusText}`,
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Affirmations delete request failed:", err);
+      alert("Failed to delete affirmation. Please check your connection.");
     }
   };
 
@@ -1096,74 +1209,98 @@ const GoalsHabits = () => {
       place: habitPlace,
       start_date: habitStartDate,
     };
-    const newHabit: Habit = {
-      id: crypto.randomUUID(),
-      name: habitName,
-      frequency: habitFrequency as "daily" | "weekly" | "custom",
-      description: habitDescription || undefined,
-      category: habitCategory || undefined,
-      time: habitTime || undefined,
-      place: habitPlace || undefined,
-      startDate: habitStartDate || undefined,
-    };
+
+    console.log("Creating habit with payload:", JSON.stringify(payload));
+
     try {
-      try {
-        const res = await fetchWithAuth("/habits", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
-        if (res.ok) {
-          const d = await res.json();
-          newHabit.id = d.id || d._id || d.data?.id || newHabit.id;
-          console.log("Habit created:", d);
-        } else {
-          const errorText = await res.text();
-          console.error(
-            "Habits API error:",
-            res.status,
-            res.statusText,
-            errorText,
-          );
-        }
-      } catch (err) {
-        console.error("Habits API fetch error:", err);
-      }
-      setHabits((prev) => {
-        const u = [...prev, newHabit];
-        save("user_habits", u);
-        return u;
+      const res = await fetchWithAuth("/habits", {
+        method: "POST",
+        body: JSON.stringify(payload),
       });
-    } catch (e) {
-      console.error("Failed to create habit:", e);
+      console.log("Habit API response status:", res.status);
+
+      if (res.ok) {
+        const d = await res.json();
+        console.log("Habit created successfully:", d);
+
+        // Fetch updated list from server
+        try {
+          const listRes = await fetchWithAuth("/habits");
+          if (listRes.ok) {
+            const data = await listRes.json();
+            const list = Array.isArray(data)
+              ? data
+              : (data.habits ?? data.data ?? []);
+            setHabits(list);
+            save("user_habits", list);
+            console.log("Habits list refreshed:", list);
+          }
+        } catch (err) {
+          console.error("Failed to refresh habits list:", err);
+        }
+
+        setHabitName("");
+        setHabitDescription("");
+        setHabitFrequency("daily");
+        setHabitCategory("");
+        setHabitTime("");
+        setHabitPlace("");
+        setHabitStartDate("");
+        setIsHabitDialogOpen(false);
+      } else {
+        try {
+          const errorText = await res.text();
+          console.error("Habits API error:", res.status, errorText);
+          alert(`Failed to create habit: ${res.status}`);
+        } catch {
+          console.error("Habits API error:", res.status, res.statusText);
+          alert(`Failed to create habit: ${res.status} ${res.statusText}`);
+        }
+      }
+    } catch (err) {
+      console.error("Habits API request failed:", err);
+      alert("Failed to create habit. Please check your connection.");
     }
-    setHabitName("");
-    setHabitDescription("");
-    setHabitFrequency("daily");
-    setHabitCategory("");
-    setHabitTime("");
-    setHabitPlace("");
-    setHabitStartDate("");
-    setIsHabitDialogOpen(false);
   };
 
   const handleDeleteHabit = async (id: string) => {
+    console.log("Deleting habit with id:", id);
+
     try {
-      try {
-        const res = await fetchWithAuth(`/habits/${id}`, { method: "DELETE" });
-        if (!res.ok) {
-          const errorText = await res.text();
-          console.log("Habits delete API error:", res.status, errorText);
+      const res = await fetchWithAuth(`/habits/${id}`, { method: "DELETE" });
+      console.log("Delete habit API response status:", res.status);
+
+      if (res.ok) {
+        console.log("Habit deleted successfully");
+
+        // Fetch updated list from server
+        try {
+          const listRes = await fetchWithAuth("/habits");
+          if (listRes.ok) {
+            const data = await listRes.json();
+            const list = Array.isArray(data)
+              ? data
+              : (data.habits ?? data.data ?? []);
+            setHabits(list);
+            save("user_habits", list);
+            console.log("Habits list refreshed after delete:", list);
+          }
+        } catch (err) {
+          console.error("Failed to refresh habits list:", err);
         }
-      } catch (err) {
-        console.log("API unavailable, deleting locally", err);
+      } else {
+        try {
+          const errorText = await res.text();
+          console.error("Habits delete API error:", res.status, errorText);
+          alert(`Failed to delete habit: ${res.status}`);
+        } catch {
+          console.error("Habits delete API error:", res.status, res.statusText);
+          alert(`Failed to delete habit: ${res.status} ${res.statusText}`);
+        }
       }
-      setHabits((prev) => {
-        const u = prev.filter((h) => h.id !== id);
-        save("user_habits", u);
-        return u;
-      });
-    } catch (e) {
-      console.error("Failed to delete habit:", e);
+    } catch (err) {
+      console.error("Habits delete request failed:", err);
+      alert("Failed to delete habit. Please check your connection.");
     }
   };
 
@@ -2056,47 +2193,32 @@ const GoalsHabits = () => {
                 </Button>
               </div>
             </div>
-            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 py-12 sm:py-16 lg:py-20 px-4">
+            <div
+              className={`rounded-lg border-2 border-dashed border-gray-300 p-4 ${affirmations.length === 0 ? "flex flex-col items-center justify-center py-16" : ""}`}
+            >
               {affirmations.length === 0 ? (
                 <>
-                  <Sparkles className="mb-3 sm:mb-4 h-10 w-10 sm:h-12 sm:w-12 lg:h-16 lg:w-16 text-muted-foreground/30 mx-auto" />
-                  <p className="text-xs sm:text-sm sm:text-base text-muted-foreground text-center">
-                    No affirmations yet. Start your day with positive thoughts!
+                  <Sparkles className="mb-3 h-12 w-12 text-muted-foreground/30" />
+                  <p className="text-sm text-muted-foreground text-center">
+                    No affirmations yet.
                   </p>
                 </>
               ) : (
-                <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {affirmations.map((affirmation) => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {affirmations.map((a) => (
                     <Card
-                      key={affirmation.id}
+                      key={a.id}
                       className="p-3 sm:p-4 relative group bg-purple-50 border-purple-200"
                     >
-                      <p className="text-sm sm:text-base text-foreground pr-8 italic">
-                        "{affirmation.text}"
+                      <p className="text-sm text-foreground pr-8 italic">
+                        "{a.statement}"
                       </p>
-                      {affirmation.category && (
+                      {a.priority && (
                         <p className="text-xs text-purple-600 mt-2">
-                          ✨ {affirmation.category}
+                          ⭐ Priority: {a.priority}
                         </p>
                       )}
-                      <button
-                        onClick={() => handleDeleteAffirmation(affirmation.id)}
-                        className="absolute top-3 right-3 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <svg
-                          className="h-4 w-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                      </button>
+                      <DelBtn onClick={() => handleDeleteAffirmation(a.id)} />
                     </Card>
                   ))}
                 </div>
@@ -2843,43 +2965,25 @@ const GoalsHabits = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="affirmation-text">Affirmation *</Label>
+              <Label>Statement *</Label>
               <Textarea
-                id="affirmation-text"
-                placeholder='e.g., "I am confident and capable"...'
+                placeholder='"I am confident and capable"'
                 rows={3}
-                value={affirmationText}
-                onChange={(e) => setAffirmationText(e.target.value)}
+                value={affirmationStatement}
+                onChange={(e) => setAffirmationStatement(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="affirmation-category">Category</Label>
-              <Select
-                value={affirmationCategory}
-                onValueChange={setAffirmationCategory}
-              >
-                <SelectTrigger id="affirmation-category">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="confidence">Confidence</SelectItem>
-                  <SelectItem value="abundance">Abundance</SelectItem>
-                  <SelectItem value="health">Health</SelectItem>
-                  <SelectItem value="success">Success</SelectItem>
-                  <SelectItem value="relationships">Relationships</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="affirmation-belief">
-                Linked to Belief (Optional)
-              </Label>
+              <Label>Priority (1-10)</Label>
               <Input
-                id="affirmation-belief"
-                placeholder="Which limiting belief does this counter?"
-                value={affirmationBelief}
-                onChange={(e) => setAffirmationBelief(e.target.value)}
+                type="number"
+                min="1"
+                max="10"
+                placeholder="5"
+                value={affirmationPriority}
+                onChange={(e) =>
+                  setAffirmationPriority(parseInt(e.target.value) || 5)
+                }
               />
             </div>
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-4">
