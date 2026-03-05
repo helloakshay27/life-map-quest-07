@@ -1615,7 +1615,12 @@ const GoalsHabits = () => {
           </div>
 
           {viewMode === "kanban" && (
-            <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div
+              className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4 select-none touch-none"
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerCancel}
+            >
               {goalStatuses.map((status) => {
                 const statusGoals = getGoalsByStatus(
                   status.key as Goal["status"],
@@ -1638,7 +1643,8 @@ const GoalsHabits = () => {
                       </span>
                     </div>
                     <div
-                      className={`min-h-56 sm:min-h-64 lg:min-h-80 xl:min-h-96 rounded-xl border ${status.border} ${status.bg} p-2 sm:p-3 lg:p-4`}
+                      ref={(el) => (columnRefs.current[status.key] = el)}
+                      className={`min-h-56 sm:min-h-64 lg:min-h-80 xl:min-h-96 rounded-xl border transition-colors ${status.border} ${status.bg} p-2 sm:p-3 lg:p-4 ${hoveredStatus === status.key ? "ring-2 ring-blue-400 bg-opacity-70" : ""}`}
                     >
                       {statusGoals.length === 0 ? (
                         <div className="flex h-full min-h-48 sm:min-h-56 flex-col items-center justify-center">
@@ -1651,7 +1657,10 @@ const GoalsHabits = () => {
                           {statusGoals.map((goal) => (
                             <Card
                               key={goal.id}
-                              className="cursor-pointer bg-white p-2 sm:p-3 shadow-sm hover:shadow-md transition-shadow relative group"
+                              onPointerDown={(e) =>
+                                handlePointerDown(e, goal.id)
+                              }
+                              className={`cursor-grab active:cursor-grabbing bg-white p-2 sm:p-3 shadow-sm hover:shadow-md transition-all relative group ${dragState?.goalId === goal.id ? "opacity-50 scale-95" : "hover:-translate-y-1"}`}
                             >
                               <p className="text-xs sm:text-sm font-medium text-foreground pr-8">
                                 {goal.title}
@@ -1701,6 +1710,16 @@ const GoalsHabits = () => {
                   </div>
                 );
               })}
+              {dragState?.isDragging && (
+                <Card
+                  style={ghostStyle}
+                  className="bg-white p-2 sm:p-3 border-2 border-teal-500 rounded-xl"
+                >
+                  <p className="text-xs sm:text-sm font-medium text-foreground opacity-90">
+                    {goals.find((g) => g.id === dragState.goalId)?.title}
+                  </p>
+                </Card>
+              )}
             </div>
           )}
 
@@ -2456,20 +2475,6 @@ const GoalsHabits = () => {
                   />
                 </div>
               </div>
-            </div>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setIsGoalDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="bg-teal-500 hover:bg-teal-600 text-white"
-                onClick={handleCreateGoal}
-              >
-                Create Goal
-              </Button>
             </div>
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-4">
               <Button
