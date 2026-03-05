@@ -279,137 +279,16 @@ const GoalsHabits = () => {
     load();
   }, []);
 
-  // Load beliefs from API — GET /limiting_beliefs
-  const loadBeliefs = async () => {
-    setBeliefsLoading(true);
-    setBeliefsError(null);
-    try {
-      const res = await fetchWithAuth("/limiting_beliefs");
-      if (!res.ok) throw new Error(`Server error: ${res.status}`);
-      const data = await res.json();
-      // API always returns an array (may be empty [])
-      const list: Belief[] = Array.isArray(data)
-        ? data
-        : (data.limiting_beliefs ?? data.data ?? []);
-      // Normalise: API uses `statement` as the main text field
-      setBeliefs(
-        list.map((b) => ({
-          ...b,
-          belief: b.statement ?? b.limiting_belief ?? b.belief ?? "",
-          alternative: b.reflection_data?.reframe ?? b.alternative ?? "",
-        })),
-      );
-    } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to load beliefs.";
-      setBeliefsError(msg);
-      // Fall back to localStorage on network/server error
-      try {
-        const saved = localStorage.getItem("user_beliefs");
-        if (saved) setBeliefs(JSON.parse(saved));
-      } catch {
-        // ignore
-      }
-    } finally {
-      setBeliefsLoading(false);
-    }
-  };
-
-  // Load patterns from API
-  const loadPatterns = async () => {
-    setPatternsLoading(true);
-    setPatternsError(null);
-    try {
-      const res = await fetchWithAuth("/behavioral_patterns");
-      if (!res.ok) throw new Error(`Server error: ${res.status}`);
-      const data = await res.json();
-      const list: Pattern[] = Array.isArray(data)
-        ? data
-        : (data.behavioral_patterns ?? data.data ?? []);
-
-      setPatterns(
-        list.map((p) => ({
-          ...p,
-          name: p.recurring_behavior ?? p.name ?? "",
-          alternative: p.pattern_data?.desired_behavior ?? p.alternative ?? "",
-          trigger: p.pattern_data?.triggers ?? p.trigger,
-          consequence: p.pattern_data?.impact ?? p.consequence,
-          affirmation_id: p.affirmation_id,
-        })),
-      );
-    } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to load patterns.";
-      setPatternsError(msg);
-      // Fall back to localStorage on network error
-      try {
-        const saved = localStorage.getItem("user_patterns");
-        if (saved) setPatterns(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    } finally {
-      setPatternsLoading(false);
-    }
-  };
-
-  /** GET /behavioral_patterns/:id — fetch full detail and open modal */
-  const openPatternDetail = async (id: string | number) => {
-    setIsPatternDetailOpen(true);
-    setPatternDetailLoading(true);
-    setPatternDetail(null);
-    try {
-      const res = await fetchWithAuth(`/behavioral_patterns/${id}`);
-      if (!res.ok) throw new Error(`Server error: ${res.status}`);
-      const json = await res.json();
-      // API wraps response: { pattern: {...} }
-      const raw: Pattern = json.pattern ?? json;
-      setPatternDetail({
-        ...raw,
-        name: raw.recurring_behavior ?? raw.name ?? "",
-        alternative:
-          raw.pattern_data?.desired_behavior ?? raw.alternative ?? "",
-        trigger: raw.pattern_data?.triggers ?? raw.trigger,
-        consequence: raw.pattern_data?.impact ?? raw.consequence,
-        affirmation_id: raw.affirmation_id,
-      });
-    } catch (err: unknown) {
-      console.error("GET /behavioral_patterns/:id failed:", err);
-      // Fallback: use already-loaded list data
-      const found = patterns.find((p) => p.id === id);
-      if (found) setPatternDetail(found);
-    } finally {
-      setPatternDetailLoading(false);
-    }
-  };
-
-  // Load beliefs, patterns, affirmations, habits
+  // ─── LOAD BELIEFS ─────────────────────────────────────────────────────────
   useEffect(() => {
-    const loadData = async () => {
-      // Load Affirmations (localStorage only)
-      try {
-        const savedAffirmations = localStorage.getItem("user_affirmations");
-        if (savedAffirmations) {
-          setAffirmations(JSON.parse(savedAffirmations));
-        }
-      } catch (e) {
-        console.log("Error loading affirmations from storage");
-      }
+    const saved = localStorage.getItem("user_beliefs");
+    if (saved) { setBeliefs(JSON.parse(saved)); }
+  }, []);
 
-      // Load Habits (localStorage only)
-      try {
-        const savedHabits = localStorage.getItem("user_habits");
-        if (savedHabits) {
-          setHabits(JSON.parse(savedHabits));
-        }
-      } catch (e) {
-        console.log("Error loading habits from storage");
-      }
-    };
-
-    loadData();
-    loadBeliefs(); // Fetch from API
-    loadPatterns(); // Fetch from API
+  // ─── LOAD PATTERNS ────────────────────────────────────────────────────────
+  useEffect(() => {
+    const saved = localStorage.getItem("user_patterns");
+    if (saved) { setPatterns(JSON.parse(saved)); }
   }, []);
 
   // ─── LOAD AFFIRMATIONS ────────────────────────────────────────────────────
