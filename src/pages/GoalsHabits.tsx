@@ -491,36 +491,92 @@ const GoalsHabits = () => {
   const handleCreateHabit = async () => {
     if (!habitName.trim()) return;
     const payload = { name: habitName, frequency: habitFrequency || "daily", description: habitDescription, category: habitCategory, time: habitTime, place: habitPlace, start_date: habitStartDate };
-    const newHabit: Habit = { id: crypto.randomUUID(), name: habitName, frequency: habitFrequency as "daily" | "weekly" | "custom", description: habitDescription || undefined, category: habitCategory || undefined, time: habitTime || undefined, place: habitPlace || undefined, startDate: habitStartDate || undefined };
+    
+    console.log("Creating habit with payload:", JSON.stringify(payload));
+    
     try {
-      try {
-        const res = await fetchWithAuth("/habits", { method: "POST", body: JSON.stringify(payload) });
-        if (res.ok) {
-          const d = await res.json();
-          newHabit.id = d.id || d._id || d.data?.id || newHabit.id;
-          console.log("Habit created:", d);
-        } else {
-          const errorText = await res.text();
-          console.error("Habits API error:", res.status, res.statusText, errorText);
+      const res = await fetchWithAuth("/habits", { method: "POST", body: JSON.stringify(payload) });
+      console.log("Habit API response status:", res.status);
+      
+      if (res.ok) {
+        const d = await res.json();
+        console.log("Habit created successfully:", d);
+        
+        // Fetch updated list from server
+        try {
+          const listRes = await fetchWithAuth("/habits");
+          if (listRes.ok) {
+            const data = await listRes.json();
+            const list = Array.isArray(data) ? data : data.habits ?? data.data ?? [];
+            setHabits(list);
+            save("user_habits", list);
+            console.log("Habits list refreshed:", list);
+          }
+        } catch (err) {
+          console.error("Failed to refresh habits list:", err);
         }
-      } catch (err) { console.error("Habits API fetch error:", err); }
-      setHabits(prev => { const u = [...prev, newHabit]; save("user_habits", u); return u; });
-    } catch (e) { console.error("Failed to create habit:", e); }
-    setHabitName(""); setHabitDescription(""); setHabitFrequency("daily"); setHabitCategory("");
-    setHabitTime(""); setHabitPlace(""); setHabitStartDate(""); setIsHabitDialogOpen(false);
+        
+        setHabitName(""); 
+        setHabitDescription(""); 
+        setHabitFrequency("daily"); 
+        setHabitCategory("");
+        setHabitTime(""); 
+        setHabitPlace(""); 
+        setHabitStartDate(""); 
+        setIsHabitDialogOpen(false);
+      } else {
+        try {
+          const errorText = await res.text();
+          console.error("Habits API error:", res.status, errorText);
+          alert(`Failed to create habit: ${res.status}`);
+        } catch {
+          console.error("Habits API error:", res.status, res.statusText);
+          alert(`Failed to create habit: ${res.status} ${res.statusText}`);
+        }
+      }
+    } catch (err) { 
+      console.error("Habits API request failed:", err);
+      alert("Failed to create habit. Please check your connection.");
+    }
   };
 
   const handleDeleteHabit = async (id: string) => {
+    console.log("Deleting habit with id:", id);
+    
     try {
-      try {
-        const res = await fetchWithAuth(`/habits/${id}`, { method: "DELETE" });
-        if (!res.ok) {
-          const errorText = await res.text();
-          console.log("Habits delete API error:", res.status, errorText);
+      const res = await fetchWithAuth(`/habits/${id}`, { method: "DELETE" });
+      console.log("Delete habit API response status:", res.status);
+      
+      if (res.ok) {
+        console.log("Habit deleted successfully");
+        
+        // Fetch updated list from server
+        try {
+          const listRes = await fetchWithAuth("/habits");
+          if (listRes.ok) {
+            const data = await listRes.json();
+            const list = Array.isArray(data) ? data : data.habits ?? data.data ?? [];
+            setHabits(list);
+            save("user_habits", list);
+            console.log("Habits list refreshed after delete:", list);
+          }
+        } catch (err) {
+          console.error("Failed to refresh habits list:", err);
         }
-      } catch (err) { console.log("API unavailable, deleting locally", err); }
-      setHabits(prev => { const u = prev.filter(h => h.id !== id); save("user_habits", u); return u; });
-    } catch (e) { console.error("Failed to delete habit:", e); }
+      } else {
+        try {
+          const errorText = await res.text();
+          console.error("Habits delete API error:", res.status, errorText);
+          alert(`Failed to delete habit: ${res.status}`);
+        } catch {
+          console.error("Habits delete API error:", res.status, res.statusText);
+          alert(`Failed to delete habit: ${res.status} ${res.statusText}`);
+        }
+      }
+    } catch (err) { 
+      console.error("Habits delete request failed:", err);
+      alert("Failed to delete habit. Please check your connection.");
+    }
   };
 
   // ─── Pointer Drag & Drop ──────────────────────────────────────────────────
