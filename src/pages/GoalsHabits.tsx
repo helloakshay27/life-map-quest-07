@@ -208,7 +208,7 @@ const GoalsHabits = () => {
   // ─── GOALS CRUD ───────────────────────────────────────────────────────────
   const handleCreateGoal = async () => {
     if (!goalName.trim()) return;
-    const payload = { title: goalName, description: goalDescription, status: goalStatus, area: goalCategory, progress: goalProgress, start_date: goalStartDate, target_date: goalTargetDate };
+    const payload = { title: goalName, description: goalDescription, status: goalStatus, area: goalCategory, start_date: goalStartDate, target_date: goalTargetDate };
     const newGoal: Goal = { id: crypto.randomUUID(), ...payload };
     try {
       try {
@@ -216,10 +216,16 @@ const GoalsHabits = () => {
         if (res.ok) {
           const d = await res.json();
           newGoal.id = d.id || d._id || d.data?.id || newGoal.id;
+          console.log("Goal created:", d);
         } else {
-          console.log("Goals API error:", res.status, await res.text());
+          try {
+            const errorText = await res.text();
+            console.error("Goals API error:", res.status, errorText);
+          } catch {
+            console.error("Goals API error:", res.status, res.statusText);
+          }
         }
-      } catch (err) { console.log("Goals API unavailable, saving locally", err); }
+      } catch (err) { console.error("Goals API unavailable:", err); }
       setGoals(prev => { const u = [...prev, newGoal]; save("user_goals", u); return u; });
     } catch (e) { console.error("Failed to create goal:", e); }
     setGoalName(""); setGoalDescription(""); setGoalCategory(""); setGoalStatus("planning");
@@ -231,7 +237,12 @@ const GoalsHabits = () => {
       try {
         const res = await fetchWithAuth(`/goals/${id}`, { method: "DELETE" });
         if (!res.ok) {
-          console.log("Goals delete API error:", res.status, await res.text());
+          try {
+            const errorText = await res.text();
+            console.log("Goals delete API error:", res.status, errorText);
+          } catch {
+            console.log("Goals delete API error:", res.status, res.statusText);
+          }
         }
       } catch (err) { console.log("API unavailable, deleting locally", err); }
       setGoals(prev => { const u = prev.filter(g => g.id !== id); save("user_goals", u); return u; });
@@ -290,10 +301,16 @@ const GoalsHabits = () => {
         if (res.ok) {
           const d = await res.json();
           newBelief.id = d.id || d._id || d.data?.id || newBelief.id;
+          console.log("Belief created:", d);
         } else {
-          console.log("Beliefs API error:", res.status, await res.text());
+          try {
+            const errorText = await res.text();
+            console.error("Beliefs API error:", res.status, errorText);
+          } catch {
+            console.error("Beliefs API error:", res.status, res.statusText);
+          }
         }
-      } catch (err) { console.log("Beliefs API unavailable, saving locally", err); }
+      } catch (err) { console.error("Beliefs API unavailable:", err); }
       setBeliefs(prev => { const u = [...prev, newBelief]; save("user_beliefs", u); return u; });
     } catch (e) { console.error("Failed to create belief:", e); }
     setBeliefText(""); setBeliefOrigin(""); setBeliefEvidence(""); setBeliefAlternative(""); setIsBeliefDialogOpen(false);
@@ -304,7 +321,12 @@ const GoalsHabits = () => {
       try {
         const res = await fetchWithAuth(`/beliefs/${id}`, { method: "DELETE" });
         if (!res.ok) {
-          console.log("Beliefs delete API error:", res.status, await res.text());
+          try {
+            const errorText = await res.text();
+            console.log("Beliefs delete API error:", res.status, errorText);
+          } catch {
+            console.log("Beliefs delete API error:", res.status, res.statusText);
+          }
         }
       } catch (err) { console.log("API unavailable, deleting locally", err); }
       setBeliefs(prev => { const u = prev.filter(b => b.id !== id); save("user_beliefs", u); return u; });
@@ -322,10 +344,16 @@ const GoalsHabits = () => {
         if (res.ok) {
           const d = await res.json();
           newPattern.id = d.id || d._id || d.data?.id || newPattern.id;
+          console.log("Pattern created:", d);
         } else {
-          console.log("Patterns API error:", res.status, await res.text());
+          try {
+            const errorText = await res.text();
+            console.error("Patterns API error:", res.status, errorText);
+          } catch {
+            console.error("Patterns API error:", res.status, res.statusText);
+          }
         }
-      } catch (err) { console.log("Patterns API unavailable, saving locally", err); }
+      } catch (err) { console.error("Patterns API unavailable:", err); }
       setPatterns(prev => { const u = [...prev, newPattern]; save("user_patterns", u); return u; });
     } catch (e) { console.error("Failed to create pattern:", e); }
     setPatternName(""); setPatternTrigger(""); setPatternConsequence(""); setPatternAlternative(""); setIsPatternDialogOpen(false);
@@ -336,7 +364,12 @@ const GoalsHabits = () => {
       try {
         const res = await fetchWithAuth(`/patterns/${id}`, { method: "DELETE" });
         if (!res.ok) {
-          console.log("Patterns delete API error:", res.status, await res.text());
+          try {
+            const errorText = await res.text();
+            console.log("Patterns delete API error:", res.status, errorText);
+          } catch {
+            console.log("Patterns delete API error:", res.status, res.statusText);
+          }
         }
       } catch (err) { console.log("API unavailable, deleting locally", err); }
       setPatterns(prev => { const u = prev.filter(p => p.id !== id); save("user_patterns", u); return u; });
@@ -354,10 +387,16 @@ const GoalsHabits = () => {
         if (res.ok) {
           const d = await res.json();
           newAffirmation.id = d.id || d._id || d.data?.id || newAffirmation.id;
+          console.log("Affirmation created:", d);
         } else {
-          console.log("Affirmations API error:", res.status, await res.text());
+          try {
+            const errorText = await res.text();
+            console.error("Affirmations API error:", res.status, errorText);
+          } catch {
+            console.error("Affirmations API error:", res.status, res.statusText);
+          }
         }
-      } catch (err) { console.log("Affirmations API unavailable, saving locally", err); }
+      } catch (err) { console.error("Affirmations API unavailable:", err); }
       setAffirmations(prev => { const u = [...prev, newAffirmation]; save("user_affirmations", u); return u; });
     } catch (e) { console.error("Failed to create affirmation:", e); }
     setAffirmationText(""); setAffirmationCategory(""); setAffirmationBelief(""); setIsAffirmationDialogOpen(false);
@@ -368,7 +407,12 @@ const GoalsHabits = () => {
       try {
         const res = await fetchWithAuth(`/affirmations/${id}`, { method: "DELETE" });
         if (!res.ok) {
-          console.log("Affirmations delete API error:", res.status, await res.text());
+          try {
+            const errorText = await res.text();
+            console.log("Affirmations delete API error:", res.status, errorText);
+          } catch {
+            console.log("Affirmations delete API error:", res.status, res.statusText);
+          }
         }
       } catch (err) { console.log("API unavailable, deleting locally", err); }
       setAffirmations(prev => { const u = prev.filter(a => a.id !== id); save("user_affirmations", u); return u; });
