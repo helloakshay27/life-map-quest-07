@@ -1,28 +1,69 @@
 import React from "react";
 
-// ==========================================
-// 1. MOCK DATA (Testing ke liye)
-// ==========================================
+interface Submission {
+  id: number;
+  name: string;
+  time: string;
+}
 
-// Case A: Jab koi data nahi hai
-const emptySubmissions = [];
+interface YesterdaySubmissionsProps {
+  submissions?: Submission[];
+  loading?: boolean;
+  date?: string; // e.g. "2026-03-04"
+}
 
-// Case B: Jab data aa jaye (Aapke screenshot wala data)
-const filledSubmissions = [
-  { id: 1, name: "Sandeep Dingra", time: "6:25 PM IST" },
-  { id: 2, name: "Nikant Garg", time: "7:04 PM IST" },
-  { id: 3, name: "L B Maurya", time: "7:30 PM IST" },
-  { id: 4, name: "Rahul Shah", time: "8:23 PM IST" },
-];
-
-// ==========================================
-// 2. MAIN COMPONENT
-// ==========================================
 export default function YesterdaySubmissions({
-  submissions = filledSubmissions,
-}) {
-  // Date format karne ke liye (Aap isko props se bhi pass kar sakte hain)
-  const yesterdayDate = "February 26, 2026";
+  submissions = [],
+  loading = false,
+  date,
+}: YesterdaySubmissionsProps) {
+  // Format the date from API ("2026-03-04") or fall back to yesterday
+  const yesterdayDate = (() => {
+    if (date) {
+      return new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }).format(new Date(date + "T00:00:00"));
+    }
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return new Intl.DateTimeFormat("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }).format(d);
+  })();
+
+  // ---- Loading skeleton ----
+  if (loading) {
+    return (
+      <div className="w-full max-w-4xl mx-auto bg-[#f4f7ff] border border-[#d1ddf7] rounded-2xl p-5 md:p-4 font-sans animate-pulse">
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-6 h-6 rounded-full bg-blue-200" />
+          <div className="h-4 bg-blue-200 rounded w-72" />
+        </div>
+        <div className="h-3 bg-blue-100 rounded w-64 mb-6" />
+        <div className="flex flex-col gap-3">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between p-4 bg-white border border-white rounded-xl shadow-sm"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-11 h-11 rounded-full bg-slate-200 shrink-0" />
+                <div>
+                  <div className="h-4 bg-slate-200 rounded w-36 mb-2" />
+                  <div className="h-3 bg-slate-100 rounded w-24" />
+                </div>
+              </div>
+              <div className="h-8 w-20 bg-blue-100 rounded-lg" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto bg-[#f4f7ff] border border-[#d1ddf7] rounded-2xl p-5 md:p-4 font-sans">
@@ -50,14 +91,14 @@ export default function YesterdaySubmissions({
 
       {/* --- 2. Subtitle Section --- */}
       <p className="text-[15px] text-[#475569] mb-6 font-medium">
-        {submissions.length} people submitted their daily journal for{" "}
-        {yesterdayDate}
+        {submissions.length}{" "}
+        {submissions.length === 1 ? "person submitted" : "people submitted"}{" "}
+        their daily journal for {yesterdayDate}
       </p>
 
       {/* --- 3. Dynamic Content Section (Empty vs Filled) --- */}
-
       {submissions.length === 0 ? (
-        // 🔴 KHALI STATE (Jab array empty ho)
+        // Empty state
         <div className="flex flex-col items-center justify-center py-10">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -78,21 +119,20 @@ export default function YesterdaySubmissions({
           </p>
         </div>
       ) : (
-        // 🟢 FILLED STATE (Jab array me data ho - Exact Screenshot design)
+        // Filled state
         <div className="flex flex-col gap-3">
           {submissions.map((user, index) => (
             <div
               key={user.id}
-              className="flex items-center justify-between p-4 bg-white border border-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:shadow-md"
+              className="flex items-center justify-between p-4 bg-white border border-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:shadow-md transition-shadow"
             >
               {/* Left Side: Number, Name & Time */}
               <div className="flex items-center gap-4">
-                {/* Number Circle (Light Blue bg, Dark Blue text) */}
+                {/* Number Circle */}
                 <div className="w-11 h-11 rounded-full bg-[#e0e7ff] text-[#3b82f6] flex items-center justify-center font-bold text-lg shrink-0">
                   {index + 1}
                 </div>
-
-                <div className="flex flex-col">
+                <div className="flex flex-col text-left">
                   <span className="font-bold text-[#1e293b] text-[16px]">
                     {user.name}
                   </span>
@@ -116,7 +156,6 @@ export default function YesterdaySubmissions({
                     clipRule="evenodd"
                   />
                 </svg>
-            
                 Done
               </div>
             </div>

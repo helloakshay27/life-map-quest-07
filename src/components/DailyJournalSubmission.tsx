@@ -1,36 +1,66 @@
 import React from "react";
 
-// ==========================================
-// 1. MOCK DATA (Testing ke liye)
-// ==========================================
+interface Submission {
+  id: number;
+  name: string;
+  time: string;
+}
 
-// Case A: Jab koi data nahi hai (Aapke screenshot wali state)
-const emptySubmissions = [];
+interface DailyJournalSubmissionsProps {
+  submissions?: Submission[];
+  loading?: boolean;
+  date?: string; // e.g. "2026-03-05"
+}
 
-// Case B: Jab data aa jayega (Test karne ke liye isko use kar sakte ho)
-const filledSubmissions = [
-  { id: 1, name: "Anil Gupta", time: "09:30 AM" },
-  { id: 2, name: "Yash Bhanpuria", time: "10:15 AM" },
-];
-
-// ==========================================
-// 2. MAIN COMPONENT
-// ==========================================
 export default function DailyJournalSubmissions({
-  submissions = emptySubmissions,
-}) {
-  // Aaj ki date format karne ke liye (e.g., "February 27, 2026")
-  const todayDate = new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date());
+  submissions = [],
+  loading = false,
+  date,
+}: DailyJournalSubmissionsProps) {
+  // Format the date from API ("2026-03-05") or fall back to today
+  const todayDate = date
+    ? new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }).format(new Date(date + "T00:00:00")) // force local parse
+    : new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }).format(new Date());
+
+  // ---- Loading skeleton ----
+  if (loading) {
+    return (
+      <div className="w-full max-w-4xl mx-auto bg-[#f2fcf5] border border-[#bbf7d0] rounded-xl p-5 md:p-6 font-sans animate-pulse">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-6 h-6 rounded-full bg-green-200" />
+          <div className="h-4 bg-green-200 rounded w-64" />
+        </div>
+        <div className="h-3 bg-green-100 rounded w-72 mb-8" />
+        <div className="flex flex-col gap-3">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between p-4 bg-white border border-[#dcfce7] rounded-lg"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-slate-200" />
+                <div className="h-4 bg-slate-200 rounded w-36" />
+              </div>
+              <div className="h-6 bg-slate-100 rounded-full w-20" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto bg-[#f2fcf5] border border-[#bbf7d0] rounded-xl p-5 md:p-6 font-sans">
       {/* --- 1. Header Section --- */}
       <div className="flex items-center gap-2 mb-4">
-        {/* Green Check Icon */}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -52,14 +82,14 @@ export default function DailyJournalSubmissions({
 
       {/* --- 2. Subtitle Section --- */}
       <p className="text-[15px] text-[#475569] mb-8">
-        {submissions.length} people have submitted their daily journal for{" "}
-        {todayDate}
+        {submissions.length}{" "}
+        {submissions.length === 1 ? "person has" : "people have"} submitted
+        their daily journal for {todayDate}
       </p>
 
       {/* --- 3. Dynamic Content Section (Empty vs Filled) --- */}
-
       {submissions.length === 0 ? (
-        // 🔴 KHALI STATE (Jab array empty ho - Screenshot jaisa)
+        // Empty state
         <div className="flex flex-col items-center justify-center py-8">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -80,7 +110,7 @@ export default function DailyJournalSubmissions({
           </p>
         </div>
       ) : (
-        // 🟢 FILLED STATE (Jab array me data ho)
+        // Filled state
         <div className="flex flex-col gap-3">
           {submissions.map((user) => (
             <div
@@ -88,8 +118,8 @@ export default function DailyJournalSubmissions({
               className="flex items-center justify-between p-4 bg-white border border-[#dcfce7] rounded-lg shadow-sm"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#dcfce7] text-[#15803d] flex items-center justify-center font-bold">
-                  {user.name.charAt(0)}
+                <div className="w-10 h-10 rounded-full bg-[#dcfce7] text-[#15803d] flex items-center justify-center font-bold text-lg">
+                  {user.name.charAt(0).toUpperCase()}
                 </div>
                 <span className="font-semibold text-[#1e293b]">
                   {user.name}

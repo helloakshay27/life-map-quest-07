@@ -7,6 +7,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { apiRequest } from "@/config/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -25,8 +26,6 @@ import WeeklyPlanComponent from "@/components/WeeklyPlanComponent";
 import FocusAndBoundaries from "@/components/FocusAndBoundaries";
 import ReviewToDos from "@/components/ReviewToDos";
 import BucketListProgress from "@/components/BucketListProgress";
-
-const API_BASE_URL = "https://life-api.lockated.com";
 
 const WeeklyJournal = () => {
   const navigate = useNavigate();
@@ -118,7 +117,6 @@ const WeeklyJournal = () => {
 
       const payload = {
         user_journal: {
-          // <-- FIXED KEY (was "journal")
           user_id: user?.id ? parseInt(user.id, 10) : 1,
           journal_type: "weekly",
           start_date: startDate,
@@ -130,7 +128,7 @@ const WeeklyJournal = () => {
             weekly_story: habitsText,
             wins: [],
             biggest_challenge: challenge,
-            challenge_cause: challenge,
+            challenge_cause: "", // separate field — extend UI when needed
             key_insight: insight,
             mission_connection: missionText,
             life_balance_rating: balanceRating,
@@ -138,38 +136,29 @@ const WeeklyJournal = () => {
         },
       };
 
-      const url = journalId
-        ? `${API_BASE_URL}/user_journals/${journalId}`
-        : `${API_BASE_URL}/user_journals`;
+      const url = journalId ? `/user_journals/${journalId}` : `/user_journals`;
       const method = journalId ? "PUT" : "POST";
 
-      const res = await fetch(url, {
+      const res = await apiRequest(url, {
         method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
-        },
         body: JSON.stringify(payload),
       });
 
-      // 🚨 ADVANCED LOGGING TRIGGER
       if (!res.ok) {
         const errorData = await res.text();
-        console.error("🚨 BACKEND REJECTED THE DATA:", errorData);
-        console.error("🚨 PAYLOAD SENT WAS:", JSON.stringify(payload, null, 2));
+        console.error("🚨 Backend error:", errorData);
+        console.error("🚨 Payload sent:", JSON.stringify(payload, null, 2));
         throw new Error(`Failed to save weekly journal: ${res.status}`);
       }
 
       const responseData = await res.json();
 
-      // Handle different possible response structures
-      if (responseData.journal?.id) {
-        setJournalId(responseData.journal.id);
-      } else if (responseData.user_journal?.id) {
-        setJournalId(responseData.user_journal.id);
-      } else if (responseData.id) {
-        setJournalId(responseData.id);
-      }
+      // Capture the id returned by the API for subsequent PUT calls
+      const newId =
+        responseData.journal?.id ??
+        responseData.user_journal?.id ??
+        responseData.id;
+      if (newId) setJournalId(newId);
 
       toast({
         title: "Weekly plan saved ✅",
@@ -178,9 +167,8 @@ const WeeklyJournal = () => {
     } catch (error) {
       console.error("Save weekly journal error:", error);
       toast({
-        title: "Error",
-        description:
-          "Check the console (F12) to see why the API rejected the data.",
+        title: "Error saving journal",
+        description: "Please check your connection and try again.",
         variant: "destructive",
       });
     } finally {
@@ -193,15 +181,8 @@ const WeeklyJournal = () => {
       const fetchInsights = async () => {
         setIsLoadingInsights(true);
         try {
-          const authToken = token || localStorage.getItem("auth_token");
-          const res = await fetch(
-            `${API_BASE_URL}/user_journals/weekly_journals_insights`,
-            {
-              headers: {
-                "Content-Type": "application/json",
-                ...(authToken && { Authorization: `Bearer ${authToken}` }),
-              },
-            },
+          const res = await apiRequest(
+            "/user_journals/weekly_journals_insights",
           );
 
           if (res.ok) {
@@ -244,14 +225,7 @@ const WeeklyJournal = () => {
       const fetchPastJournals = async () => {
         setIsLoadingPast(true);
         try {
-          const res = await fetch(
-            `${API_BASE_URL}/user_journals?journal_type=weekly`,
-            {
-              headers: {
-                Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
-              },
-            },
-          );
+          const res = await apiRequest("/user_journals?journal_type=weekly");
           const data = await res.json();
           setPastJournals(Array.isArray(data) ? data : []);
         } catch (error) {
@@ -268,14 +242,7 @@ const WeeklyJournal = () => {
     setIsJournalModalOpen(true);
     setIsLoadingJournal(true);
     try {
-      const res = await fetch(
-        `https://life-api.lockated.com/user_journals/${id}?journal_type=weekly`,
-        {
-          headers: {
-            Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
-          },
-        },
-      );
+      const res = await apiRequest(`/user_journals/${id}?journal_type=weekly`);
       const data = await res.json();
       setSelectedPastJournal(data);
     } catch (error) {
@@ -300,15 +267,9 @@ const WeeklyJournal = () => {
       return;
 
     try {
-      const res = await fetch(
-        `https://life-api.lockated.com/user_journals/${id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
-          },
-        },
-      );
+      const res = await apiRequest(`/user_journals/${id}`, {
+        method: "DELETE",
+      });
 
       if (!res.ok) throw new Error("Failed to delete weekly journal");
 
