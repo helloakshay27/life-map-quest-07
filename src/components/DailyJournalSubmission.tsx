@@ -1,23 +1,41 @@
 import React from "react";
 
+// Dost ka banaya hua TypeScript Interface (thoda update kiya gaya tumhare checks support karne ke liye)
 interface Submission {
-  id: number;
-  name: string;
-  time: string;
+  id?: number;
+  name?: string;
+  userName?: string;
+  time?: string;
+  submittedAt?: string;
 }
 
 interface DailyJournalSubmissionsProps {
   submissions?: Submission[];
   loading?: boolean;
   date?: string; // e.g. "2026-03-05"
+  data?: any; // Tumhara purana data prop support karne ke liye
 }
 
 export default function DailyJournalSubmissions({
   submissions = [],
   loading = false,
   date,
+  data,
 }: DailyJournalSubmissionsProps) {
-  // Format the date from API ("2026-03-05") or fall back to today
+  // 1. Tumhare Data Parsing & Safety Checks
+  let finalSubmissions = submissions;
+
+  if (!finalSubmissions || finalSubmissions.length === 0) {
+    if (Array.isArray(data)) {
+      finalSubmissions = data;
+    } else if (data && data.submissions && Array.isArray(data.submissions)) {
+      finalSubmissions = data.submissions;
+    } else if (data && data.users && Array.isArray(data.users)) {
+      finalSubmissions = data.users;
+    }
+  }
+
+  // 2. Date Formatting (Dost ka clean logic + Tumhara fallback)
   const todayDate = date
     ? new Intl.DateTimeFormat("en-US", {
         month: "long",
@@ -30,7 +48,7 @@ export default function DailyJournalSubmissions({
         year: "numeric",
       }).format(new Date());
 
-  // ---- Loading skeleton ----
+  // ---- Dost ka Loading skeleton ----
   if (loading) {
     return (
       <div className="w-full max-w-4xl mx-auto bg-[#f2fcf5] border border-[#bbf7d0] rounded-xl p-5 md:p-6 font-sans animate-pulse">
@@ -58,8 +76,8 @@ export default function DailyJournalSubmissions({
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto bg-[#f2fcf5] border border-[#bbf7d0] rounded-xl p-5 md:p-6 font-sans">
-      {/* --- 1. Header Section --- */}
+    <div className="w-full max-w-4xl mx-auto bg-[#f2fcf5] border border-[#bbf7d0] rounded-xl p-5 md:p-6 font-sans text-left">
+      {/* --- Header Section --- */}
       <div className="flex items-center gap-2 mb-4">
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -80,15 +98,15 @@ export default function DailyJournalSubmissions({
         </h2>
       </div>
 
-      {/* --- 2. Subtitle Section --- */}
+      {/* --- Subtitle Section --- */}
       <p className="text-[15px] text-[#475569] mb-8">
-        {submissions.length}{" "}
-        {submissions.length === 1 ? "person has" : "people have"} submitted
+        {finalSubmissions.length}{" "}
+        {finalSubmissions.length === 1 ? "person has" : "people have"} submitted
         their daily journal for {todayDate}
       </p>
 
-      {/* --- 3. Dynamic Content Section (Empty vs Filled) --- */}
-      {submissions.length === 0 ? (
+      {/* --- Dynamic Content Section --- */}
+      {!finalSubmissions || finalSubmissions.length === 0 ? (
         // Empty state
         <div className="flex flex-col items-center justify-center py-8">
           <svg
@@ -97,7 +115,7 @@ export default function DailyJournalSubmissions({
             viewBox="0 0 24 24"
             strokeWidth={1.5}
             stroke="currentColor"
-            className="w-14 h-14 text-[#94a3b8] mb-3"
+            className="w-14 h-14 text-[#94a3b8] mb-3 opacity-70"
           >
             <path
               strokeLinecap="round"
@@ -105,31 +123,45 @@ export default function DailyJournalSubmissions({
               d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
             />
           </svg>
-          <p className="text-[16px] text-[#64748b] font-medium">
+          <p className="text-[16px] text-[#64748b] font-medium text-center">
             No submissions yet today
           </p>
         </div>
       ) : (
         // Filled state
         <div className="flex flex-col gap-3">
-          {submissions.map((user) => (
-            <div
-              key={user.id}
-              className="flex items-center justify-between p-4 bg-white border border-[#dcfce7] rounded-lg shadow-sm"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#dcfce7] text-[#15803d] flex items-center justify-center font-bold text-lg">
-                  {user.name.charAt(0).toUpperCase()}
+          {finalSubmissions.map((user, index) => {
+            // Tumhare banaye hue safety checks
+            const userName = user.name || user.userName || "Unknown User";
+            const submissionTime =
+              user.time || user.submittedAt || "Time not specified";
+
+            const userInitial =
+              userName !== "Unknown User" && userName.length > 0
+                ? userName.charAt(0).toUpperCase()
+                : "?";
+
+            return (
+              <div
+                key={user.id || index}
+                className="flex items-center justify-between p-4 bg-white border border-[#dcfce7] rounded-lg shadow-sm hover:shadow transition-shadow"
+              >
+                <div className="flex items-center gap-3">
+                  {/* User Initial Circle */}
+                  <div className="w-10 h-10 rounded-full bg-[#dcfce7] text-[#15803d] flex items-center justify-center font-bold shrink-0">
+                    {userInitial}
+                  </div>
+                  <span className="font-semibold text-[#1e293b]">
+                    {userName}
+                  </span>
                 </div>
-                <span className="font-semibold text-[#1e293b]">
-                  {user.name}
+                {/* Time Pill */}
+                <span className="text-sm font-medium text-[#64748b] bg-gray-50 px-3 py-1 rounded-full border border-gray-100 shrink-0">
+                  {submissionTime}
                 </span>
               </div>
-              <span className="text-sm font-medium text-[#64748b] bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
-                {user.time}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

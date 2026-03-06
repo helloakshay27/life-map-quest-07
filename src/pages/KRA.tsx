@@ -23,72 +23,49 @@ const defaultTeam = [
   { id: 7, key: "reliability_consistency_score", icon: "🎯", title: "Reliability & Consistency",  description: "Is the team's output dependable and steady?",                         kpi: "Delivery variance, uptime",                score: 3 },
 ];
 
-// ─── ScoreCard ────────────────────────────────────────────────────────────────
+const API_BASE_URL = "https://life-api.lockated.com";
 
+// ─── ScoreCard ────────────────────────────────────────────────────────────────
 function ScoreCard({ data }) {
-  const { score = { achieved: 21, total: 35 }, title = "Needs Improvement", message = "You're driving growth, but systems aren't scaling with you." } = data || {};
-  const pct = Math.min(100, Math.round((score.achieved / score.total) * 100));
+  const {
+    score = { achieved: 0, total: 0 },
+    title = "No Data",
+    message = "Complete evaluation to see your score",
+  } = data || {};
+  const pct =
+    Math.min(100, Math.round((score.achieved / score.total) * 100)) || 0;
 
   return (
-    <div
-      style={{
-        background: "linear-gradient(135deg, #f97316 0%, #ea580c 60%, #c2410c 100%)",
-        borderRadius: "20px",
-        padding: "40px 40px 36px",
-        position: "relative",
-        overflow: "hidden",
-        boxShadow: "0 8px 32px rgba(234,88,12,0.35)",
-      }}
-    >
+    <div className="relative w-full max-w-4xl overflow-hidden bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700 rounded-[20px] p-8 pb-9 shadow-lg">
       {/* Decorative circles */}
-      <div style={{ position:"absolute", top:-30, right:-30, width:130, height:130, borderRadius:"50%", background:"rgba(255,255,255,0.08)" }} />
-      <div style={{ position:"absolute", top:10, right:10, width:80, height:80, borderRadius:"50%", background:"rgba(255,255,255,0.10)" }} />
+      <div className="absolute -top-7 -right-7 w-32 h-32 rounded-full bg-white/10" />
+      <div className="absolute top-2 right-2 w-20 h-20 rounded-full bg-white/10" />
 
-      {/* Trending icon button */}
-      <div
-        style={{
-          position: "absolute",
-          top: 20,
-          right: 20,
-          width: 48,
-          height: 48,
-          borderRadius: "50%",
-          background: "rgba(255,255,255,0.22)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backdropFilter: "blur(4px)",
-        }}
-      >
-        <svg width="22" height="22" fill="none" stroke="white" strokeWidth="2.2" viewBox="0 0 24 24">
-          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-          <polyline points="17 6 23 6 23 12" />
-        </svg>
+      {/* Trending icon */}
+      <div className="absolute top-5 right-5 w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+        <TrendingUp className="text-white w-5 h-5" strokeWidth={2.2} />
       </div>
 
       {/* Score */}
-      <p style={{ color: "rgba(255,255,255,0.85)", fontSize: 15, fontWeight: 500, marginBottom: 4, letterSpacing: "0.03em" }}>
+      <p className="text-orange-100 text-sm font-medium mb-1 tracking-wide">
         Your Total Score
       </p>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 2, marginBottom: 14 }}>
-        <span style={{ color: "#fff", fontSize: 68, fontWeight: 800, lineHeight: 1 }}>{score.achieved}</span>
-        <span style={{ color: "rgba(255,255,255,0.70)", fontSize: 32, fontWeight: 600 }}>/{score.total}</span>
+      <div className="flex items-baseline gap-1 mb-3">
+        <span className="text-6xl font-black text-white">{score.achieved}</span>
+        <span className="text-3xl font-semibold text-orange-200">
+          /{score.total}
+        </span>
       </div>
 
       {/* Title & Message */}
-      <p style={{ color: "#fff", fontSize: 26, fontWeight: 700, marginBottom: 4 }}>{title}</p>
-      <p style={{ color: "rgba(255,255,255,0.80)", fontSize: 15, marginBottom: 24, fontStyle: "italic" }}>{message}</p>
+      <p className="text-2xl font-bold text-white mb-1">{title}</p>
+      <p className="text-orange-100 text-sm mb-6 italic">{message}</p>
 
       {/* Progress Bar */}
-      <div style={{ background: "rgba(255,255,255,0.25)", borderRadius: 99, height: 10, overflow: "hidden" }}>
+      <div className="bg-white/25 rounded-full h-2.5 overflow-hidden">
         <div
-          style={{
-            height: "100%",
-            width: `${pct}%`,
-            background: "#fff",
-            borderRadius: 99,
-            transition: "width 0.8s cubic-bezier(.4,0,.2,1)",
-          }}
+          className="h-full bg-white rounded-full transition-all duration-700 ease-out"
+          style={{ width: `${pct}%` }}
         />
       </div>
     </div>
@@ -101,39 +78,20 @@ function KraItem({ item, index, onScoreChange }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div
-      style={{
-        background: "#fff",
-        borderRadius: 12,
-        border: "1px solid #f0f0f0",
-        boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-        overflow: "hidden",
-        transition: "box-shadow 0.2s",
-      }}
-    >
-      <button
-        onClick={() => setOpen(!open)}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          gap: 18,
-          padding: "20px 22px",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          textAlign: "left",
-        }}
-      >
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+      <div className="w-full flex items-center gap-4 py-5 px-5">
         {/* Icon */}
-        <span style={{ fontSize: 30, flexShrink: 0 }}>{item.icon}</span>
+        <span className="text-3xl shrink-0">{item.icon || "📝"}</span>
 
         {/* Title & Description */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontWeight: 600, fontSize: 16, color: "#1a1a1a", margin: 0 }}>
+        <div
+          className="flex-1 min-w-0 cursor-pointer pl-2"
+          onClick={() => setOpen(!open)}
+        >
+          <p className="font-semibold text-base text-gray-900">
             {index + 1}. {item.title}
           </p>
-          <p style={{ fontSize: 14, color: "#6b7280", margin: "3px 0 0", lineHeight: 1.4 }}>
+          <p className="text-sm text-gray-500 mt-1 leading-relaxed">
             {item.description}
           </p>
         </div>
@@ -160,19 +118,29 @@ function KraItem({ item, index, onScoreChange }) {
         </div>
 
         {/* Chevron */}
-        <svg
-          width="16" height="16" fill="none" stroke="#9ca3af" strokeWidth="2" viewBox="0 0 24 24"
-          style={{ flexShrink: 0, transition: "transform 0.25s", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+        <button
+          onClick={() => setOpen(!open)}
+          className="bg-transparent border-none cursor-pointer p-1"
         >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
+          <svg
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+            className={`text-gray-400 transition-transform duration-250 ${open ? "rotate-180" : ""}`}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+      </div>
 
       {/* Expanded KPI */}
       {open && (
-        <div style={{ padding: "0 18px 16px 56px", borderTop: "1px solid #f3f4f6" }}>
-          <p style={{ fontSize: 12.5, color: "#6b7280", marginTop: 10, lineHeight: 1.6 }}>
-            <strong style={{ color: "#374151" }}>KPI:</strong> {item.kpi}
+        <div className="px-5 pb-4 pl-[68px] border-t border-gray-100 bg-gray-50/50">
+          <p className="text-xs text-gray-500 mt-3 leading-relaxed">
+            <strong className="text-gray-700">KPI:</strong> {item.kpi || "N/A"}
           </p>
         </div>
       )}
@@ -187,20 +155,17 @@ function QuestionsAndAnswers({ header, questions, onScoreChange, notes, setNotes
   // any API-provided overrides can be injected there as well.
 
   return (
-      <div style={{ background: "#fff", borderRadius: 20, padding: "24px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #f0f0f0" }}>
+    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24, padding: "18px 20px", background: "linear-gradient(135deg,#ede9fe,#f3f4f6)", borderRadius: 14 }}>
-        <div style={{ width: 50, height: 50, borderRadius: 12, background: "linear-gradient(135deg,#7c3aed,#6d28d9)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink: 0 }}>
-          <svg width="24" height="24" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24">
-            <rect x="3" y="3" width="7" height="7" rx="1" />
-            <rect x="14" y="3" width="7" height="7" rx="1" />
-            <rect x="3" y="14" width="7" height="7" rx="1" />
-            <rect x="14" y="14" width="7" height="7" rx="1" />
-          </svg>
+      <div className="flex items-center gap-4 mb-6 p-4 bg-gradient-to-r from-purple-50 to-gray-50 rounded-xl">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center shrink-0">
+          <LayoutDashboard className="text-white w-5 h-5" />
         </div>
         <div>
-          <p style={{ fontWeight: 700, fontSize: 17, color: "#1a1a1a", margin: 0 }}>{header}</p>
-          <p style={{ fontSize: 13.5, color: "#6b7280", margin: "3px 0 0" }}>Rate yourself on each Key Result Area</p>
+          <p className="font-bold text-gray-900">{header}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Rate yourself on each Key Result Area
+          </p>
         </div>
       </div>
 
@@ -212,26 +177,18 @@ function QuestionsAndAnswers({ header, questions, onScoreChange, notes, setNotes
       </div>
 
       {/* Additional Notes */}
-      <div style={{ marginTop: 20 }}>
-        <p style={{ fontWeight: 600, fontSize: 15, color: "#374151", marginBottom: 10 }}>Additional Notes (Optional)</p>
+      <div className="mt-5">
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
+          Additional Notes (Optional)
+        </label>
         <textarea
+          value={notes}
+          onChange={onNotesChange}
           placeholder="Any additional observations or action items..."
           value={notes}
           onChange={e => setNotes(e.target.value)}
           rows={3}
-          style={{
-            width: "100%",
-            borderRadius: 10,
-            border: "1px solid #e5e7eb",
-            padding: "14px 16px",
-            fontSize: 15,
-            color: "#374151",
-            resize: "vertical",
-            outline: "none",
-            fontFamily: "inherit",
-            background: "#fafafa",
-            boxSizing: "border-box",
-          }}
+          className="w-full rounded-xl border border-gray-200 p-4 text-sm bg-gray-50 focus:ring-2 focus:ring-purple-200 focus:outline-none transition-all"
         />
       </div>
 
@@ -256,19 +213,18 @@ function QuestionsAndAnswers({ header, questions, onScoreChange, notes, setNotes
         onMouseEnter={e => (e.currentTarget.style.opacity = "0.88")}
         onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
       >
-        Submit Evaluation
+        {isSubmitting ? (
+          <Loader2 className="animate-spin w-5 h-5" />
+        ) : (
+          <Save className="w-5 h-5" />
+        )}
+        {isSubmitting ? "Submitting..." : "Submit Evaluation"}
       </button>
     </div>
   );
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-
-const mockScore = {
-  md: { score: { achieved: 21, total: 35 }, title: "Needs Improvement", message: "You're driving growth, but systems aren't scaling with you." },
-  team: { score: { achieved: 28, total: 35 }, title: "Good Performance", message: "Your team is performing well with room for excellence." },
-};
-
 export default function KraSelfEvaluation() {
   const [activeTab, setActiveTab] = useState("MD");
   const [notes, setNotes] = useState("");
@@ -277,7 +233,6 @@ export default function KraSelfEvaluation() {
   const { toast } = useToast();
 
   const evaluationType = activeTab === "MD" ? "md" : "team";
-  const scoreData = mockScore[evaluationType];
 
   // when tab switches, reset questions to the appropriate defaults
   useEffect(() => {
@@ -341,63 +296,215 @@ export default function KraSelfEvaluation() {
     <div style={{ minHeight: "100vh", background: "#f5f5f0", padding: "40px 24px", fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
 
+    fetchQuestions();
+  }, [evaluationType, refresh]);
+
+  // ─── FETCH LATEST EVALUATION FOR SCORE ───────────────────
+  useEffect(() => {
+    const fetchLatestEvaluation = async () => {
+      try {
+        const token = localStorage.getItem("auth_token");
+        if (!token) return;
+
+        const res = await fetch(
+          `${API_BASE_URL}/kra_evaluations?evaluation_type=${evaluationType}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        if (res.ok) {
+          const data = await res.json();
+          console.log("Evaluations data:", data);
+
+          let evaluationsList = [];
+          if (Array.isArray(data)) evaluationsList = data;
+          else if (data.evaluations) evaluationsList = data.evaluations;
+
+          setEvaluations(evaluationsList);
+
+          // Get latest evaluation for score card
+          if (evaluationsList.length > 0) {
+            const latest = evaluationsList[evaluationsList.length - 1];
+            const totalScore = Object.values(latest.scores || {}).reduce(
+              (a, b) => a + Number(b),
+              0,
+            );
+            const maxTotal = questions.length * 5;
+
+            let title = "Needs Improvement";
+            let message = "Focus on low-scoring areas to improve performance.";
+            const pct = maxTotal > 0 ? (totalScore / maxTotal) * 100 : 0;
+
+            if (pct >= 80) {
+              title = "Exceptional";
+              message = "You are on the right track, keep it up!";
+            } else if (pct >= 60) {
+              title = "Good";
+              message = "You are on the right track, keep it up!";
+            }
+
+            setScoreData({
+              score: { achieved: totalScore, total: maxTotal || 35 },
+              title: title,
+              message: message,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching evaluations:", error);
+      }
+    };
+
+    fetchLatestEvaluation();
+  }, [evaluationType, refresh, questions.length]);
+
+  // ─── HANDLE SCORE CHANGE ───────────────────────
+  const handleScoreChange = (key, val) => {
+    setScores((prev) => ({ ...prev, [key]: val }));
+  };
+
+  // ─── HANDLE NOTES CHANGE ───────────────────────
+  const handleNotesChange = (e) => {
+    setNotes(e.target.value);
+  };
+
+  // ─── HANDLE SUBMIT ───────────────────────
+  const handleSubmit = async () => {
+    // Check if any scores are filled
+    const hasScores = Object.values(scores).some((v) => v > 0);
+    if (!hasScores) {
+      alert("Please rate at least one area.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        alert("Please login first");
+        return;
+      }
+
+      const today = new Date().toISOString().split("T")[0];
+
+      // Filter out zero scores
+      const cleanScores = {};
+      Object.entries(scores).forEach(([key, value]) => {
+        if (value > 0) cleanScores[key] = value;
+      });
+
+      const payload = {
+        kra_evaluation: {
+          evaluation_type: evaluationType,
+          evaluation_date: today,
+          notes: notes,
+          scores: cleanScores,
+        },
+      };
+
+      console.log("Submitting:", payload);
+
+      const res = await fetch(`${API_BASE_URL}/kra_evaluations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        alert("Evaluation submitted successfully! 🎉");
+
+        // Reset form
+        const resetScores = {};
+        questions.forEach((q) => {
+          const key = q.key || q.id;
+          resetScores[key] = 0;
+        });
+        setScores(resetScores);
+        setNotes("");
+
+        // Refresh data
+        setRefresh((prev) => !prev);
+      } else {
+        const error = await res.text();
+        alert("Error: " + error);
+      }
+    } catch (error) {
+      console.error("Submit error:", error);
+      alert("Network error!");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-stone-50 py-10 px-4 md:px-8 font-sans">
+      <div className="max-w-4xl mx-auto">
         {/* Page Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <button style={{ width: 40, height: 40, borderRadius: "50%", border: "1px solid #e5e7eb", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-              <svg width="18" height="18" fill="none" stroke="#374151" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
+        <div className="flex justify-between items-start mb-7">
+          <div className="flex items-center gap-4">
+            <button className="w-10 h-10 rounded-full border border-gray-200 bg-white flex items-center justify-center hover:bg-gray-50 transition-colors">
+              <ArrowLeft className="w-4 h-4 text-gray-700" />
             </button>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 42, height: 42, borderRadius: 10, background: "linear-gradient(135deg,#7c3aed,#6d28d9)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="22" height="22" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" /><path d="M12 8v4l3 3" />
-                </svg>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center">
+                <LayoutDashboard className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 style={{ fontSize: 32, fontWeight: 800, color: "#111827", margin: 0 }}>KRA Self-Evaluation</h1>
-                <p style={{ fontSize: 14, color: "#6b7280", margin: "2px 0 0" }}>Assess your performance across key result areas</p>
+                <h1 className="text-3xl font-extrabold text-gray-900">
+                  KRA Self-Evaluation
+                </h1>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Assess your performance across key result areas
+                </p>
               </div>
             </div>
           </div>
-          <button style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, color: "#6b7280", background: "none", border: "none", cursor: "pointer", fontWeight: 500, marginTop: 4 }}>
-            <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+          <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors mt-1">
+            <HelpCircle className="w-4 h-4" />
             Help
           </button>
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", background: "#e9e9e4", borderRadius: 12, padding: 4, marginBottom: 18 }}>
-          {["MD", "Team"].map(tab => (
+        <div className="flex bg-gray-200/50 p-1 rounded-xl mb-5">
+          {["MD", "Team"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              style={{
-                flex: 1,
-                padding: "9px 0",
-                borderRadius: 9,
-                border: activeTab === tab ? "1px solid rgba(0,0,0,0.08)" : "1px solid transparent",
-                background: activeTab === tab ? "#fff" : "transparent",
-                fontWeight: 600,
-                fontSize: 13.5,
-                color: activeTab === tab ? "#111827" : "#6b7280",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-                boxShadow: activeTab === tab ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
-                transition: "all 0.2s",
-              }}
+              className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                activeTab === tab
+                  ? "bg-white shadow-sm text-purple-600"
+                  : "text-gray-400 hover:text-gray-600"
+              }`}
             >
-              <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                {tab === "MD"
-                  ? <><circle cx="12" cy="8" r="4" /><path d="M6 20v-2a6 6 0 0112 0v2" /></>
-                  : <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></>
-                }
+              <svg
+                width="15"
+                height="15"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                {tab === "MD" ? (
+                  <>
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M6 20v-2a6 6 0 0 1 12 0v2" />
+                  </>
+                ) : (
+                  <>
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                  </>
+                )}
               </svg>
               {tab === "MD" ? "MD's Evaluation" : "Team's Evaluation"}
             </button>
@@ -448,6 +555,57 @@ export default function KraSelfEvaluation() {
           </div>
         )}
 
+            {/* Recent Evaluations */}
+            {evaluations.length > 0 && (
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
+                  Recent Evaluations
+                </h3>
+                <div className="space-y-2">
+                  {evaluations
+                    .slice(-3)
+                    .reverse()
+                    .map((evalItem) => {
+                      const evalScore = Object.values(
+                        evalItem.scores || {},
+                      ).reduce((a, b) => a + Number(b), 0);
+                      return (
+                        <div
+                          key={evalItem.id}
+                          className="text-sm text-gray-600 flex justify-between items-center p-2 bg-gray-50 rounded-lg"
+                        >
+                          <span>
+                            {new Date(
+                              evalItem.evaluation_date,
+                            ).toLocaleDateString()}
+                          </span>
+                          <span className="font-bold text-purple-600">
+                            Score: {evalScore}/{questions.length * 5 || 35}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+
+            {/* Questions Form */}
+            <QuestionsAndAnswers
+              header={
+                activeTab === "MD"
+                  ? "MD/Owner Self-Evaluation"
+                  : "Team Self-Evaluation"
+              }
+              questions={questions}
+              scores={scores}
+              onScoreChange={handleScoreChange}
+              onSubmit={handleSubmit}
+              isSubmitting={isSubmitting}
+              notes={notes}
+              onNotesChange={handleNotesChange}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

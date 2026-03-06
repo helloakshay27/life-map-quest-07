@@ -25,6 +25,7 @@ import BucketList from "@/components/BucketList";
 import SignUp from "./pages/SignUp";
 import KraSelfEvaluation from "./pages/KRA";
 import WeeklyJournal from "./pages/WeeklyJournal";
+import KRA from "./pages/KRA";
 
 const queryClient = new QueryClient();
 
@@ -49,7 +50,7 @@ const App = () => (
               <Route path="/goals-habits" element={<GoalsHabits />} />
               <Route path="/todos" element={<Todos />} />
               <Route path="/people" element={<People />} />
-              <Route path="/kra" element={<KraSelfEvaluation />} />
+              <Route path="/kra" element={<KRA />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/achievements" element={<Achievements />} />
               <Route path="/learn" element={<LearnAndConnect />} />

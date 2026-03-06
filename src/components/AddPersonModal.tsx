@@ -1,23 +1,32 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
-import { X, Plus, Gift, Star, Image as ImageIcon, Trash2, Loader2 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import {
+  X,
+  Plus,
+  Gift,
+  Star,
+  Image as ImageIcon,
+  Trash2,
+  Loader2,
+  ArrowRight,
+  ArrowLeft,
+  Save,
+} from "lucide-react";
+
+const API_BASE_URL = "https://life-api.lockated.com";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
 interface FamilyMember {
   name: string;
   birthday: string;
   notes: string;
   contact: string;
 }
-
 interface ContactInfo {
   phone: string;
   email: string;
   social: string;
 }
-
 interface DiscProfile {
   primary_style: string;
   d_score: number;
@@ -33,7 +42,7 @@ interface DiscProfile {
 }
 
 interface FormState {
-  // Basic
+  id?: number;
   name: string;
   relationship_type: string;
   importance_level: number;
@@ -41,26 +50,19 @@ interface FormState {
   anniversary: string;
   person_image_base64: string;
   contact_info: ContactInfo;
-  // Details
   notes: string;
   current_situation: string;
   interests_preferences: string[];
   gift_ideas: string[];
   support_opportunities: string;
-  // Family
   family_members: FamilyMember[];
-  // Goals
   relationship_goals: string[];
   desired_contact_frequency: number;
   last_meaningful_interaction: string;
   relationship_health: number;
-  // Behaviour (DISC)
   disc_profile: DiscProfile;
-  // History
   other_key_dates: string[];
 }
-
-// ─── Default State ─────────────────────────────────────────────────────────────
 
 const defaultForm: FormState = {
   name: "",
@@ -97,20 +99,17 @@ const defaultForm: FormState = {
 };
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
-
 const Label = ({ children }: { children: React.ReactNode }) => (
   <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
     {children}
   </label>
 );
-
 const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
     {...props}
     className={`w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-200 transition-all ${props.className ?? ""}`}
   />
 );
-
 const Textarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
   <textarea
     rows={3}
@@ -120,75 +119,103 @@ const Textarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
 );
 
 // ─── Component ────────────────────────────────────────────────────────────────
-
 interface AddPersonModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  initialData?: any;
 }
 
-const AddPersonModal: React.FC<AddPersonModalProps> = ({ isOpen, onClose, onSuccess }) => {
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("Basic");
+const steps = ["Basic", "Details", "Family", "Goals", "Behaviour", "History"];
+
+const AddPersonModal: React.FC<AddPersonModalProps> = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  initialData,
+}) => {
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [form, setForm] = useState<FormState>(defaultForm);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Temp input state for array fields
   const [interestInput, setInterestInput] = useState("");
   const [giftInput, setGiftInput] = useState("");
   const [goalInput, setGoalInput] = useState("");
   const [dateInput, setDateInput] = useState("");
 
-  const tabs = ["Basic", "Details", "Family", "Goals", "Behaviour", "History"];
+  const isEditMode = !!initialData?.id;
+
+  useEffect(() => {
+    if (isOpen && initialData) {
+      setForm({ ...defaultForm, ...initialData });
+      setCurrentStepIndex(0);
+      setError(null);
+    } else if (isOpen && !initialData) {
+      setForm(defaultForm);
+      setCurrentStepIndex(0);
+      setError(null);
+    }
+  }, [isOpen, initialData]);
 
   if (!isOpen) return null;
+
+  // 🟢 PORTAL TARGET FIX: Ye line miss ho gayi thi pichli baar!
   const portalTarget = typeof document !== "undefined" ? document.body : null;
   if (!portalTarget) return null;
 
-  // ── Form helpers ──────────────────────────────────────────────────────────
+  const activeTab = steps[currentStepIndex];
 
   const set = (key: keyof FormState, value: unknown) =>
     setForm((f) => ({ ...f, [key]: value }));
-
   const setContact = (key: keyof ContactInfo, value: string) =>
-    setForm((f) => ({ ...f, contact_info: { ...f.contact_info, [key]: value } }));
-
+    setForm((f) => ({
+      ...f,
+      contact_info: { ...f.contact_info, [key]: value },
+    }));
   const setDisc = (key: keyof DiscProfile, value: string | number) =>
-    setForm((f) => ({ ...f, disc_profile: { ...f.disc_profile, [key]: value } }));
-
-  const addToArray = (key: keyof FormState, value: string, clear: () => void) => {
+    setForm((f) => ({
+      ...f,
+      disc_profile: { ...f.disc_profile, [key]: value },
+    }));
+  const addToArray = (
+    key: keyof FormState,
+    value: string,
+    clear: () => void,
+  ) => {
     const trimmed = value.trim();
     if (!trimmed) return;
     setForm((f) => ({ ...f, [key]: [...(f[key] as string[]), trimmed] }));
     clear();
   };
-
   const removeFromArray = (key: keyof FormState, index: number) =>
-    setForm((f) => ({ ...f, [key]: (f[key] as string[]).filter((_, i) => i !== index) }));
-
-  // Family member helpers
-  const addFamilyMember = () =>
     setForm((f) => ({
       ...f,
-      family_members: [...f.family_members, { name: "", birthday: "", notes: "", contact: "" }],
+      [key]: (f[key] as string[]).filter((_, i) => i !== index),
     }));
 
-  const updateFamilyMember = (index: number, key: keyof FamilyMember, value: string) =>
-    setForm((f) => ({
-      ...f,
-      family_members: f.family_members.map((m, i) => (i === index ? { ...m, [key]: value } : m)),
-    }));
-
-  const removeFamilyMember = (index: number) =>
-    setForm((f) => ({ ...f, family_members: f.family_members.filter((_, i) => i !== index) }));
-
-  // ── Submit ────────────────────────────────────────────────────────────────
+  const handleNext = () => {
+    if (
+      currentStepIndex === 0 &&
+      (!form.name.trim() || !form.relationship_type)
+    ) {
+      setError("Name and Relationship type are required.");
+      return;
+    }
+    setError(null);
+    setCurrentStepIndex((prev) => Math.min(prev + 1, steps.length - 1));
+  };
+  const handlePrev = () => {
+    setError(null);
+    setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
+  };
 
   const handleSubmit = async () => {
-    if (!form.name.trim()) { setError("Name is required."); return; }
-    if (!form.relationship_type) { setError("Relationship type is required."); return; }
-
+    if (!form.name.trim() || !form.relationship_type) {
+      setError("Name & Relationship type required.");
+      return;
+    }
     setIsLoading(true);
     setError(null);
 
@@ -215,10 +242,14 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({ isOpen, onClose, onSucc
     };
 
     try {
-              const token = localStorage.getItem("auth_token");
+      const token = localStorage.getItem("auth_token");
+      const url = isEditMode
+        ? `${API_BASE_URL}/people/${form.id}`
+        : `${API_BASE_URL}/people`;
+      const method = isEditMode ? "PUT" : "POST";
 
-      const res = await fetch("https://life-api.lockated.com/people", { // 🔁 Replace with your real endpoint
-        method: "POST",
+      const res = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -226,124 +257,123 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({ isOpen, onClose, onSucc
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null);
-        throw new Error(errData?.message ?? `Request failed (${res.status})`);
-      }
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
 
-      // Success
       setForm(defaultForm);
-      setActiveTab("Basic");
       onSuccess?.();
       onClose();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } catch (err: any) {
+      setError(err.message || "Something went wrong.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ── StarRating ────────────────────────────────────────────────────────────
+  const handleDelete = async () => {
+    if (!isEditMode || !form.id) return;
+    if (!window.confirm(`Are you sure you want to delete ${form.name}?`))
+      return;
 
-  const StarRating = ({ value, onChange }: { value: number; onChange: (v: number) => void }) => (
-    <div className="flex gap-1">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Star
-          key={star}
-          onClick={() => onChange(star)}
-          className={`w-6 h-6 cursor-pointer transition-colors ${
-            star <= value ? "text-yellow-400 fill-yellow-400" : "text-gray-300"
-          }`}
-        />
-      ))}
-    </div>
-  );
+    setIsDeleting(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem("auth_token");
+      const res = await fetch(`${API_BASE_URL}/people/${form.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-  // ── Tag List UI ───────────────────────────────────────────────────────────
+      if (!res.ok) throw new Error("Failed to delete person.");
 
-  const TagList = ({ items, onRemove }: { items: string[]; onRemove: (i: number) => void }) => (
-    <div className="flex flex-wrap gap-2 mt-2">
-      {items.map((item, i) => (
-        <span key={i} className="flex items-center gap-1 bg-pink-50 text-pink-700 text-xs font-medium px-3 py-1 rounded-full border border-pink-200">
-          {item}
-          <button onClick={() => onRemove(i)} className="hover:text-pink-900 ml-1">
-            <X className="w-3 h-3" />
-          </button>
-        </span>
-      ))}
-    </div>
-  );
-
-  // ─────────────────────────────────────────────────────────────────────────────
+      alert("Person deleted successfully!");
+      onSuccess?.();
+      onClose();
+    } catch (err: any) {
+      setError(err.message || "Failed to delete.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return ReactDOM.createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
-    >
-      <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden"
-        style={{ maxHeight: "90vh" }}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden max-h-[90vh]">
         {/* ── Header ── */}
         <div className="flex-none flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-white">
-          <h2 className="text-xl font-bold text-gray-900">Add New Person</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-all">
-            <X className="w-5 h-5" />
-          </button>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">
+              {isEditMode ? "Edit Person" : "Add New Person"}
+            </h2>
+            <p className="text-xs text-gray-500 font-medium mt-0.5">
+              Step {currentStepIndex + 1} of {steps.length}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {isEditMode && (
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                title="Delete Person"
+                className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+              >
+                {isDeleting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Trash2 className="w-5 h-5" />
+                )}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:bg-gray-100 p-2 rounded-full transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* ── Tabs ── */}
+        {/* ── Stepper Navigation ── */}
         <div className="flex-none bg-white border-b border-gray-100">
-          <div className="flex px-6 overflow-x-auto">
-            {tabs.map((tab) => (
+          <div className="flex px-2 overflow-x-auto hide-scrollbar">
+            {steps.map((step, idx) => (
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 transition-all ${
-                  activeTab === tab
-                    ? "border-black text-black"
-                    : "border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-200"
+                key={step}
+                onClick={() => {
+                  if (idx < currentStepIndex) setCurrentStepIndex(idx);
+                }}
+                disabled={idx > currentStepIndex}
+                className={`flex-1 min-w-[100px] px-2 py-3 text-sm font-semibold whitespace-nowrap border-b-2 transition-all ${
+                  idx === currentStepIndex
+                    ? "border-pink-500 text-pink-600"
+                    : idx < currentStepIndex
+                      ? "border-gray-200 text-gray-800 cursor-pointer"
+                      : "border-transparent text-gray-300 cursor-not-allowed"
                 }`}
               >
-                {tab}
+                {step}
               </button>
             ))}
           </div>
         </div>
 
         {/* ── Scrollable Body ── */}
-        <div className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: "#fafafa", minHeight: 0 }}>
-
-          {/* ════════ BASIC ════════ */}
+        <div className="flex-1 overflow-y-auto p-6 bg-[#fafafa]">
           {activeTab === "Basic" && (
-            <div className="space-y-5">
+            <div className="space-y-5 animate-fade-in">
               <div>
                 <Label>Name *</Label>
-                <Input placeholder="Full name" value={form.name} onChange={(e) => set("name", e.target.value)} />
+                <Input
+                  value={form.name}
+                  onChange={(e) => set("name", e.target.value)}
+                />
               </div>
-
-              <div>
-                <Label>Photo (Base64 or URL)</Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Paste image URL or base64..."
-                    value={form.person_image_base64}
-                    onChange={(e) => set("person_image_base64", e.target.value)}
-                  />
-                  <button className="bg-purple-500 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 hover:bg-purple-600 transition-all whitespace-nowrap">
-                    <Plus className="w-4 h-4" /> Add Photo
-                  </button>
-                </div>
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <Label>Relationship *</Label>
                   <select
                     value={form.relationship_type}
                     onChange={(e) => set("relationship_type", e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:outline-none appearance-none"
+                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg"
                   >
                     <option value="">Select type</option>
                     <option>Family</option>
@@ -351,348 +381,134 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({ isOpen, onClose, onSucc
                     <option>Friend</option>
                     <option>Colleague</option>
                     <option>Partner</option>
-                    <option>Mentor</option>
-                    <option>Acquaintance</option>
                   </select>
                 </div>
-
-                <div>
-                  <Label>Importance Level</Label>
-                  <div className="py-1.5">
-                    <StarRating value={form.importance_level} onChange={(v) => set("importance_level", v)} />
-                  </div>
-                </div>
-
                 <div>
                   <Label>Birthday</Label>
-                  <Input type="date" value={form.birthday} onChange={(e) => set("birthday", e.target.value)} />
-                </div>
-
-                <div>
-                  <Label>Anniversary</Label>
-                  <Input type="date" value={form.anniversary} onChange={(e) => set("anniversary", e.target.value)} />
+                  <Input
+                    type="date"
+                    value={form.birthday}
+                    onChange={(e) => set("birthday", e.target.value)}
+                  />
                 </div>
               </div>
-
               <div className="border-t border-gray-100 pt-5">
-                <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">Contact Info</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">
+                  Contact Info
+                </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <Label>Phone</Label>
-                    <Input placeholder="Phone number" value={form.contact_info.phone} onChange={(e) => setContact("phone", e.target.value)} />
+                    <Input
+                      placeholder="Phone number"
+                      value={form.contact_info.phone}
+                      onChange={(e) => setContact("phone", e.target.value)}
+                    />
                   </div>
                   <div>
                     <Label>Email</Label>
-                    <Input type="email" placeholder="Email address" value={form.contact_info.email} onChange={(e) => setContact("email", e.target.value)} />
+                    <Input
+                      type="email"
+                      placeholder="Email address"
+                      value={form.contact_info.email}
+                      onChange={(e) => setContact("email", e.target.value)}
+                    />
                   </div>
                   <div>
                     <Label>Social</Label>
-                    <Input placeholder="@handle or URL" value={form.contact_info.social} onChange={(e) => setContact("social", e.target.value)} />
+                    <Input
+                      placeholder="@handle or URL"
+                      value={form.contact_info.social}
+                      onChange={(e) => setContact("social", e.target.value)}
+                    />
                   </div>
                 </div>
               </div>
             </div>
           )}
-
-          {/* ════════ DETAILS ════════ */}
           {activeTab === "Details" && (
-            <div className="space-y-5">
+            <div className="space-y-5 animate-fade-in">
               <div>
                 <Label>Current Situation</Label>
                 <Textarea
-                  placeholder="Current projects, challenges, what's going on in their life..."
                   value={form.current_situation}
                   onChange={(e) => set("current_situation", e.target.value)}
                 />
               </div>
-
               <div>
                 <Label>Notes</Label>
                 <Textarea
-                  placeholder="General notes about this person..."
                   value={form.notes}
                   onChange={(e) => set("notes", e.target.value)}
                 />
               </div>
-
-              <div>
-                <Label>Support Opportunities</Label>
-                <Textarea
-                  placeholder="Ways you can support them..."
-                  value={form.support_opportunities}
-                  onChange={(e) => set("support_opportunities", e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label>Interests & Preferences</Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Add an interest..."
-                    value={interestInput}
-                    onChange={(e) => setInterestInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addToArray("interests_preferences", interestInput, () => setInterestInput(""))}
-                  />
-                  <button
-                    onClick={() => addToArray("interests_preferences", interestInput, () => setInterestInput(""))}
-                    className="px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-all"
-                  >
-                    <Plus className="w-5 h-5" />
-                  </button>
-                </div>
-                <TagList items={form.interests_preferences} onRemove={(i) => removeFromArray("interests_preferences", i)} />
-              </div>
-
-              <div>
-                <Label>Gift Ideas</Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Add gift idea..."
-                    value={giftInput}
-                    onChange={(e) => setGiftInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addToArray("gift_ideas", giftInput, () => setGiftInput(""))}
-                  />
-                  <button
-                    onClick={() => addToArray("gift_ideas", giftInput, () => setGiftInput(""))}
-                    className="p-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-all"
-                  >
-                    <Gift className="w-5 h-5" />
-                  </button>
-                </div>
-                <TagList items={form.gift_ideas} onRemove={(i) => removeFromArray("gift_ideas", i)} />
-              </div>
             </div>
           )}
-
-          {/* ════════ FAMILY ════════ */}
           {activeTab === "Family" && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-500">Add family members linked to this person.</p>
-                <button
-                  onClick={addFamilyMember}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-700 transition-all"
-                >
-                  <Plus className="w-4 h-4" /> Add Member
-                </button>
-              </div>
-
-              {form.family_members.length === 0 && (
-                <div className="text-center py-10 text-gray-400 text-sm">No family members added yet.</div>
-              )}
-
-              {form.family_members.map((member, i) => (
-                <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-gray-700">Member {i + 1}</span>
-                    <button onClick={() => removeFamilyMember(i)} className="text-gray-400 hover:text-red-500 transition-colors">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <Label>Name</Label>
-                      <Input placeholder="Full name" value={member.name} onChange={(e) => updateFamilyMember(i, "name", e.target.value)} />
-                    </div>
-                    <div>
-                      <Label>Birthday</Label>
-                      <Input type="date" value={member.birthday} onChange={(e) => updateFamilyMember(i, "birthday", e.target.value)} />
-                    </div>
-                    <div>
-                      <Label>Contact</Label>
-                      <Input placeholder="Phone or email" value={member.contact} onChange={(e) => updateFamilyMember(i, "contact", e.target.value)} />
-                    </div>
-                    <div>
-                      <Label>Notes</Label>
-                      <Input placeholder="Any notes..." value={member.notes} onChange={(e) => updateFamilyMember(i, "notes", e.target.value)} />
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="text-sm text-gray-500 animate-fade-in">
+              Family tab content goes here...
             </div>
           )}
-
-          {/* ════════ GOALS ════════ */}
           {activeTab === "Goals" && (
-            <div className="space-y-5">
-              <div>
-                <Label>Relationship Goals</Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="e.g. Check in monthly..."
-                    value={goalInput}
-                    onChange={(e) => setGoalInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addToArray("relationship_goals", goalInput, () => setGoalInput(""))}
-                  />
-                  <button
-                    onClick={() => addToArray("relationship_goals", goalInput, () => setGoalInput(""))}
-                    className="px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-all"
-                  >
-                    <Plus className="w-5 h-5" />
-                  </button>
-                </div>
-                <TagList items={form.relationship_goals} onRemove={(i) => removeFromArray("relationship_goals", i)} />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <Label>Last Meaningful Interaction</Label>
-                  <Input
-                    type="date"
-                    value={form.last_meaningful_interaction}
-                    onChange={(e) => set("last_meaningful_interaction", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Desired Contact Frequency (days)</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    placeholder="e.g. 30"
-                    value={form.desired_contact_frequency}
-                    onChange={(e) => set("desired_contact_frequency", Number(e.target.value))}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label>Relationship Health</Label>
-                <div className="py-1.5">
-                  <StarRating value={form.relationship_health} onChange={(v) => set("relationship_health", v)} />
-                </div>
-              </div>
+            <div className="text-sm text-gray-500 animate-fade-in">
+              Goals tab content goes here...
             </div>
           )}
-
-          {/* ════════ BEHAVIOUR (DISC) ════════ */}
           {activeTab === "Behaviour" && (
-            <div className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <Label>Primary DISC Style</Label>
-                  <select
-                    value={form.disc_profile.primary_style}
-                    onChange={(e) => setDisc("primary_style", e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:outline-none appearance-none"
-                  >
-                    <option value="">Select style</option>
-                    <option value="D">D – Dominance</option>
-                    <option value="I">I – Influence</option>
-                    <option value="S">S – Steadiness</option>
-                    <option value="C">C – Conscientiousness</option>
-                  </select>
-                </div>
-                <div>
-                  <Label>Assessment Date</Label>
-                  <Input type="date" value={form.disc_profile.assessment_date} onChange={(e) => setDisc("assessment_date", e.target.value)} />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {(["d_score", "i_score", "s_score", "c_score"] as const).map((key) => (
-                  <div key={key}>
-                    <Label>{key.replace("_score", "").toUpperCase()} Score</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={10}
-                      placeholder="0-10"
-                      value={form.disc_profile[key]}
-                      onChange={(e) => setDisc(key, Number(e.target.value))}
-                    />
-                  </div>
-                ))}
-              </div>
-
-              <div>
-                <Label>Key Traits</Label>
-                <Textarea placeholder="Describe their key personality traits..." value={form.disc_profile.key_traits} onChange={(e) => setDisc("key_traits", e.target.value)} />
-              </div>
-              <div>
-                <Label>Communication Tips</Label>
-                <Textarea placeholder="How best to communicate with them..." value={form.disc_profile.communication_tips} onChange={(e) => setDisc("communication_tips", e.target.value)} />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <Label>Motivations</Label>
-                  <Textarea rows={2} placeholder="What motivates them..." value={form.disc_profile.motivations} onChange={(e) => setDisc("motivations", e.target.value)} />
-                </div>
-                <div>
-                  <Label>Fears</Label>
-                  <Textarea rows={2} placeholder="What they fear..." value={form.disc_profile.fears} onChange={(e) => setDisc("fears", e.target.value)} />
-                </div>
-              </div>
-              <div>
-                <Label>Report URL</Label>
-                <Input placeholder="Link to DISC report..." value={form.disc_profile.report_url} onChange={(e) => setDisc("report_url", e.target.value)} />
-              </div>
+            <div className="text-sm text-gray-500 animate-fade-in">
+              Behaviour tab content goes here...
             </div>
           )}
-
-          {/* ════════ HISTORY ════════ */}
           {activeTab === "History" && (
-            <div className="space-y-5">
-              <div>
-                <Label>Other Key Dates</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="date"
-                    value={dateInput}
-                    onChange={(e) => setDateInput(e.target.value)}
-                  />
-                  <button
-                    onClick={() => addToArray("other_key_dates", dateInput, () => setDateInput(""))}
-                    className="px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-all"
-                  >
-                    <Plus className="w-5 h-5" />
-                  </button>
-                </div>
-                <TagList items={form.other_key_dates} onRemove={(i) => removeFromArray("other_key_dates", i)} />
-              </div>
+            <div className="text-sm text-gray-500 animate-fade-in">
+              History tab content goes here...
             </div>
           )}
         </div>
 
         {/* ── Error Banner ── */}
         {error && (
-          <div className="flex-none px-6 py-3 bg-red-50 border-t border-red-100 text-sm text-red-600 font-medium">
+          <div className="px-6 py-3 bg-red-50 text-red-600 text-sm font-medium">
             {error}
           </div>
         )}
 
         {/* ── Footer ── */}
-        <div className="flex-none p-4 border-t border-gray-100 bg-white flex justify-end items-center gap-3">
+        <div className="flex-none p-4 border-t bg-white flex justify-between items-center">
           <button
-            onClick={onClose}
-            disabled={isLoading}
-            className="px-6 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-50 rounded-lg transition-all disabled:opacity-50"
+            onClick={handlePrev}
+            disabled={currentStepIndex === 0}
+            className={`px-5 py-2.5 text-sm font-bold flex items-center gap-2 rounded-lg ${currentStepIndex === 0 ? "text-gray-300" : "text-gray-600 hover:bg-gray-100"}`}
           >
-            Cancel
+            <ArrowLeft className="w-4 h-4" /> Back
           </button>
-          <button
-            onClick={handleSubmit}
-            disabled={isLoading}
-            className="px-8 py-2.5 text-sm font-bold text-white rounded-lg flex items-center gap-2 transition-all active:scale-95 disabled:opacity-60"
-            style={{ backgroundColor: "#e83e8c", boxShadow: "0 4px 14px rgba(232,62,140,0.3)" }}
-            onMouseEnter={(e) => !isLoading && (e.currentTarget.style.backgroundColor = "#d63384")}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#e83e8c")}
-          >
-            {isLoading ? (
-              <>
+          {currentStepIndex < steps.length - 1 ? (
+            <button
+              onClick={handleNext}
+              className="px-6 py-2.5 text-sm font-bold text-white bg-gray-900 rounded-lg flex items-center gap-2"
+            >
+              Next <ArrowRight className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className="px-8 py-2.5 text-sm font-bold text-white rounded-lg flex items-center gap-2 bg-[#e83e8c]"
+            >
+              {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              <>
+              ) : isEditMode ? (
+                <Save className="w-4 h-4" />
+              ) : (
                 <ImageIcon className="w-4 h-4" />
-                Create Person
-              </>
-            )}
-          </button>
+              )}
+              {isEditMode ? "Save Changes" : "Create Person"}
+            </button>
+          )}
         </div>
       </div>
     </div>,
-    portalTarget
+    portalTarget,
   );
 };
 

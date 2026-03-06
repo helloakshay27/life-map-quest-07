@@ -11,20 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -184,11 +172,11 @@ const GoalsHabits = () => {
   const [affirmations, setAffirmations] = useState<Affirmation[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
 
-  const [isGoalDialogOpen, setIsGoalDialogOpen] = useState(false);
-  const [isBeliefDialogOpen, setIsBeliefDialogOpen] = useState(false);
-  const [isPatternDialogOpen, setIsPatternDialogOpen] = useState(false);
+  const [isGoalDialogOpen,        setIsGoalDialogOpen]        = useState(false);
+  const [isBeliefDialogOpen,      setIsBeliefDialogOpen]      = useState(false);
+  const [isPatternDialogOpen,     setIsPatternDialogOpen]     = useState(false);
   const [isAffirmationDialogOpen, setIsAffirmationDialogOpen] = useState(false);
-  const [isHabitDialogOpen, setIsHabitDialogOpen] = useState(false);
+  const [isHabitDialogOpen,       setIsHabitDialogOpen]       = useState(false);
 
   // Goal form
   const [goalName, setGoalName] = useState("");
@@ -437,7 +425,8 @@ const GoalsHabits = () => {
         });
       }
     }
-  };
+  }, [goals]);
+
 
   const handleUpdateGoalStatus = useCallback(
     async (id: string, newStatus: string) => {
@@ -1464,9 +1453,7 @@ const GoalsHabits = () => {
           {/* Controls row — stacks on mobile */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Select value={selectedArea} onValueChange={setSelectedArea}>
-              <SelectTrigger className="w-full sm:w-48 text-sm">
-                <SelectValue placeholder="Select area" />
-              </SelectTrigger>
+              <SelectTrigger className="w-full sm:w-48 text-sm"><SelectValue placeholder="Select area" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all-areas">All Areas</SelectItem>
                 <SelectItem value="health">Health & Fitness</SelectItem>
@@ -1596,6 +1583,42 @@ const GoalsHabits = () => {
                           ))}
                         </div>
                       )}
+                      {cols.length === 0 && !isHovered
+                        ? <div className="flex h-full min-h-48 flex-col items-center justify-center"><p className="text-center text-xs sm:text-sm text-muted-foreground">No goals yet</p></div>
+                        : <div className="space-y-2 sm:space-y-3">
+                            {cols.map(goal => {
+                              const dragging = dragState?.goalId === goal.id && dragState?.isDragging;
+                              return (
+                                <Card key={goal.id}
+                                  onPointerDown={e => handlePointerDown(e, goal.id)}
+                                  onPointerMove={handlePointerMove}
+                                  onPointerUp={handlePointerUp}
+                                  onPointerCancel={handlePointerCancel}
+                                  className={`bg-white p-2 sm:p-3 shadow-sm select-none touch-none relative group transition-all duration-150
+                                    ${dragging ? "opacity-25 scale-95 shadow-none" : "cursor-grab hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5 active:cursor-grabbing"}`}
+                                >
+                                  <div className="flex items-start gap-1.5 pr-6">
+                                    <GripVertical className="h-4 w-4 text-muted-foreground/40 flex-shrink-0 mt-0.5" />
+                                    <p className="text-xs sm:text-sm font-medium text-foreground line-clamp-2">{goal.title}</p>
+                                  </div>
+                                  <div className="mt-2">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-xs text-muted-foreground">Progress</span>
+                                      <span className="text-xs font-semibold text-primary">{goal.progress || 0}%</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                      <div className="bg-gradient-to-r from-blue-500 to-teal-500 h-2 rounded-full" style={{ width: `${goal.progress || 0}%` }} />
+                                    </div>
+                                  </div>
+                                  <button onPointerDown={e => e.stopPropagation()} onClick={() => handleDeleteGoal(goal.id)}
+                                    className="absolute top-2 right-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                  </button>
+                                </Card>
+                              );
+                            })}
+                          </div>
+                      }
                     </div>
                   </div>
                 );
@@ -1679,8 +1702,6 @@ const GoalsHabits = () => {
                     </Card>
                   ))}
                 </div>
-              )}
-            </div>
           )}
         </TabsContent>
 
@@ -2380,6 +2401,7 @@ const GoalsHabits = () => {
                 Create Goal
               </Button>
             </div>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-4"><Button variant="outline" onClick={() => setIsGoalDialogOpen(false)}>Cancel</Button><Button className="bg-teal-500 hover:bg-teal-600 text-white" onClick={handleCreateGoal}>Create Goal</Button></div>
           </div>
         </DialogContent>
       </Dialog>
@@ -3019,6 +3041,8 @@ const GoalsHabits = () => {
                 Create Habit
               </Button>
             </div>
+            <div className="space-y-2"><Label>Start Date</Label><Input type="date" value={habitStartDate} onChange={e => setHabitStartDate(e.target.value)} /></div>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-4"><Button variant="outline" onClick={() => setIsHabitDialogOpen(false)}>Cancel</Button><Button className="bg-teal-500 hover:bg-teal-600 text-white" onClick={handleCreateHabit}>Create Habit</Button></div>
           </div>
         </DialogContent>
       </Dialog>
