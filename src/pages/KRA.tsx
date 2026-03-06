@@ -1,12 +1,27 @@
 import { useState, useEffect } from "react";
-import {
-  Loader2,
-  Save,
-  LayoutDashboard,
-  TrendingUp,
-  HelpCircle,
-  ArrowLeft,
-} from "lucide-react";
+import { apiRequest } from "../config/api";
+import { useToast } from "../hooks/use-toast";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../components/ui/table";
+// default question sets with score keys for API payload
+const defaultMD = [
+  { id: 1, key: "vision_strategy_score", icon: "🎯", title: "Vision & Strategy",        description: "Is my team crystal clear about where the company is headed and what success looks like this year?",   kpi: "Team alignment score, OKR completion rate", score: 3 },
+  { id: 2, key: "systems_processes_score", icon: "⚙️", title: "Systems & Processes",      description: "Can my business run smoothly for 2 weeks without my direct involvement?",                              kpi: "SOP coverage, escalation frequency",         score: 3 },
+  { id: 3, key: "leadership_team_score", icon: "👥", title: "Leadership & Team",         description: "Do I have the right people leading each function, and do they take ownership?",                        kpi: "Leadership coverage, accountability index",  score: 3 },
+  { id: 4, key: "financial_health_score", icon: "💰", title: "Financial Health",          description: "Do I know my company's profit, cash flow, and break-even at any point in time?",                       kpi: "P&L accuracy, cash flow visibility",         score: 3 },
+  { id: 5, key: "growth_sales_score", icon: "📈", title: "Growth & Sales Engine",     description: "Is my revenue growing predictably every quarter from repeat and new clients?",                         kpi: "QoQ revenue growth, repeat vs new ratio",    score: 3 },
+  { id: 6, key: "innovation_technology_score", icon: "💡", title: "Innovation & Technology",   description: "Have we implemented new tools, automation, or innovations in the last 6 months?",                      kpi: "Tools adopted, automation ROI",              score: 3 },
+  { id: 7, key: "personal_growth_score", icon: "🌱", title: "Personal Growth & Delegation", description: "Am I spending most of my time on strategic growth, not daily firefighting?",                      kpi: "Delegation rate, deep work hours/week",      score: 3 },
+];
+
+const defaultTeam = [
+  { id: 1, key: "goal_clarity_alignment_score", icon: "🤝", title: "Goal Clarity & Alignment", description: "Does every team member understand and align with company goals?",              kpi: "OKR alignment rate, clarity surveys",        score: 3 },
+  { id: 2, key: "ownership_accountability_score", icon: "📋", title: "Ownership & Accountability", description: "Does each team member take full ownership of their deliverables?",         kpi: "On-time task completion rate",               score: 3 },
+  { id: 3, key: "process_discipline_score", icon: "💬", title: "Process Discipline",           description: "Are team processes followed consistently and efficiently?",                 kpi: "SOP adherence, rework rate",                score: 3 },
+  { id: 4, key: "collaboration_communication_score", icon: "🏆", title: "Collaboration & Communication", description: "Does the team collaborate effectively across departments?",              kpi: "Cross-team project success rate",            score: 3 },
+  { id: 5, key: "learning_innovation_score", icon: "🔄", title: "Learning & Innovation",      description: "Is the team actively growing skills and fostering innovation?",           kpi: "Training hours, new ideas implemented",     score: 3 },
+  { id: 6, key: "client_stakeholder_focus_score", icon: "📚", title: "Client/Stakeholder Focus", description: "Does the team keep clients/stakeholders front of mind?",                 kpi: "CSAT, stakeholder feedback",                score: 3 },
+  { id: 7, key: "reliability_consistency_score", icon: "🎯", title: "Reliability & Consistency",  description: "Is the team's output dependable and steady?",                         kpi: "Delivery variance, uptime",                score: 3 },
+];
 
 const API_BASE_URL = "https://life-api.lockated.com";
 
@@ -58,7 +73,8 @@ function ScoreCard({ data }) {
 }
 
 // ─── KRA Question Item ────────────────────────────────────────────────────────
-function KraItem({ item, index, currentScore, onScoreChange }) {
+
+function KraItem({ item, index, onScoreChange }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -80,21 +96,25 @@ function KraItem({ item, index, currentScore, onScoreChange }) {
           </p>
         </div>
 
-        {/* Score Buttons */}
-        <div className="flex gap-1 shrink-0 mr-2">
-          {[1, 2, 3, 4, 5].map((num) => (
-            <button
-              key={num}
-              onClick={() => onScoreChange(item.key || item.id, num)}
-              className={`w-8 h-8 rounded-full font-semibold text-sm flex items-center justify-center transition-all ${
-                currentScore === num
-                  ? "bg-purple-600 text-white border-none scale-110 shadow-md"
-                  : "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50"
-              }`}
-            >
-              {num}
-            </button>
-          ))}
+        {/* Score - editable number for simplicity */}
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, marginRight: 6 }}>
+          <input
+            type="number"
+            min={0}
+            max={5}
+            value={item.score}
+            onChange={e => onScoreChange(index, Number(e.target.value))}
+            style={{
+              width: 40,
+              fontSize: 28,
+              fontWeight: 700,
+              color: "#0d9488",
+              textAlign: "center",
+              border: "none",
+              background: "transparent",
+            }}
+          />
+          <span style={{ fontSize: 14, color: "#9ca3af", fontWeight: 500 }}>/ 5</span>
         </div>
 
         {/* Chevron */}
@@ -129,16 +149,11 @@ function KraItem({ item, index, currentScore, onScoreChange }) {
 }
 
 // ─── QuestionsAndAnswers ──────────────────────────────────────────────────────
-function QuestionsAndAnswers({
-  header,
-  questions = [],
-  scores,
-  onScoreChange,
-  onSubmit,
-  isSubmitting,
-  notes,
-  onNotesChange,
-}) {
+
+function QuestionsAndAnswers({ header, questions, onScoreChange, notes, setNotes, onSubmit }) {
+  // `questions` is provided by the parent so that state lives in KraSelfEvaluation.
+  // any API-provided overrides can be injected there as well.
+
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
       {/* Header */}
@@ -155,22 +170,10 @@ function QuestionsAndAnswers({
       </div>
 
       {/* Question List */}
-      <div className="space-y-3">
-        {questions.length > 0 ? (
-          questions.map((q, i) => (
-            <KraItem
-              key={q.key || q.id || i}
-              item={q}
-              index={i}
-              currentScore={scores[q.key || q.id] || 0}
-              onScoreChange={onScoreChange}
-            />
-          ))
-        ) : (
-          <div className="text-center py-10 bg-red-50 rounded-xl text-red-500">
-            No questions available
-          </div>
-        )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {questions.map((q, i) => (
+          <KraItem key={q.id ?? i} item={q} index={i} onScoreChange={onScoreChange} />
+        ))}
       </div>
 
       {/* Additional Notes */}
@@ -182,6 +185,8 @@ function QuestionsAndAnswers({
           value={notes}
           onChange={onNotesChange}
           placeholder="Any additional observations or action items..."
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
           rows={3}
           className="w-full rounded-xl border border-gray-200 p-4 text-sm bg-gray-50 focus:ring-2 focus:ring-purple-200 focus:outline-none transition-all"
         />
@@ -189,13 +194,24 @@ function QuestionsAndAnswers({
 
       {/* Submit */}
       <button
+        style={{
+          marginTop: 16,
+          width: "100%",
+          padding: "16px",
+          borderRadius: 12,
+          background: "linear-gradient(135deg,#7c3aed,#6d28d9)",
+          color: "#fff",
+          fontWeight: 700,
+          fontSize: 15,
+          border: "none",
+          cursor: "pointer",
+          letterSpacing: "0.02em",
+          boxShadow: "0 4px 14px rgba(109,40,217,0.35)",
+          transition: "opacity 0.2s",
+        }}
         onClick={onSubmit}
-        disabled={isSubmitting || questions.length === 0}
-        className={`w-full mt-4 py-4 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
-          isSubmitting || questions.length === 0
-            ? "bg-gray-400 cursor-not-allowed"
-            : "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 active:scale-[0.98]"
-        }`}
+        onMouseEnter={e => (e.currentTarget.style.opacity = "0.88")}
+        onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
       >
         {isSubmitting ? (
           <Loader2 className="animate-spin w-5 h-5" />
@@ -211,75 +227,74 @@ function QuestionsAndAnswers({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function KraSelfEvaluation() {
   const [activeTab, setActiveTab] = useState("MD");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [refresh, setRefresh] = useState(false);
-
-  // Data States
-  const [questions, setQuestions] = useState([]);
   const [notes, setNotes] = useState("");
-  const [scores, setScores] = useState({});
-  const [evaluations, setEvaluations] = useState([]);
-  const [scoreData, setScoreData] = useState({
-    score: { achieved: 0, total: 0 },
-    title: "No Data",
-    message: "Complete evaluation to see your score",
-  });
+  const [questions, setQuestions] = useState(defaultMD);
+  const [history, setHistory] = useState([]);
+  const { toast } = useToast();
 
   const evaluationType = activeTab === "MD" ? "md" : "team";
 
-  // ─── FETCH QUESTIONS ───────────────────
+  // when tab switches, reset questions to the appropriate defaults
   useEffect(() => {
-    const fetchQuestions = async () => {
-      setIsLoading(true);
+    setQuestions(evaluationType === "md" ? defaultMD : defaultTeam);
+    setNotes("");
+    fetchHistory();
+  }, [evaluationType]);
 
-      try {
-        const token = localStorage.getItem("auth_token");
-        if (!token) {
-          alert("Please login first");
-          return;
-        }
+  const fetchHistory = async () => {
+    try {
+      const res = await apiRequest(`/kra_evaluations?evaluation_type=${evaluationType}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      // API might return { kra_evaluations: [...] } or just an array
+      setHistory(json.kra_evaluations || json || []);
+    } catch (err) {
+      console.error("failed to fetch history", err);
+    }
+  };
 
-        console.log("Fetching questions for:", evaluationType);
+  const handleScoreChange = (index, newScore) => {
+    setQuestions(prev => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], score: newScore };
+      return copy;
+    });
+  };
 
-        const res = await fetch(
-          `${API_BASE_URL}/kra_evaluations?evaluation_type=${evaluationType}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        );
-
-        if (res.ok) {
-          const data = await res.json();
-          console.log("Questions data:", data);
-
-          // Handle response
-          let questionsList = [];
-          if (Array.isArray(data)) questionsList = data;
-          else if (data.questions) questionsList = data.questions;
-          else if (data.data) questionsList = data.data;
-
-          if (questionsList.length > 0) {
-            setQuestions(questionsList);
-
-            // Initialize scores
-            const initialScores = {};
-            questionsList.forEach((q) => {
-              const key = q.key || q.id;
-              initialScores[key] = 0;
-            });
-            setScores(initialScores);
-          }
-        }
-      } catch (error) {
-        console.error("Error:", error);
-      } finally {
-        setIsLoading(false);
-      }
+  const handleSubmit = async () => {
+    // build same payload for both evaluation types (md or team)
+    const payload = {
+      kra_evaluation: {
+        evaluation_type: evaluationType,
+        evaluation_date: new Date().toISOString().split("T")[0],
+        notes,
+        scores: questions.reduce((acc, q) => {
+          if (q.key) acc[q.key] = q.score;
+          return acc;
+        }, {}),
+      },
     };
+
+    try {
+      const res = await apiRequest("/kra_evaluations", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      console.log("evaluation saved", data);
+      toast({ title: "Evaluation submitted", description: "Your responses have been saved." });
+      // refresh list after successful submission
+      fetchHistory();
+    } catch (err) {
+      console.error("failed to submit evaluation", err);
+      toast({ title: "Submission failed", description: "Could not send evaluation. Please try again.", variant: "destructive" });
+    }
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#f5f5f0", padding: "40px 24px", fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
 
     fetchQuestions();
   }, [evaluationType, refresh]);
@@ -497,17 +512,48 @@ export default function KraSelfEvaluation() {
         </div>
 
         {/* Content */}
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <Loader2 className="animate-spin text-purple-600 w-10 h-10" />
-            <p className="text-gray-400 animate-pulse font-medium">
-              Loading questions...
-            </p>
+        <div style={{ background: "rgba(237,233,254,0.3)", borderRadius: 16, border: "1px solid rgba(167,139,250,0.2)", padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+          <ScoreCard data={scoreData} />
+          <QuestionsAndAnswers
+            header={activeTab === "MD" ? "MD/Owner Self-Evaluation" : "Team Self-Evaluation"}
+            questions={questions}
+            onScoreChange={handleScoreChange}
+            notes={notes}
+            setNotes={setNotes}
+            onSubmit={handleSubmit}
+          />
+        </div>
+        {history.length > 0 && (
+          <div style={{ marginTop: 32 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>
+              Previous {evaluationType === "md" ? "MD" : "Team"} Evaluations
+            </h2>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Notes</TableHead>
+                  {questions.map(q => (
+                    <TableHead key={q.key}>{q.title}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {history.map((ev, idx) => (
+                  <TableRow key={ev.id ?? idx}>
+                    <TableCell>{ev.evaluation_date || ev.date || "-"}</TableCell>
+                    <TableCell>{ev.notes || ""}</TableCell>
+                    {questions.map(q => (
+                      <TableCell key={q.key}>
+                        {ev.scores && q.key ? ev.scores[q.key] : "-"}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
-        ) : (
-          <div className="bg-purple-50/30 rounded-2xl border border-purple-200/50 p-4 space-y-4">
-            {/* Score Card */}
-            <ScoreCard data={scoreData} />
+        )}
 
             {/* Recent Evaluations */}
             {evaluations.length > 0 && (
