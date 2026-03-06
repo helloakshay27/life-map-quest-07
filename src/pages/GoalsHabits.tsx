@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useToast } from "@/hooks/use-toast";
 import {
   Plus,
   Heart,
@@ -127,6 +128,7 @@ interface DragState {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 const GoalsHabits = () => {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("goals");
   const [selectedArea, setSelectedArea] = useState("all-areas");
   const [viewMode, setViewMode] = useState<"kanban" | "grid">("kanban");
@@ -210,49 +212,97 @@ const GoalsHabits = () => {
   const [hoveredStatus, setHoveredStatus] = useState<string | null>(null);
   const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // ─── LOAD GOALS (mirrors Todos pattern exactly) ───────────────────────────
+  // ─── LOAD GOALS — always fetch fresh from API ────────────────────────────
   useEffect(() => {
     const load = async () => {
+      // Always clear stale/local cache so UUID-based goals don't persist
+      localStorage.removeItem("user_goals");
       try {
-        const saved = localStorage.getItem("user_goals");
-        if (saved) {
-          setGoals(JSON.parse(saved));
+        const res = await fetchWithAuth("/goals");
+        if (res.ok) {
+          const data = await res.json();
+          const list: Goal[] = (
+            Array.isArray(data) ? data : (data.goals ?? data.data ?? [])
+          ).map((g: Goal) => ({ ...g, id: String(g.id) }));
+          setGoals(list);
+          localStorage.setItem("user_goals", JSON.stringify(list));
           return;
         }
-        try {
-          const res = await fetchWithAuth("/goals");
-          if (res.ok) {
-            const data = await res.json();
-            const list = Array.isArray(data)
-              ? data
-              : (data.goals ?? data.data ?? []);
-            setGoals(list);
-            localStorage.setItem("user_goals", JSON.stringify(list));
-          }
-        } catch {
-          console.log("Goals API unavailable, using local storage");
-        }
+        console.warn("GET /goals returned", res.status);
       } catch {
-        console.log("Using local storage for goals");
+        console.log("Goals API unavailable, starting with empty list");
       }
     };
     load();
   }, []);
 
-  // ─── LOAD BELIEFS ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    const saved = localStorage.getItem("user_beliefs");
-    if (saved) {
-      setBeliefs(JSON.parse(saved));
+  // ─── LOAD BELIEFS — from API ──────────────────────────────────────────────
+  const loadBeliefs = async () => {
+    setBeliefsLoading(true);
+    setBeliefsError(null);
+    localStorage.removeItem("user_beliefs");
+    try {
+      const res = await fetchWithAuth("/limiting_beliefs");
+      if (res.ok) {
+        const data = await res.json();
+        const list: Belief[] = (
+          Array.isArray(data)
+            ? data
+            : (data.limiting_beliefs ?? data.data ?? [])
+        ).map((b: Belief) => ({
+          ...b,
+          id: String(b.id),
+          belief: b.statement ?? b.limiting_belief ?? b.belief ?? "",
+        }));
+        setBeliefs(list);
+        localStorage.setItem("user_beliefs", JSON.stringify(list));
+      } else {
+        setBeliefsError("Failed to load beliefs.");
+      }
+    } catch {
+      setBeliefsError("Could not reach the server.");
+    } finally {
+      setBeliefsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    loadBeliefs();
   }, []);
 
-  // ─── LOAD PATTERNS ────────────────────────────────────────────────────────
-  useEffect(() => {
-    const saved = localStorage.getItem("user_patterns");
-    if (saved) {
-      setPatterns(JSON.parse(saved));
+  // ─── LOAD PATTERNS — from API ─────────────────────────────────────────────
+  const loadPatterns = async () => {
+    setPatternsLoading(true);
+    setPatternsError(null);
+    localStorage.removeItem("user_patterns");
+    try {
+      const res = await fetchWithAuth("/behavioral_patterns");
+      if (res.ok) {
+        const data = await res.json();
+        const list: Pattern[] = (
+          Array.isArray(data)
+            ? data
+            : (data.behavioral_patterns ?? data.data ?? [])
+        ).map((p: Pattern) => ({
+          ...p,
+          id: String(p.id),
+          name: p.recurring_behavior ?? p.name ?? "",
+          alternative: p.pattern_data?.desired_behavior ?? p.alternative ?? "",
+        }));
+        setPatterns(list);
+        localStorage.setItem("user_patterns", JSON.stringify(list));
+      } else {
+        setPatternsError("Failed to load patterns.");
+      }
+    } catch {
+      setPatternsError("Could not reach the server.");
+    } finally {
+      setPatternsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    loadPatterns();
   }, []);
 
   // ─── LOAD AFFIRMATIONS ────────────────────────────────────────────────────
@@ -336,8 +386,9 @@ const GoalsHabits = () => {
         });
         if (res.ok) {
           const d = await res.json();
-          newGoal.id = d.id || d._id || d.data?.id || newGoal.id;
-          console.log("Goal created:", d);
+          // Normalize to string — API returns numeric id (e.g. 69)
+          newGoal.id = String(d.id ?? d._id ?? d.data?.id ?? newGoal.id);
+          console.log("Goal created with id:", newGoal.id);
         } else {
           try {
             const errorText = await res.text();
@@ -368,12 +419,12 @@ const GoalsHabits = () => {
   };
 
   const handleDeleteGoal = async (id: string) => {
-    // Optimistic removal
+    // 1. Optimistic removal from UI & cache
     const removed = goals.find((g) => g.id === id);
     setGoals((prev) => {
-      const u = prev.filter((g) => g.id !== id);
-      save("user_goals", u);
-      return u;
+      const updated = prev.filter((g) => g.id !== id);
+      save("user_goals", updated);
+      return updated;
     });
 
     try {
@@ -384,18 +435,27 @@ const GoalsHabits = () => {
         console.error("DELETE /goals failed:", res.status, errText);
         throw new Error(`Server error: ${res.status}`);
       }
-      // Success — API returns { message: "Goal deleted successfully" }
-      console.log("Goal deleted successfully");
+
+      // 2. API confirms — { message: "Goal deleted successfully" }
+      toast({
+        title: "Goal deleted",
+        description: "The goal was removed successfully.",
+      });
     } catch (error) {
       console.error("Failed to delete goal:", error);
-      // Roll back — restore the removed goal
+      // 3. Roll back optimistic removal
       if (removed) {
         setGoals((prev) => {
-          const u = [...prev, removed];
-          save("user_goals", u);
-          return u;
+          const restored = [...prev, removed];
+          save("user_goals", restored);
+          return restored;
         });
       }
+      toast({
+        title: "Delete failed",
+        description: "Could not delete the goal. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -889,6 +949,31 @@ const GoalsHabits = () => {
       }
     } finally {
       setPatternSaving(false);
+    }
+  };
+
+  /** Open the pattern detail modal — loads from local state instantly, then fetches full data */
+  const openPatternDetail = async (id: string | number) => {
+    const local = patterns.find((p) => p.id === String(id)) ?? null;
+    setPatternDetail(local);
+    setIsPatternDetailOpen(true);
+    setPatternDetailLoading(true);
+    try {
+      const res = await fetchWithAuth(`/behavioral_patterns/${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setPatternDetail({
+          ...data,
+          id: String(data.id),
+          name: data.recurring_behavior ?? data.name ?? "",
+          alternative:
+            data.pattern_data?.desired_behavior ?? data.alternative ?? "",
+        });
+      }
+    } catch {
+      // Keep local data if fetch fails
+    } finally {
+      setPatternDetailLoading(false);
     }
   };
 
@@ -1554,78 +1639,6 @@ const GoalsHabits = () => {
                               </button>
                             </Card>
                           ))}
-                        </div>
-                      )}
-                      {cols.length === 0 && !isHovered ? (
-                        <div className="flex h-full min-h-48 flex-col items-center justify-center">
-                          <p className="text-center text-xs sm:text-sm text-muted-foreground">
-                            No goals yet
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2 sm:space-y-3">
-                          {cols.map((goal) => {
-                            const dragging =
-                              dragState?.goalId === goal.id &&
-                              dragState?.isDragging;
-                            return (
-                              <Card
-                                key={goal.id}
-                                onPointerDown={(e) =>
-                                  handlePointerDown(e, goal.id)
-                                }
-                                onPointerMove={handlePointerMove}
-                                onPointerUp={handlePointerUp}
-                                onPointerCancel={handlePointerCancel}
-                                className={`bg-white p-2 sm:p-3 shadow-sm select-none touch-none relative group transition-all duration-150
-                                    ${dragging ? "opacity-25 scale-95 shadow-none" : "cursor-grab hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5 active:cursor-grabbing"}`}
-                              >
-                                <div className="flex items-start gap-1.5 pr-6">
-                                  <GripVertical className="h-4 w-4 text-muted-foreground/40 flex-shrink-0 mt-0.5" />
-                                  <p className="text-xs sm:text-sm font-medium text-foreground line-clamp-2">
-                                    {goal.title}
-                                  </p>
-                                </div>
-                                <div className="mt-2">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <span className="text-xs text-muted-foreground">
-                                      Progress
-                                    </span>
-                                    <span className="text-xs font-semibold text-primary">
-                                      {goal.progress || 0}%
-                                    </span>
-                                  </div>
-                                  <div className="w-full bg-gray-200 rounded-full h-2">
-                                    <div
-                                      className="bg-gradient-to-r from-blue-500 to-teal-500 h-2 rounded-full"
-                                      style={{
-                                        width: `${goal.progress || 0}%`,
-                                      }}
-                                    />
-                                  </div>
-                                </div>
-                                <button
-                                  onPointerDown={(e) => e.stopPropagation()}
-                                  onClick={() => handleDeleteGoal(goal.id)}
-                                  className="absolute top-2 right-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <svg
-                                    className="h-4 w-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth="2"
-                                      d="M6 18L18 6M6 6l12 12"
-                                    />
-                                  </svg>
-                                </button>
-                              </Card>
-                            );
-                          })}
                         </div>
                       )}
                     </div>
@@ -2397,20 +2410,6 @@ const GoalsHabits = () => {
                   />
                 </div>
               </div>
-            </div>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setIsGoalDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="bg-teal-500 hover:bg-teal-600 text-white"
-                onClick={handleCreateGoal}
-              >
-                Create Goal
-              </Button>
             </div>
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-4">
               <Button
