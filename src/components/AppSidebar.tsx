@@ -14,6 +14,7 @@ import {
   Medal,
   Calendar,
   Notebook,
+  Heart,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -37,6 +38,7 @@ const navItems = [
   { title: "Goals & Habits", url: "/goals-habits", icon: Target },
   { title: "To Do's", url: "/todos", icon: CheckSquare },
   { title: "People", url: "/people", icon: Users },
+  { title: "For Family", url: "/for-family", icon: Heart },
   { title: "KRA", url: "/kra", icon: BarChart3 },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Achievements", url: "/achievements", icon: Trophy },
