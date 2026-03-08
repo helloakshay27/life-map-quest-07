@@ -26,6 +26,7 @@ import SignUp from "./pages/SignUp";
 import KraSelfEvaluation from "./pages/KRA";
 import WeeklyJournal from "./pages/WeeklyJournal";
 import KRA from "./pages/KRA";
+import ForFamily from "./pages/ForFamily";
 import ResetPassword from "./pages/resetPass";
 import UpdatePassword from "./pages/UpdatePass";
 
@@ -55,6 +56,7 @@ const App = () => (
               <Route path="/goals-habits" element={<GoalsHabits />} />
               <Route path="/todos" element={<Todos />} />
               <Route path="/people" element={<People />} />
+              <Route path="/for-family" element={<ForFamily />} />
               <Route path="/kra" element={<KRA />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/achievements" element={<Achievements />} />

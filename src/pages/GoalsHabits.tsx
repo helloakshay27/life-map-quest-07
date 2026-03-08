@@ -9,6 +9,7 @@ import {
   Target,
   GripVertical,
   Link as LinkIcon,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -134,9 +135,9 @@ interface DragState {
 
 // ─── COMPONENT ────────────────────────────────────────────────────────────────
 const GoalsHabits = () => {
-  const [activeTab, setActiveTab] = useState("goals");
   const [selectedArea, setSelectedArea] = useState("all-areas");
   const [viewMode, setViewMode] = useState<"kanban" | "grid">("kanban");
+  const [activeTab, setActiveTab] = useState("goals");
 
   const [goals, setGoals] = useState<Goal[]>([]);
   const [beliefs, setBeliefs] = useState<Belief[]>([]);
@@ -1192,7 +1193,7 @@ const GoalsHabits = () => {
       label: areaLabels[selectedArea] || "Create Your First Goal",
       className: "bg-teal-500 hover:bg-teal-600 text-white",
       icon: <Target className="h-4 w-4 mr-2 shrink-0" />,
-      emptyText: "No goals yet. Create your first goal to get started!",
+      emptyText: "No goals yet. Create your first goal!",
       emptyIcon: <Target className="h-10 w-10 text-gray-300" />,
     },
     beliefs: {
@@ -1200,8 +1201,7 @@ const GoalsHabits = () => {
       label: "Identify Your First Belief",
       className: "bg-pink-500 hover:bg-pink-600 text-white",
       icon: <Heart className="h-4 w-4 mr-2 shrink-0" />,
-      emptyText:
-        "No limiting beliefs recorded yet. What thoughts are holding you back?",
+      emptyText: "No limiting beliefs recorded yet.",
       emptyIcon: <Heart className="h-10 w-10 text-gray-300" />,
     },
     affirmations: {
@@ -1209,7 +1209,7 @@ const GoalsHabits = () => {
       label: "Add Your First Affirmation",
       className: "bg-purple-500 hover:bg-purple-600 text-white",
       icon: <Sparkles className="h-4 w-4 mr-2 shrink-0" />,
-      emptyText: "No affirmations yet. Start your day with positive thoughts!",
+      emptyText: "No affirmations yet.",
       emptyIcon: <Sparkles className="h-10 w-10 text-gray-300" />,
     },
     habits: {
@@ -1251,59 +1251,39 @@ const GoalsHabits = () => {
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="animate-fade-in space-y-4 sm:space-y-6 relative min-h-screen pb-44 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
-        <div className="text-center sm:text-left">
-          <h1 className="text-2xl sm:text-3xl text-foreground">
-            Goals & Habits
-          </h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1">
-            Transform beliefs and achieve your aspirations
-          </p>
-        </div>
+    <div className="animate-fade-in space-y-4 sm:space-y-6 relative min-h-screen pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <div>
+        <h1 className="text-2xl sm:text-3xl text-foreground">Goals & Habits</h1>
+        <p className="text-sm sm:text-base text-muted-foreground mt-1">
+          Transform beliefs and achieve your aspirations
+        </p>
       </div>
 
       <Card className="border-l-4 border-blue-400 bg-blue-50 p-3 sm:p-4">
         <p className="text-sm text-foreground">
           <strong>Setting SMART Goals:</strong> Create Specific, Measurable,
           Achievable, Relevant, and Time-bound goals. Break big goals into
-          smaller milestones. Link them to your core values for motivation.
-          Track progress regularly and celebrate wins.
+          smaller milestones.
         </p>
       </Card>
 
-      {/* Tabs */}
       <Tabs
         defaultValue="goals"
         className="space-y-4"
-        onValueChange={(val) => setActiveTab(val)}
+        onValueChange={setActiveTab}
       >
-        {/* Tab list — full width, scrollable on very small screens */}
         <div className="overflow-x-auto">
-          <TabsList className="grid w-full min-w-[280px] sm:min-w-[300px] grid-cols-4 gap-1 sm:gap-2">
-            <TabsTrigger
-              value="goals"
-              className="text-xs sm:text-sm py-2 px-1 sm:px-2"
-            >
+          <TabsList className="grid w-full min-w-[280px] grid-cols-4">
+            <TabsTrigger value="goals" className="text-xs sm:text-sm">
               Goals
             </TabsTrigger>
-            <TabsTrigger
-              value="beliefs"
-              className="text-xs sm:text-sm py-2 px-1 sm:px-2"
-            >
+            <TabsTrigger value="beliefs" className="text-xs sm:text-sm">
               Beliefs
             </TabsTrigger>
-            <TabsTrigger
-              value="affirmations"
-              className="text-xs sm:text-sm py-2 px-1 sm:px-2"
-            >
+            <TabsTrigger value="affirmations" className="text-xs sm:text-sm">
               Affirmations
             </TabsTrigger>
-            <TabsTrigger
-              value="habits"
-              className="text-xs sm:text-sm py-2 px-1 sm:px-2"
-            >
+            <TabsTrigger value="habits" className="text-xs sm:text-sm">
               Habits
             </TabsTrigger>
           </TabsList>
@@ -1311,7 +1291,6 @@ const GoalsHabits = () => {
 
         {/* ── GOALS ── */}
         <TabsContent value="goals" className="space-y-4">
-          {/* Controls row — stacks on mobile */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Select value={selectedArea} onValueChange={setSelectedArea}>
               <SelectTrigger className="w-full sm:w-48 text-sm">
@@ -1355,95 +1334,51 @@ const GoalsHabits = () => {
           </div>
 
           {viewMode === "kanban" && (
-            <div
-              className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4 select-none touch-none"
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerCancel}
-            >
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {goalStatuses.map((status) => {
-                const statusGoals = getGoalsByStatus(
-                  status.key as Goal["status"],
-                );
+                const cols = getGoalsByStatus(status.key as Goal["status"]);
+                const isHovered =
+                  hoveredStatus === status.key && dragState?.isDragging;
                 return (
                   <div key={status.key} className="space-y-2">
                     <div
-                      className={`flex items-center justify-between rounded-xl border ${status.border} ${status.bg} px-2 sm:px-3 py-2 sm:py-2.5`}
+                      className={`flex items-center justify-between rounded-xl border ${status.border} ${status.bg} px-2 sm:px-3 py-2`}
                     >
                       <div className="flex items-center gap-1 sm:gap-2">
-                        <span className="text-sm sm:text-base sm:text-lg">
-                          {status.icon}
-                        </span>
+                        <span className="text-sm">{status.icon}</span>
                         <h3 className="font-semibold text-foreground text-xs sm:text-sm">
                           {status.label}
                         </h3>
                       </div>
                       <span className="rounded-md bg-white border border-gray-200 px-1.5 py-0.5 text-xs font-medium text-gray-600">
-                        {statusGoals.length}
+                        {cols.length}
                       </span>
                     </div>
                     <div
-                      ref={(el) => (columnRefs.current[status.key] = el)}
-                      className={`min-h-56 sm:min-h-64 lg:min-h-80 xl:min-h-96 rounded-xl border transition-colors ${status.border} ${status.bg} p-2 sm:p-3 lg:p-4 ${hoveredStatus === status.key ? "ring-2 ring-blue-400 bg-opacity-70" : ""}`}
+                      ref={(el) => {
+                        columnRefs.current[status.key] = el;
+                      }}
+                      className={`min-h-56 sm:min-h-64 lg:min-h-80 rounded-xl border p-2 sm:p-3 lg:p-4 transition-all duration-150
+                        ${isHovered ? `${status.hoverBg} ${status.hoverBorder} border-2 border-dashed shadow-lg scale-[1.015]` : `${status.bg} ${status.border} border`}
+                        ${dragState?.isDragging && !isHovered ? "opacity-70" : ""}`}
                     >
-                      {statusGoals.length === 0 ? (
-                        <div className="flex h-full min-h-48 sm:min-h-56 flex-col items-center justify-center">
-                          <p className="text-center text-xs sm:text-sm text-muted-foreground">
-                            No goals yet
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2 sm:space-y-3">
-                          {statusGoals.map((goal) => (
-                            <Card
-                              key={goal.id}
-                              onPointerDown={(e) =>
-                                handlePointerDown(e, goal.id)
-                              }
-                              className={`cursor-grab active:cursor-grabbing bg-white p-2 sm:p-3 shadow-sm hover:shadow-md transition-all relative group ${dragState?.goalId === goal.id ? "opacity-50 scale-95" : "hover:-translate-y-1"}`}
-                            >
-                              <p className="text-xs sm:text-sm font-medium text-foreground pr-8">
-                                {goal.title}
-                              </p>
-                              <div className="mt-2">
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs text-muted-foreground">
-                                    Progress
-                                  </span>
-                                  <span className="text-xs font-semibold text-primary">
-                                    {goal.progress || 0}%
-                                  </span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className="bg-gradient-to-r from-blue-500 to-teal-500 h-2 rounded-full transition-all"
-                                    style={{ width: `${goal.progress || 0}%` }}
-                                  />
-                                </div>
-                              </div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteGoal(goal.id);
-                                }}
-                                className="absolute top-2 right-2 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <svg
-                                  className="h-4 w-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M6 18L18 6M6 6l12 12"
-                                  />
-                                </svg>
-                              </button>
-                            </Card>
-                          ))}
+                      {isHovered && (
+                        <div className="mb-3 rounded-lg border-2 border-dashed border-gray-400 bg-white/70 h-14 flex items-center justify-center gap-2">
+                          <div
+                            className="w-1.5 h-5 rounded-full bg-gray-400 animate-bounce"
+                            style={{ animationDelay: "0ms" }}
+                          />
+                          <div
+                            className="w-1.5 h-7 rounded-full bg-gray-400 animate-bounce"
+                            style={{ animationDelay: "80ms" }}
+                          />
+                          <div
+                            className="w-1.5 h-4 rounded-full bg-gray-400 animate-bounce"
+                            style={{ animationDelay: "160ms" }}
+                          />
+                          <span className="text-xs text-gray-500 font-semibold ml-1">
+                            Drop here
+                          </span>
                         </div>
                       )}
                     </div>
@@ -1463,75 +1398,44 @@ const GoalsHabits = () => {
             </div>
           )}
 
-          {viewMode === "grid" && (
-            <div className="space-y-4">
-              {goals.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 py-8 sm:py-12 lg:py-16 px-4">
-                  <svg
-                    className="mb-3 sm:mb-4 h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground/40 mx-auto"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  >
-                    <circle cx="12" cy="12" r="2" fill="currentColor" />
-                    <circle cx="12" cy="12" r="6" fill="none" />
-                    <circle cx="12" cy="12" r="10" fill="none" />
-                  </svg>
-                  <p className="text-xs sm:text-sm sm:text-base text-muted-foreground text-center">
-                    No goals yet. Create your first goal to get started!
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {goals.map((goal) => (
-                    <Card key={goal.id} className="p-3 sm:p-4 relative group">
-                      <p className="font-semibold text-sm sm:text-base text-foreground pr-8">
-                        {goal.title}
-                      </p>
-                      <p className="text-xs sm:text-sm text-muted-foreground capitalize mt-1">
-                        {goal.status}
-                      </p>
-                      <div className="mt-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs text-muted-foreground">
-                            Progress
-                          </span>
-                          <span className="text-xs font-semibold text-primary">
-                            {goal.progress || 0}%
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2.5">
-                          <div
-                            className="bg-gradient-to-r from-blue-500 to-teal-500 h-2.5 rounded-full"
-                            style={{ width: `${goal.progress || 0}%` }}
-                          />
-                        </div>
+          {viewMode === "grid" &&
+            (goals.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 py-12 px-4">
+                <p className="text-sm text-muted-foreground">
+                  No goals yet. Create your first goal!
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {goals.map((goal) => (
+                  <Card key={goal.id} className="p-3 sm:p-4 relative group">
+                    <p className="font-semibold text-sm sm:text-base text-foreground pr-8">
+                      {goal.title}
+                    </p>
+                    <p className="text-xs sm:text-sm text-muted-foreground capitalize mt-1">
+                      {goal.status}
+                    </p>
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-muted-foreground">
+                          Progress
+                        </span>
+                        <span className="text-xs font-semibold text-primary">
+                          {goal.progress || 0}%
+                        </span>
                       </div>
-                      <button
-                        onClick={() => handleDeleteGoal(goal.id)}
-                        className="absolute top-3 right-3 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <svg
-                          className="h-4 w-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                      </button>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div
+                          className="bg-gradient-to-r from-blue-500 to-teal-500 h-2.5 rounded-full"
+                          style={{ width: `${goal.progress || 0}%` }}
+                        />
+                      </div>
+                    </div>
+                    <DelBtn onClick={() => handleDeleteGoal(goal.id)} />
+                  </Card>
+                ))}
+              </div>
+            ))}
         </TabsContent>
 
         {/* ── BELIEFS ── */}
@@ -2047,14 +1951,10 @@ const GoalsHabits = () => {
         <DialogContent className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl sm:text-2xl">
-              {editingPatternId !== null
-                ? "✏️ Edit Behavioral Pattern"
-                : "⚡ Identify Behavioral Pattern"}
+              ⚡ Identify Behavioral Pattern
             </DialogTitle>
             <DialogDescription className="text-orange-600">
-              {editingPatternId !== null
-                ? "Update your pattern and strategies"
-                : "Understand recurring actions you want to change"}
+              Understand recurring actions you want to change
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">

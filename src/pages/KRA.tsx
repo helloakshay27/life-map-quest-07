@@ -1,4 +1,12 @@
 import { useState, useEffect } from "react";
+import {
+  LayoutDashboard,
+  TrendingUp,
+  ArrowLeft,
+  HelpCircle,
+  Save,
+  Loader2,
+} from "lucide-react";
 import { apiRequest } from "../config/api";
 import { useToast } from "../hooks/use-toast";
 import {
@@ -9,14 +17,6 @@ import {
   TableHead,
   TableCell,
 } from "../components/ui/table";
-import {
-  LayoutDashboard,
-  ArrowLeft,
-  HelpCircle,
-  TrendingUp,
-  Save,
-  Loader2,
-} from "lucide-react";
 
 // default question sets with score keys for API payload
 const defaultMD = [
@@ -204,7 +204,15 @@ function ScoreCard({ data }) {
 }
 
 // ─── KRA Question Item ────────────────────────────────────────────────────────
-function KraItem({ item, index, onScoreChange }) {
+function KraItem({
+  item,
+  index,
+  onScoreChange,
+}: {
+  item: any;
+  index: number;
+  onScoreChange: (index: number, score: number) => void;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -249,6 +257,9 @@ function KraItem({ item, index, onScoreChange }) {
               background: "transparent",
             }}
           />
+          <span style={{ fontSize: 14, color: "#9ca3af", fontWeight: 500 }}>
+            / 5
+          </span>
           <span style={{ fontSize: 14, color: "#9ca3af", fontWeight: 500 }}>
             / 5
           </span>
@@ -356,12 +367,7 @@ function QuestionsAndAnswers({
         onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.88")}
         onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
       >
-        {isSubmitting ? (
-          <Loader2 className="animate-spin w-5 h-5" />
-        ) : (
-          <Save className="w-5 h-5" />
-        )}
-        {isSubmitting ? "Submitting..." : "Submit Evaluation"}
+        Submit Evaluation
       </button>
     </div>
   );
@@ -445,7 +451,7 @@ export default function KraSelfEvaluation() {
     fetchLatestEvaluation();
   }, [evaluationType, refresh, questions.length]);
 
-  const handleScoreChange = (index, newScore) => {
+  const handleScoreChange = (index: number, newScore: number) => {
     setQuestions((prev) => {
       const copy = [...prev];
       copy[index] = { ...copy[index], score: newScore };
@@ -511,9 +517,6 @@ export default function KraSelfEvaluation() {
         {/* Page Header */}
         <div className="flex justify-between items-start mb-7">
           <div className="flex items-center gap-4">
-            <button className="w-10 h-10 rounded-full border border-gray-200 bg-white flex items-center justify-center hover:bg-gray-50 transition-colors">
-              <ArrowLeft className="w-4 h-4 text-gray-700" />
-            </button>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center">
                 <LayoutDashboard className="w-5 h-5 text-white" />
@@ -528,10 +531,6 @@ export default function KraSelfEvaluation() {
               </div>
             </div>
           </div>
-          <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors mt-1">
-            <HelpCircle className="w-4 h-4" />
-            Help
-          </button>
         </div>
 
         {/* Tabs */}
@@ -546,27 +545,6 @@ export default function KraSelfEvaluation() {
                   : "text-gray-400 hover:text-gray-600"
               }`}
             >
-              <svg
-                width="15"
-                height="15"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                {tab === "MD" ? (
-                  <>
-                    <circle cx="12" cy="8" r="4" />
-                    <path d="M6 20v-2a6 6 0 0 1 12 0v2" />
-                  </>
-                ) : (
-                  <>
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-                  </>
-                )}
-              </svg>
               {tab === "MD" ? "MD's Evaluation" : "Team's Evaluation"}
             </button>
           ))}
