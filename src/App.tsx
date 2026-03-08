@@ -26,6 +26,8 @@ import SignUp from "./pages/SignUp";
 import KraSelfEvaluation from "./pages/KRA";
 import WeeklyJournal from "./pages/WeeklyJournal";
 import KRA from "./pages/KRA";
+import ResetPassword from "./pages/resetPass";
+import UpdatePassword from "./pages/UpdatePass";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +42,9 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signUp" element={<SignUp />} />
+            <Route path="/resetPassword" element={<ResetPassword />} />
+            <Route path="/updatePassword" element={<UpdatePassword />} />
+
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/daily-journal" element={<DailyJournal />} />

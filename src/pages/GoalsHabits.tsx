@@ -7,17 +7,31 @@ import {
   Clock,
   MapPin,
   Target,
+  GripVertical,
+  Link as LinkIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
-// ─── API (mirrors Todos.tsx exactly) ─────────────────────────────────────────
+// ─── API CONFIG ──────────────────────────────────────────────────────────────
 const API_BASE_URL = "https://life-api.lockated.com";
 
 const getAuthHeaders = (): Record<string, string> => {
@@ -35,22 +49,20 @@ const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
   return response;
 };
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── TYPES ────────────────────────────────────────────────────────────────────
 interface Goal {
   id: string;
   title: string;
   status: "planning" | "started" | "progress" | "completed";
   area?: string;
-  progress?: number; // 0-100
+  progress?: number;
 }
 
 interface Belief {
   id: string | number;
-  // Normalised display field (resolved from API `statement`)
   belief: string;
-  // --- Real API response fields ---
-  statement?: string; // primary text field from API
-  limiting_belief?: string; // legacy fallback
+  statement?: string;
+  limiting_belief?: string;
   user_id?: number;
   affirmation_id?: number | null;
   active?: number;
@@ -64,7 +76,6 @@ interface Belief {
     impact?: string;
     reframe?: string;
   };
-  // Local-only fallback fields
   origin?: string;
   evidence?: string;
   alternative: string;
@@ -72,11 +83,11 @@ interface Belief {
 
 interface Pattern {
   id: string | number;
-  name: string; // normalised from recurring_behavior
-  recurring_behavior?: string; // API field
+  name: string;
+  recurring_behavior?: string;
   trigger?: string;
   consequence?: string;
-  alternative: string; // normalised from pattern_data.desired_behavior
+  alternative: string;
   pattern_data?: {
     triggers?: string;
     underlying_reason?: string;
@@ -90,58 +101,26 @@ interface Pattern {
 
 interface Affirmation {
   id: string;
-  text: string;
+  text?: string;
+  statement?: string;
   category?: string;
   linkedBelief?: string;
+  priority?: number;
 }
 
 interface Habit {
   id: string;
   name: string;
   description?: string;
-  start_date?: string;
-  target_date?: string;
-}
-// (Duplicate interface declarations removed — see primary definitions above)
-interface DragState {
-  goalId: string;
-  startX: number;
-  startY: number;
-  currentX: number;
-  currentY: number;
-  cardWidth: number;
-  cardHeight: number;
-  isDragging: boolean;
-}
-interface Belief {
-  id: string;
-  belief: string;
-  origin?: string;
-  evidence?: string;
-  alternative: string;
-}
-interface Pattern {
-  id: string;
-  name: string;
-  trigger?: string;
-  consequence?: string;
-  alternative: string;
-}
-interface Affirmation {
-  id: string;
-  statement: string;
-  priority?: number;
-}
-interface Habit {
-  id: string;
-  name: string;
-  description?: string;
-  frequency: "daily" | "weekly" | "custom";
+  frequency?: "daily" | "weekly" | "custom";
   category?: string;
   time?: string;
   place?: string;
+  start_date?: string;
+  target_date?: string;
   startDate?: string;
 }
+
 interface DragState {
   goalId: string;
   startX: number;
@@ -153,11 +132,12 @@ interface DragState {
   isDragging: boolean;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── COMPONENT ────────────────────────────────────────────────────────────────
 const GoalsHabits = () => {
   const [activeTab, setActiveTab] = useState("goals");
   const [selectedArea, setSelectedArea] = useState("all-areas");
   const [viewMode, setViewMode] = useState<"kanban" | "grid">("kanban");
+
   const [goals, setGoals] = useState<Goal[]>([]);
   const [beliefs, setBeliefs] = useState<Belief[]>([]);
   const [beliefsLoading, setBeliefsLoading] = useState(false);
@@ -165,6 +145,7 @@ const GoalsHabits = () => {
   const [patterns, setPatterns] = useState<Pattern[]>([]);
   const [patternsLoading, setPatternsLoading] = useState(false);
   const [patternsError, setPatternsError] = useState<string | null>(null);
+
   // Detail modal
   const [patternDetail, setPatternDetail] = useState<Pattern | null>(null);
   const [patternDetailLoading, setPatternDetailLoading] = useState(false);
@@ -172,11 +153,11 @@ const GoalsHabits = () => {
   const [affirmations, setAffirmations] = useState<Affirmation[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
 
-  const [isGoalDialogOpen,        setIsGoalDialogOpen]        = useState(false);
-  const [isBeliefDialogOpen,      setIsBeliefDialogOpen]      = useState(false);
-  const [isPatternDialogOpen,     setIsPatternDialogOpen]     = useState(false);
+  const [isGoalDialogOpen, setIsGoalDialogOpen] = useState(false);
+  const [isBeliefDialogOpen, setIsBeliefDialogOpen] = useState(false);
+  const [isPatternDialogOpen, setIsPatternDialogOpen] = useState(false);
   const [isAffirmationDialogOpen, setIsAffirmationDialogOpen] = useState(false);
-  const [isHabitDialogOpen,       setIsHabitDialogOpen]       = useState(false);
+  const [isHabitDialogOpen, setIsHabitDialogOpen] = useState(false);
 
   // Goal form
   const [goalName, setGoalName] = useState("");
@@ -191,12 +172,11 @@ const GoalsHabits = () => {
   const [beliefText, setBeliefText] = useState("");
   const [beliefOrigin, setBeliefOrigin] = useState("");
   const [beliefSupportingEvidence, setBeliefSupportingEvidence] = useState("");
-  const [beliefEvidence, setBeliefEvidence] = useState(""); // contradicting evidence
+  const [beliefEvidence, setBeliefEvidence] = useState("");
   const [beliefImpact, setBeliefImpact] = useState("");
-  const [beliefAlternative, setBeliefAlternative] = useState(""); // reframe
+  const [beliefAlternative, setBeliefAlternative] = useState("");
   const [beliefSaving, setBeliefSaving] = useState(false);
   const [beliefSaveError, setBeliefSaveError] = useState<string | null>(null);
-  // null = create mode, id = edit mode
   const [editingBeliefId, setEditingBeliefId] = useState<
     string | number | null
   >(null);
@@ -211,15 +191,11 @@ const GoalsHabits = () => {
   const [patternAffirmationId, setPatternAffirmationId] = useState<string>("");
   const [patternSaving, setPatternSaving] = useState(false);
   const [patternSaveError, setPatternSaveError] = useState<string | null>(null);
-  // null = create mode, id = edit mode
   const [editingPatternId, setEditingPatternId] = useState<
     string | number | null
   >(null);
 
   // Affirmation form
-  const [affirmationText, setAffirmationText] = useState("");
-  const [affirmationCategory, setAffirmationCategory] = useState("");
-  const [affirmationBelief, setAffirmationBelief] = useState("");
   const [affirmationStatement, setAffirmationStatement] = useState("");
   const [affirmationPriority, setAffirmationPriority] = useState(5);
 
@@ -232,21 +208,22 @@ const GoalsHabits = () => {
   const [habitTime, setHabitTime] = useState("");
   const [habitPlace, setHabitPlace] = useState("");
   const [habitStartDate, setHabitStartDate] = useState("");
+  const [habitLinkedGoals, setHabitLinkedGoals] = useState<string[]>([]); // New state for linking goals
 
-  // Drag
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [hoveredStatus, setHoveredStatus] = useState<string | null>(null);
   const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // ─── LOAD GOALS (mirrors Todos pattern exactly) ───────────────────────────
+  const save = <T,>(key: string, items: T[]) =>
+    localStorage.setItem(key, JSON.stringify(items));
+
+  // ─── LOAD GOALS (GET) ───────────────────────────
   useEffect(() => {
     const load = async () => {
       try {
         const saved = localStorage.getItem("user_goals");
-        if (saved) {
-          setGoals(JSON.parse(saved));
-          return;
-        }
+        if (saved) setGoals(JSON.parse(saved));
+
         try {
           const res = await fetchWithAuth("/goals");
           if (res.ok) {
@@ -255,7 +232,7 @@ const GoalsHabits = () => {
               ? data
               : (data.goals ?? data.data ?? []);
             setGoals(list);
-            localStorage.setItem("user_goals", JSON.stringify(list));
+            save("user_goals", list);
           }
         } catch {
           console.log("Goals API unavailable, using local storage");
@@ -267,31 +244,67 @@ const GoalsHabits = () => {
     load();
   }, []);
 
-  // ─── LOAD BELIEFS ─────────────────────────────────────────────────────────
+  // ─── LOAD BELIEFS (GET) ──────────────────────────────────────────────────
   useEffect(() => {
-    const saved = localStorage.getItem("user_beliefs");
-    if (saved) {
-      setBeliefs(JSON.parse(saved));
-    }
+    const load = async () => {
+      try {
+        const saved = localStorage.getItem("user_beliefs");
+        if (saved) setBeliefs(JSON.parse(saved));
+
+        try {
+          const res = await fetchWithAuth("/limiting_beliefs");
+          if (res.ok) {
+            const data = await res.json();
+            const list = Array.isArray(data)
+              ? data
+              : (data.limiting_beliefs ?? data.data ?? []);
+            setBeliefs(list);
+            save("user_beliefs", list);
+          }
+        } catch {
+          console.log("Beliefs API unavailable, using local storage");
+        }
+      } catch {
+        console.log("Using local storage for beliefs");
+      }
+    };
+    load();
   }, []);
 
-  // ─── LOAD PATTERNS ────────────────────────────────────────────────────────
+  // ─── LOAD PATTERNS (GET) ─────────────────────────────────────────────────
   useEffect(() => {
-    const saved = localStorage.getItem("user_patterns");
-    if (saved) {
-      setPatterns(JSON.parse(saved));
-    }
+    const load = async () => {
+      try {
+        const saved = localStorage.getItem("user_patterns");
+        if (saved) setPatterns(JSON.parse(saved));
+
+        try {
+          const res = await fetchWithAuth("/behavioral_patterns");
+          if (res.ok) {
+            const data = await res.json();
+            const list = Array.isArray(data)
+              ? data
+              : (data.behavioral_patterns ?? data.data ?? []);
+            setPatterns(list);
+            save("user_patterns", list);
+          }
+        } catch {
+          console.log("Patterns API unavailable, using local storage");
+        }
+      } catch {
+        console.log("Using local storage for patterns");
+      }
+    };
+    load();
   }, []);
 
-  // ─── LOAD AFFIRMATIONS ────────────────────────────────────────────────────
+  // ─── LOAD AFFIRMATIONS (GET) ──────────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
       try {
         const saved = localStorage.getItem("user_affirmations");
-        if (saved) {
-          setAffirmations(JSON.parse(saved));
-          return;
-        }
+        if (saved) setAffirmations(JSON.parse(saved));
+
         try {
           const res = await fetchWithAuth("/affirmations");
           if (res.ok) {
@@ -300,7 +313,7 @@ const GoalsHabits = () => {
               ? data
               : (data.affirmations ?? data.data ?? []);
             setAffirmations(list);
-            localStorage.setItem("user_affirmations", JSON.stringify(list));
+            save("user_affirmations", list);
           }
         } catch {
           console.log("Affirmations API unavailable, using local storage");
@@ -312,15 +325,13 @@ const GoalsHabits = () => {
     load();
   }, []);
 
-  // ─── LOAD HABITS ──────────────────────────────────────────────────────────
+  // ─── LOAD HABITS (GET) ────────────────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
       try {
         const saved = localStorage.getItem("user_habits");
-        if (saved) {
-          setHabits(JSON.parse(saved));
-          return;
-        }
+        if (saved) setHabits(JSON.parse(saved));
+
         try {
           const res = await fetchWithAuth("/habits");
           if (res.ok) {
@@ -329,7 +340,7 @@ const GoalsHabits = () => {
               ? data
               : (data.habits ?? data.data ?? []);
             setHabits(list);
-            localStorage.setItem("user_habits", JSON.stringify(list));
+            save("user_habits", list);
           }
         } catch {
           console.log("Habits API unavailable, using local storage");
@@ -341,50 +352,58 @@ const GoalsHabits = () => {
     load();
   }, []);
 
-  const save = <T,>(key: string, items: T[]) =>
-    localStorage.setItem(key, JSON.stringify(items));
-
   // ─── GOALS CRUD ───────────────────────────────────────────────────────────
   const handleCreateGoal = async () => {
     if (!goalName.trim()) return;
     const payload = {
+      goal: {
+        title: goalName,
+        description: goalDescription,
+        category: goalCategory || "other",
+        status: goalStatus,
+        priority: "high", // Defaulting to high, or you can add a UI dropdown for this later
+        progress: goalProgress,
+        start_date: goalStartDate || null,
+        target_date: goalTargetDate || null,
+        end_date: goalTargetDate || null, // Using target_date as end_date
+        core_value_ids: [], // Empty array by default
+      },
+    };
+
+    const newGoal: Goal = {
+      id: crypto.randomUUID(),
       title: goalName,
-      description: goalDescription,
       status: goalStatus,
       area: goalCategory,
-      start_date: goalStartDate,
-      target_date: goalTargetDate,
+      progress: goalProgress,
     };
-    const newGoal: Goal = { id: crypto.randomUUID(), ...payload };
+
+    // Optimistic Update
+    setGoals((prev) => {
+      const u = [...prev, newGoal];
+      save("user_goals", u);
+      return u;
+    });
+
     try {
-      try {
-        const res = await fetchWithAuth("/goals", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
-        if (res.ok) {
-          const d = await res.json();
-          newGoal.id = d.id || d._id || d.data?.id || newGoal.id;
-          console.log("Goal created:", d);
-        } else {
-          try {
-            const errorText = await res.text();
-            console.error("Goals API error:", res.status, errorText);
-          } catch {
-            console.error("Goals API error:", res.status, res.statusText);
-          }
-        }
-      } catch (err) {
-        console.error("Goals API unavailable:", err);
-      }
-      setGoals((prev) => {
-        const u = [...prev, newGoal];
-        save("user_goals", u);
-        return u;
+      const res = await fetchWithAuth("/goals", {
+        method: "POST",
+        body: JSON.stringify(payload),
       });
-    } catch (e) {
-      console.error("Failed to create goal:", e);
+      if (res.ok) {
+        const d = await res.json();
+        // Update temporary ID with actual DB ID silently
+        const createdId = d.goal?.id ?? d.data?.id ?? d.id ?? newGoal.id;
+        setGoals((prev) =>
+          prev.map((g) => (g.id === newGoal.id ? { ...g, id: createdId } : g)),
+        );
+      } else {
+        console.error("Goals API error:", res.status);
+      }
+    } catch (err) {
+      console.error("Goals API unavailable:", err);
     }
+
     setGoalName("");
     setGoalDescription("");
     setGoalCategory("");
@@ -396,7 +415,6 @@ const GoalsHabits = () => {
   };
 
   const handleDeleteGoal = async (id: string) => {
-    // Optimistic removal
     const removed = goals.find((g) => g.id === id);
     setGoals((prev) => {
       const u = prev.filter((g) => g.id !== id);
@@ -406,17 +424,9 @@ const GoalsHabits = () => {
 
     try {
       const res = await fetchWithAuth(`/goals/${id}`, { method: "DELETE" });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error("DELETE /goals failed:", res.status, errText);
-        throw new Error(`Server error: ${res.status}`);
-      }
-      // Success — API returns { message: "Goal deleted successfully" }
-      console.log("Goal deleted successfully");
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
     } catch (error) {
       console.error("Failed to delete goal:", error);
-      // Roll back — restore the removed goal
       if (removed) {
         setGoals((prev) => {
           const u = [...prev, removed];
@@ -425,8 +435,7 @@ const GoalsHabits = () => {
         });
       }
     }
-  }, [goals]);
-
+  };
 
   const handleUpdateGoalStatus = useCallback(
     async (id: string, newStatus: string) => {
@@ -439,13 +448,17 @@ const GoalsHabits = () => {
       });
 
       try {
+        const payload = {
+          goal: {
+            status: newStatus,
+          },
+        };
+
         const res = await fetchWithAuth(`/goals/${id}`, {
           method: "PUT",
-          body: JSON.stringify({ status: newStatus }),
+          body: JSON.stringify(payload),
         });
-        if (!res.ok) {
-          console.error("Goals update API error:", res.status);
-        }
+        if (!res.ok) console.error("Goals update API error:", res.status);
       } catch (err) {
         console.error("Failed to update goal:", err);
       }
@@ -453,14 +466,13 @@ const GoalsHabits = () => {
     [],
   );
 
-  // Belief handlers — POST to API
+  // ─── BELIEF HANDLERS ───────────────────────────────────────────────────
   const handleCreateBelief = async () => {
     if (!beliefText.trim()) return;
 
     setBeliefSaving(true);
     setBeliefSaveError(null);
 
-    // Optimistic placeholder
     const tempId = `temp-${Date.now()}`;
     const optimistic: Belief = {
       id: tempId,
@@ -491,15 +503,9 @@ const GoalsHabits = () => {
         }),
       });
 
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error("POST /limiting_beliefs failed:", errText);
-        throw new Error(`Server error: ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
       const created = await res.json();
-      // Replace optimistic entry with real server response
-      // API returns: { id, statement, reflection_data, user_id, active, ... }
       setBeliefs((prev) =>
         prev.map((b) =>
           b.id === tempId
@@ -514,7 +520,6 @@ const GoalsHabits = () => {
         ),
       );
 
-      // Reset form
       setBeliefText("");
       setBeliefOrigin("");
       setBeliefSupportingEvidence("");
@@ -526,7 +531,6 @@ const GoalsHabits = () => {
       const msg =
         error instanceof Error ? error.message : "Failed to save belief.";
       setBeliefSaveError(msg);
-      // Roll back optimistic entry
       setBeliefs((prev) => prev.filter((b) => b.id !== tempId));
     } finally {
       setBeliefSaving(false);
@@ -534,13 +538,11 @@ const GoalsHabits = () => {
   };
 
   const handleDeleteBelief = async (id: string | number) => {
-    // Skip API call for temp/local-only ids (those created before API existed)
     if (String(id).startsWith("temp-")) {
       setBeliefs((prev) => prev.filter((b) => b.id !== id));
       return;
     }
 
-    // Optimistic removal
     const removed = beliefs.find((b) => b.id === id);
     setBeliefs((prev) => prev.filter((b) => b.id !== id));
 
@@ -548,23 +550,15 @@ const GoalsHabits = () => {
       const res = await fetchWithAuth(`/limiting_beliefs/${id}`, {
         method: "DELETE",
       });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error("DELETE /limiting_beliefs failed:", errText);
-        throw new Error(`Server error: ${res.status}`);
-      }
-      // Success — response is { message: "Deleted successfully" }, nothing more to do
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
     } catch (error) {
       console.error("Failed to delete belief:", error);
-      // Roll back — put removed belief back in list
       if (removed) {
         setBeliefs((prev) => [...prev, removed]);
       }
     }
   };
 
-  /** Pre-fill dialog form from an existing belief for editing */
   const openEditBelief = (belief: Belief) => {
     setEditingBeliefId(belief.id);
     setBeliefText(belief.statement ?? belief.belief ?? "");
@@ -583,14 +577,12 @@ const GoalsHabits = () => {
     setIsBeliefDialogOpen(true);
   };
 
-  /** PUT /limiting_beliefs/:id */
   const handleUpdateBelief = async () => {
     if (!beliefText.trim() || editingBeliefId === null) return;
 
     setBeliefSaving(true);
     setBeliefSaveError(null);
 
-    // Optimistic patch in-place
     const previous = beliefs.find((b) => b.id === editingBeliefId);
     setBeliefs((prev) =>
       prev.map((b) =>
@@ -627,14 +619,9 @@ const GoalsHabits = () => {
         }),
       });
 
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error("PUT /limiting_beliefs failed:", errText);
-        throw new Error(`Server error: ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
       const updated: Belief = await res.json();
-      // Merge real server response
       setBeliefs((prev) =>
         prev.map((b) =>
           b.id === editingBeliefId
@@ -649,7 +636,6 @@ const GoalsHabits = () => {
         ),
       );
 
-      // Reset form
       setEditingBeliefId(null);
       setBeliefText("");
       setBeliefOrigin("");
@@ -662,7 +648,6 @@ const GoalsHabits = () => {
       const msg =
         error instanceof Error ? error.message : "Failed to update belief.";
       setBeliefSaveError(msg);
-      // Roll back to previous value
       if (previous) {
         setBeliefs((prev) =>
           prev.map((b) => (b.id === editingBeliefId ? previous : b)),
@@ -673,14 +658,13 @@ const GoalsHabits = () => {
     }
   };
 
-  // Pattern handlers — POST to API
+  // ─── PATTERN HANDLERS ────────────────────────────────────────────────────
   const handleCreatePattern = async () => {
     if (!patternName.trim()) return;
 
     setPatternSaving(true);
     setPatternSaveError(null);
 
-    // Optimistic placeholder
     const tempId = `temp-${Date.now()}`;
     const optimistic: Pattern = {
       id: tempId,
@@ -721,14 +705,9 @@ const GoalsHabits = () => {
         }),
       });
 
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error("POST /behavioral_patterns failed:", errText);
-        throw new Error(`Server error: ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
       const created: Pattern = await res.json();
-      // Replace optimistic entry with real response
       setPatterns((prev) =>
         prev.map((p) =>
           p.id === tempId
@@ -743,7 +722,6 @@ const GoalsHabits = () => {
         ),
       );
 
-      // Reset form
       setPatternName("");
       setPatternTrigger("");
       setPatternUnderlyingReason("");
@@ -756,7 +734,6 @@ const GoalsHabits = () => {
       const msg =
         error instanceof Error ? error.message : "Failed to save pattern.";
       setPatternSaveError(msg);
-      // Roll back optimistic entry
       setPatterns((prev) => prev.filter((p) => p.id !== tempId));
     } finally {
       setPatternSaving(false);
@@ -764,13 +741,11 @@ const GoalsHabits = () => {
   };
 
   const handleDeletePattern = async (id: string | number) => {
-    // Skip API call for temp/local-only ids
     if (String(id).startsWith("temp-")) {
       setPatterns((prev) => prev.filter((p) => p.id !== id));
       return;
     }
 
-    // Optimistic removal
     const removed = patterns.find((p) => p.id === id);
     setPatterns((prev) => prev.filter((p) => p.id !== id));
 
@@ -779,22 +754,15 @@ const GoalsHabits = () => {
         method: "DELETE",
       });
 
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error("DELETE /behavioral_patterns failed:", errText);
-        throw new Error(`Server error: ${res.status}`);
-      }
-      // Success — response is { message: "Deleted successfully" }, nothing more to do
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
     } catch (error) {
       console.error("Failed to delete pattern:", error);
-      // Roll back — restore removed pattern
       if (removed) {
         setPatterns((prev) => [...prev, removed]);
       }
     }
   };
 
-  /** Pre-fill dialog form from an existing pattern for editing */
   const openEditPattern = (pattern: Pattern) => {
     setEditingPatternId(pattern.id);
     setPatternName(pattern.recurring_behavior ?? pattern.name ?? "");
@@ -811,18 +779,16 @@ const GoalsHabits = () => {
       pattern.affirmation_id ? String(pattern.affirmation_id) : "none",
     );
     setPatternSaveError(null);
-    setIsPatternDetailOpen(false); // close detail modal if open
+    setIsPatternDetailOpen(false);
     setIsPatternDialogOpen(true);
   };
 
-  /** PUT /behavioral_patterns/:id */
   const handleUpdatePattern = async () => {
     if (!patternName.trim() || editingPatternId === null) return;
 
     setPatternSaving(true);
     setPatternSaveError(null);
 
-    // Optimistic in-place update
     const previous = patterns.find((p) => p.id === editingPatternId);
     setPatterns((prev) =>
       prev.map((p) =>
@@ -872,14 +838,9 @@ const GoalsHabits = () => {
         },
       );
 
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error("PUT /behavioral_patterns failed:", errText);
-        throw new Error(`Server error: ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
       const updated: Pattern = await res.json();
-      // Merge real server response
       setPatterns((prev) =>
         prev.map((p) =>
           p.id === editingPatternId
@@ -896,7 +857,6 @@ const GoalsHabits = () => {
         ),
       );
 
-      // Reset form
       setEditingPatternId(null);
       setPatternName("");
       setPatternTrigger("");
@@ -910,7 +870,6 @@ const GoalsHabits = () => {
       const msg =
         error instanceof Error ? error.message : "Failed to update pattern.";
       setPatternSaveError(msg);
-      // Roll back to previous
       if (previous) {
         setPatterns((prev) =>
           prev.map((p) => (p.id === editingPatternId ? previous : p)),
@@ -918,6 +877,14 @@ const GoalsHabits = () => {
       }
     } finally {
       setPatternSaving(false);
+    }
+  };
+
+  const openPatternDetail = (id: string | number) => {
+    const p = patterns.find((pt) => pt.id === id);
+    if (p) {
+      setPatternDetail(p);
+      setIsPatternDetailOpen(true);
     }
   };
 
@@ -931,20 +898,13 @@ const GoalsHabits = () => {
       },
     };
 
-    console.log("Creating affirmation with payload:", JSON.stringify(payload));
-
     try {
       const res = await fetchWithAuth("/affirmations", {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      console.log("Affirmation API response status:", res.status);
 
       if (res.ok) {
-        const d = await res.json();
-        console.log("Affirmation created successfully:", d);
-
-        // Fetch updated list from server
         try {
           const listRes = await fetchWithAuth("/affirmations");
           if (listRes.ok) {
@@ -954,7 +914,6 @@ const GoalsHabits = () => {
               : (data.affirmations ?? data.data ?? []);
             setAffirmations(list);
             save("user_affirmations", list);
-            console.log("Affirmations list refreshed:", list);
           }
         } catch (err) {
           console.error("Failed to refresh affirmations list:", err);
@@ -964,78 +923,20 @@ const GoalsHabits = () => {
         setAffirmationPriority(5);
         setIsAffirmationDialogOpen(false);
       } else {
-        try {
-          const errorText = await res.text();
-          console.error("Affirmations API error:", res.status, errorText);
-          alert(`Failed to create affirmation: ${res.status}`);
-        } catch {
-          console.error("Affirmations API error:", res.status, res.statusText);
-          alert(
-            `Failed to create affirmation: ${res.status} ${res.statusText}`,
-          );
-        }
+        alert(`Failed to create affirmation: ${res.status}`);
       }
     } catch (err) {
-      console.error("Affirmations API request failed:", err);
       alert("Failed to create affirmation. Please check your connection.");
     }
   };
 
-  const handleUpdateAffirmation = async (
-    id: string,
-    statement: string,
-    priority: number,
-  ) => {
-    const payload = { affirmation: { statement, priority } };
-    try {
-      const res = await fetchWithAuth(`/affirmations/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        const d = await res.json();
-        console.log("Affirmation updated:", d);
-        setAffirmations((prev) => {
-          const u = prev.map((a) =>
-            a.id === id ? { ...a, statement, priority } : a,
-          );
-          save("user_affirmations", u);
-          return u;
-        });
-      } else {
-        try {
-          const errorText = await res.text();
-          console.error(
-            "Affirmations update API error:",
-            res.status,
-            errorText,
-          );
-        } catch {
-          console.error(
-            "Affirmations update API error:",
-            res.status,
-            res.statusText,
-          );
-        }
-      }
-    } catch (err) {
-      console.error("Affirmations update failed:", err);
-    }
-  };
-
   const handleDeleteAffirmation = async (id: string) => {
-    console.log("Deleting affirmation with id:", id);
-
     try {
       const res = await fetchWithAuth(`/affirmations/${id}`, {
         method: "DELETE",
       });
-      console.log("Delete affirmation API response status:", res.status);
 
       if (res.ok) {
-        console.log("Affirmation deleted successfully");
-
-        // Fetch updated list from server
         try {
           const listRes = await fetchWithAuth("/affirmations");
           if (listRes.ok) {
@@ -1045,33 +946,14 @@ const GoalsHabits = () => {
               : (data.affirmations ?? data.data ?? []);
             setAffirmations(list);
             save("user_affirmations", list);
-            console.log("Affirmations list refreshed after delete:", list);
           }
         } catch (err) {
           console.error("Failed to refresh affirmations list:", err);
         }
       } else {
-        try {
-          const errorText = await res.text();
-          console.error(
-            "Affirmations delete API error:",
-            res.status,
-            errorText,
-          );
-          alert(`Failed to delete affirmation: ${res.status}`);
-        } catch {
-          console.error(
-            "Affirmations delete API error:",
-            res.status,
-            res.statusText,
-          );
-          alert(
-            `Failed to delete affirmation: ${res.status} ${res.statusText}`,
-          );
-        }
+        alert(`Failed to delete affirmation: ${res.status}`);
       }
     } catch (err) {
-      console.error("Affirmations delete request failed:", err);
       alert("Failed to delete affirmation. Please check your connection.");
     }
   };
@@ -1087,22 +969,16 @@ const GoalsHabits = () => {
       time: habitTime,
       place: habitPlace,
       start_date: habitStartDate,
+      linked_goals: habitLinkedGoals, // Sending linked goals logic
     };
-
-    console.log("Creating habit with payload:", JSON.stringify(payload));
 
     try {
       const res = await fetchWithAuth("/habits", {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      console.log("Habit API response status:", res.status);
 
       if (res.ok) {
-        const d = await res.json();
-        console.log("Habit created successfully:", d);
-
-        // Fetch updated list from server
         try {
           const listRes = await fetchWithAuth("/habits");
           if (listRes.ok) {
@@ -1112,7 +988,6 @@ const GoalsHabits = () => {
               : (data.habits ?? data.data ?? []);
             setHabits(list);
             save("user_habits", list);
-            console.log("Habits list refreshed:", list);
           }
         } catch (err) {
           console.error("Failed to refresh habits list:", err);
@@ -1125,34 +1000,21 @@ const GoalsHabits = () => {
         setHabitTime("");
         setHabitPlace("");
         setHabitStartDate("");
+        setHabitLinkedGoals([]);
         setIsHabitDialogOpen(false);
       } else {
-        try {
-          const errorText = await res.text();
-          console.error("Habits API error:", res.status, errorText);
-          alert(`Failed to create habit: ${res.status}`);
-        } catch {
-          console.error("Habits API error:", res.status, res.statusText);
-          alert(`Failed to create habit: ${res.status} ${res.statusText}`);
-        }
+        alert(`Failed to create habit: ${res.status}`);
       }
     } catch (err) {
-      console.error("Habits API request failed:", err);
       alert("Failed to create habit. Please check your connection.");
     }
   };
 
   const handleDeleteHabit = async (id: string) => {
-    console.log("Deleting habit with id:", id);
-
     try {
       const res = await fetchWithAuth(`/habits/${id}`, { method: "DELETE" });
-      console.log("Delete habit API response status:", res.status);
 
       if (res.ok) {
-        console.log("Habit deleted successfully");
-
-        // Fetch updated list from server
         try {
           const listRes = await fetchWithAuth("/habits");
           if (listRes.ok) {
@@ -1162,23 +1024,14 @@ const GoalsHabits = () => {
               : (data.habits ?? data.data ?? []);
             setHabits(list);
             save("user_habits", list);
-            console.log("Habits list refreshed after delete:", list);
           }
         } catch (err) {
           console.error("Failed to refresh habits list:", err);
         }
       } else {
-        try {
-          const errorText = await res.text();
-          console.error("Habits delete API error:", res.status, errorText);
-          alert(`Failed to delete habit: ${res.status}`);
-        } catch {
-          console.error("Habits delete API error:", res.status, res.statusText);
-          alert(`Failed to delete habit: ${res.status} ${res.statusText}`);
-        }
+        alert(`Failed to delete habit: ${res.status}`);
       }
     } catch (err) {
-      console.error("Habits delete request failed:", err);
       alert("Failed to delete habit. Please check your connection.");
     }
   };
@@ -1285,6 +1138,8 @@ const GoalsHabits = () => {
       icon: "🎯",
       bg: "bg-blue-50",
       border: "border-blue-200",
+      hoverBg: "bg-blue-100",
+      hoverBorder: "border-blue-500",
     },
     {
       key: "started",
@@ -1292,6 +1147,8 @@ const GoalsHabits = () => {
       icon: "🚀",
       bg: "bg-purple-50",
       border: "border-purple-200",
+      hoverBg: "bg-purple-100",
+      hoverBorder: "border-purple-500",
     },
     {
       key: "progress",
@@ -1299,6 +1156,8 @@ const GoalsHabits = () => {
       icon: "📈",
       bg: "bg-orange-50",
       border: "border-orange-200",
+      hoverBg: "bg-orange-100",
+      hoverBorder: "border-orange-500",
     },
     {
       key: "completed",
@@ -1306,6 +1165,8 @@ const GoalsHabits = () => {
       icon: "✅",
       bg: "bg-teal-50",
       border: "border-teal-200",
+      hoverBg: "bg-teal-100",
+      hoverBorder: "border-teal-500",
     },
   ];
 
@@ -1453,7 +1314,9 @@ const GoalsHabits = () => {
           {/* Controls row — stacks on mobile */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Select value={selectedArea} onValueChange={setSelectedArea}>
-              <SelectTrigger className="w-full sm:w-48 text-sm"><SelectValue placeholder="Select area" /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-48 text-sm">
+                <SelectValue placeholder="Select area" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all-areas">All Areas</SelectItem>
                 <SelectItem value="health">Health & Fitness</SelectItem>
@@ -1583,42 +1446,6 @@ const GoalsHabits = () => {
                           ))}
                         </div>
                       )}
-                      {cols.length === 0 && !isHovered
-                        ? <div className="flex h-full min-h-48 flex-col items-center justify-center"><p className="text-center text-xs sm:text-sm text-muted-foreground">No goals yet</p></div>
-                        : <div className="space-y-2 sm:space-y-3">
-                            {cols.map(goal => {
-                              const dragging = dragState?.goalId === goal.id && dragState?.isDragging;
-                              return (
-                                <Card key={goal.id}
-                                  onPointerDown={e => handlePointerDown(e, goal.id)}
-                                  onPointerMove={handlePointerMove}
-                                  onPointerUp={handlePointerUp}
-                                  onPointerCancel={handlePointerCancel}
-                                  className={`bg-white p-2 sm:p-3 shadow-sm select-none touch-none relative group transition-all duration-150
-                                    ${dragging ? "opacity-25 scale-95 shadow-none" : "cursor-grab hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5 active:cursor-grabbing"}`}
-                                >
-                                  <div className="flex items-start gap-1.5 pr-6">
-                                    <GripVertical className="h-4 w-4 text-muted-foreground/40 flex-shrink-0 mt-0.5" />
-                                    <p className="text-xs sm:text-sm font-medium text-foreground line-clamp-2">{goal.title}</p>
-                                  </div>
-                                  <div className="mt-2">
-                                    <div className="flex items-center justify-between mb-1">
-                                      <span className="text-xs text-muted-foreground">Progress</span>
-                                      <span className="text-xs font-semibold text-primary">{goal.progress || 0}%</span>
-                                    </div>
-                                    <div className="w-full bg-gray-200 rounded-full h-2">
-                                      <div className="bg-gradient-to-r from-blue-500 to-teal-500 h-2 rounded-full" style={{ width: `${goal.progress || 0}%` }} />
-                                    </div>
-                                  </div>
-                                  <button onPointerDown={e => e.stopPropagation()} onClick={() => handleDeleteGoal(goal.id)}
-                                    className="absolute top-2 right-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                                  </button>
-                                </Card>
-                              );
-                            })}
-                          </div>
-                      }
                     </div>
                   </div>
                 );
@@ -1702,6 +1529,8 @@ const GoalsHabits = () => {
                     </Card>
                   ))}
                 </div>
+              )}
+            </div>
           )}
         </TabsContent>
 
@@ -1709,9 +1538,9 @@ const GoalsHabits = () => {
         <TabsContent value="beliefs" className="space-y-4">
           <Card className="border-l-4 border-red-400 bg-red-50 p-3 sm:p-4">
             <p className="text-xs sm:text-sm text-foreground">
-              <strong>Identifying Limiting Beliefs:</strong> These are negative
-              thoughts that hold you back. Write belief, explore its origin,
-              challenge it with evidence, and create an empowering alternative.
+              <strong>Identifying Limiting Beliefs:</strong> Write the belief,
+              explore its origin, challenge it with evidence, and create an
+              empowering alternative.
             </p>
           </Card>
           <div className="space-y-6">
@@ -1729,197 +1558,39 @@ const GoalsHabits = () => {
                   className="bg-pink-500 hover:bg-pink-600 text-white w-full sm:w-auto text-sm"
                   onClick={() => setIsBeliefDialogOpen(true)}
                 >
-                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                  <Plus className="h-4 w-4 mr-2" />
                   Add Belief
                 </Button>
               </div>
-              {/* Error banner */}
-              {beliefsError && (
-                <div className="w-full flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-2.5 text-sm mb-2">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-4 h-4 shrink-0"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2}
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
-                    />
-                  </svg>
-                  <span className="flex-1">{beliefsError}</span>
-                  <button
-                    onClick={loadBeliefs}
-                    className="font-semibold underline underline-offset-2 hover:text-red-900 transition-colors"
-                  >
-                    Retry
-                  </button>
-                </div>
-              )}
-
-              <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 py-8 sm:py-12 lg:py-16 px-4">
-                {beliefsLoading ? (
-                  // Loading skeleton
-                  <div className="w-full space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <div
-                        key={i}
-                        className="w-full bg-white border border-gray-100 rounded-xl p-4 animate-pulse"
-                      >
-                        <div className="h-4 bg-slate-200 rounded w-3/4 mb-3" />
-                        <div className="h-3 bg-green-100 rounded w-1/2" />
-                      </div>
-                    ))}
-                  </div>
-                ) : beliefs.length === 0 ? (
+              <div
+                className={`rounded-lg border-2 border-dashed border-gray-300 p-4 ${
+                  beliefs.length === 0
+                    ? "flex flex-col items-center justify-center py-12"
+                    : ""
+                }`}
+              >
+                {beliefs.length === 0 ? (
                   <>
-                    <Heart className="mb-3 sm:mb-4 h-10 w-10 sm:h-12 sm:w-12 lg:h-16 lg:w-16 text-muted-foreground/30 mx-auto" />
-                    <p className="text-xs sm:text-sm sm:text-base text-muted-foreground text-center">
-                      No limiting beliefs recorded yet. What thoughts are
-                      holding you back?
+                    <Heart className="mb-3 h-12 w-12 text-muted-foreground/30" />
+                    <p className="text-sm text-muted-foreground text-center">
+                      No limiting beliefs recorded yet.
                     </p>
                   </>
                 ) : (
-                  <div className="w-full space-y-3">
-                    {beliefs.map((belief) => (
+                  <div className="space-y-3">
+                    {beliefs.map((b) => (
                       <Card
-                        key={String(belief.id)}
-                        className="p-3 sm:p-4 relative group border border-gray-100 rounded-xl"
+                        key={b.id}
+                        className="p-3 sm:p-4 relative group cursor-pointer hover:border-pink-200 transition-colors"
+                        onClick={() => openEditBelief(b)}
                       >
-                        {/* Header row */}
-                        <div className="pr-20">
-                          <p className="font-semibold text-sm sm:text-base text-foreground">
-                            {belief.belief}
-                          </p>
-                        </div>
-
-                        {/* Reflection data — shown when available */}
-                        {belief.reflection_data && (
-                          <div className="mt-3 space-y-1.5 text-xs sm:text-sm">
-                            {belief.reflection_data.origin && (
-                              <div className="flex gap-2">
-                                <span className="shrink-0 font-medium text-muted-foreground w-36">
-                                  📍 Origin
-                                </span>
-                                <span className="text-foreground">
-                                  {belief.reflection_data.origin}
-                                </span>
-                              </div>
-                            )}
-                            {belief.reflection_data.supporting_evidence && (
-                              <div className="flex gap-2">
-                                <span className="shrink-0 font-medium text-muted-foreground w-36">
-                                  🔴 Supporting
-                                </span>
-                                <span className="text-foreground">
-                                  {belief.reflection_data.supporting_evidence}
-                                </span>
-                              </div>
-                            )}
-                            {belief.reflection_data.contradicting_evidence && (
-                              <div className="flex gap-2">
-                                <span className="shrink-0 font-medium text-muted-foreground w-36">
-                                  ✅ Contradicting
-                                </span>
-                                <span className="text-foreground">
-                                  {
-                                    belief.reflection_data
-                                      .contradicting_evidence
-                                  }
-                                </span>
-                              </div>
-                            )}
-                            {belief.reflection_data.impact && (
-                              <div className="flex gap-2">
-                                <span className="shrink-0 font-medium text-muted-foreground w-36">
-                                  ⚡ Impact
-                                </span>
-                                <span className="text-foreground">
-                                  {belief.reflection_data.impact}
-                                </span>
-                              </div>
-                            )}
-                            {belief.reflection_data.reframe && (
-                              <div className="flex gap-2 mt-2 pt-2 border-t border-green-100">
-                                <span className="shrink-0 font-medium text-green-600 w-36">
-                                  💚 Reframe
-                                </span>
-                                <span className="text-green-700 font-medium">
-                                  {belief.reflection_data.reframe}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Fallback: local alternative if no reflection_data */}
-                        {!belief.reflection_data && belief.alternative && (
-                          <p className="text-xs sm:text-sm text-green-600 mt-2">
-                            💚 {belief.alternative}
-                          </p>
-                        )}
-
-                        {/* Footer — timestamp */}
-                        {belief.created_at && (
-                          <p className="mt-2 text-[10px] text-muted-foreground/60">
-                            Added{" "}
-                            {new Date(belief.created_at).toLocaleDateString(
-                              "en-US",
-                              {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                              },
-                            )}
-                          </p>
-                        )}
-
-                        {/* Action buttons — visible on hover */}
-                        <div className="absolute top-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {/* Edit */}
-                          <button
-                            onClick={() => openEditBelief(belief)}
-                            className="p-1 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
-                            title="Edit belief"
-                          >
-                            <svg
-                              className="h-4 w-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
-                          </button>
-                          {/* Delete */}
-                          <button
-                            onClick={() => handleDeleteBelief(belief.id)}
-                            className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                            title="Delete belief"
-                          >
-                            <svg
-                              className="h-4 w-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            </svg>
-                          </button>
-                        </div>
+                        <p className="font-semibold text-sm text-foreground pr-8">
+                          {b.belief || b.statement || b.limiting_belief}
+                        </p>
+                        <p className="text-xs sm:text-sm text-green-600 mt-2">
+                          💚 {b.alternative || b.reflection_data?.reframe}
+                        </p>
+                        <DelBtn onClick={() => handleDeleteBelief(b.id)} />
                       </Card>
                     ))}
                   </div>
@@ -1940,143 +1611,39 @@ const GoalsHabits = () => {
                   className="bg-orange-500 hover:bg-orange-600 text-white w-full sm:w-auto text-sm"
                   onClick={() => setIsPatternDialogOpen(true)}
                 >
-                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                  <Plus className="h-4 w-4 mr-2" />
                   Add Pattern
                 </Button>
               </div>
-              {/* Error banner */}
-              {patternsError && (
-                <div className="w-full flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-2.5 text-sm mb-2">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-4 h-4 shrink-0"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2}
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
-                    />
-                  </svg>
-                  <span className="flex-1">{patternsError}</span>
-                  <button
-                    onClick={loadPatterns}
-                    className="font-semibold underline underline-offset-2 hover:text-red-900 transition-colors"
-                  >
-                    Retry
-                  </button>
-                </div>
-              )}
-
-              <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 py-8 sm:py-12 lg:py-16 px-4">
-                {patternsLoading ? (
-                  // Loading skeleton
-                  <div className="w-full space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <div
-                        key={i}
-                        className="w-full bg-white border border-gray-100 rounded-xl p-4 animate-pulse"
-                      >
-                        <div className="h-4 bg-slate-200 rounded w-3/4 mb-3" />
-                        <div className="h-3 bg-orange-100 rounded w-1/2" />
-                      </div>
-                    ))}
-                  </div>
-                ) : patterns.length === 0 ? (
+              <div
+                className={`rounded-lg border-2 border-dashed border-gray-300 p-4 ${
+                  patterns.length === 0
+                    ? "flex flex-col items-center justify-center py-12"
+                    : ""
+                }`}
+              >
+                {patterns.length === 0 ? (
                   <>
-                    <Zap className="mb-3 sm:mb-4 h-10 w-10 sm:h-12 sm:w-12 lg:h-16 lg:w-16 text-muted-foreground/30 mx-auto" />
-                    <p className="text-xs sm:text-sm sm:text-base text-muted-foreground text-center">
-                      No behavioral patterns recorded yet. What actions do you
-                      want to change?
+                    <Zap className="mb-3 h-12 w-12 text-muted-foreground/30" />
+                    <p className="text-sm text-muted-foreground text-center">
+                      No behavioral patterns recorded yet.
                     </p>
                   </>
                 ) : (
-                  <div className="w-full space-y-3">
-                    {patterns.map((pattern) => (
+                  <div className="space-y-3">
+                    {patterns.map((p) => (
                       <Card
-                        key={String(pattern.id)}
+                        key={p.id}
                         className="p-3 sm:p-4 relative group cursor-pointer hover:shadow-md transition-shadow"
-                        onClick={() => openPatternDetail(pattern.id)}
+                        onClick={() => openPatternDetail(p.id)}
                       >
-                        <p className="font-semibold text-sm sm:text-base text-foreground pr-12">
-                          {pattern.name}
+                        <p className="font-semibold text-sm text-foreground pr-12">
+                          {p.name || p.recurring_behavior}
                         </p>
-                        {pattern.alternative && (
-                          <p className="text-xs sm:text-sm text-orange-600 mt-2">
-                            ⚡ {pattern.alternative}
-                          </p>
-                        )}
-                        {pattern.trigger && (
-                          <p className="text-xs text-gray-500 mt-1 truncate">
-                            🔥 {pattern.trigger}
-                          </p>
-                        )}
-                        {/* Footer — timestamp */}
-                        {pattern.created_at && (
-                          <p className="mt-2 text-[10px] text-muted-foreground/60 group-hover:opacity-0 transition-opacity">
-                            Added{" "}
-                            {new Date(pattern.created_at).toLocaleDateString(
-                              "en-US",
-                              {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                              },
-                            )}
-                          </p>
-                        )}
-                        <p className="text-xs text-orange-400 mt-2 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-3">
-                          Click to view full details →
+                        <p className="text-xs sm:text-sm text-orange-600 mt-2">
+                          ⚡ {p.alternative || p.pattern_data?.desired_behavior}
                         </p>
-                        {/* Action buttons — stop card click propagation */}
-                        <div
-                          className="absolute top-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {/* Edit */}
-                          <button
-                            onClick={() => openEditPattern(pattern)}
-                            className="p-1 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
-                            title="Edit pattern"
-                          >
-                            <svg
-                              className="h-4 w-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
-                          </button>
-                          {/* Delete */}
-                          <button
-                            onClick={() => handleDeletePattern(pattern.id)}
-                            className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                            title="Delete pattern"
-                          >
-                            <svg
-                              className="h-4 w-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            </svg>
-                          </button>
-                        </div>
+                        <DelBtn onClick={() => handleDeletePattern(p.id)} />
                       </Card>
                     ))}
                   </div>
@@ -2091,8 +1658,7 @@ const GoalsHabits = () => {
           <Card className="border-l-4 border-purple-400 bg-purple-50 p-3 sm:p-4">
             <p className="text-xs sm:text-sm text-foreground">
               <strong>Creating Powerful Affirmations:</strong> Write in present
-              tense, use positive language, make it personal and specific.
-              Repeat daily, especially in your morning routine.
+              tense, use positive language, make it personal. Repeat daily.
             </p>
           </Card>
           <div className="space-y-3">
@@ -2107,24 +1673,20 @@ const GoalsHabits = () => {
               </div>
               <div className="flex gap-1 sm:gap-2">
                 <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 sm:flex-none text-muted-foreground text-xs sm:text-sm"
-                >
-                  <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  Load Samples
-                </Button>
-                <Button
                   className="bg-purple-500 hover:bg-purple-600 text-white flex-1 sm:flex-none text-xs sm:text-sm"
                   onClick={() => setIsAffirmationDialogOpen(true)}
                 >
-                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <Plus className="h-4 w-4 mr-2" />
                   Add
                 </Button>
               </div>
             </div>
             <div
-              className={`rounded-lg border-2 border-dashed border-gray-300 p-4 ${affirmations.length === 0 ? "flex flex-col items-center justify-center py-16" : ""}`}
+              className={`rounded-lg border-2 border-dashed border-gray-300 p-4 ${
+                affirmations.length === 0
+                  ? "flex flex-col items-center justify-center py-16"
+                  : ""
+              }`}
             >
               {affirmations.length === 0 ? (
                 <>
@@ -2141,7 +1703,7 @@ const GoalsHabits = () => {
                       className="p-3 sm:p-4 relative group bg-purple-50 border-purple-200"
                     >
                       <p className="text-sm text-foreground pr-8 italic">
-                        "{a.statement}"
+                        "{a.statement || a.text}"
                       </p>
                       {a.priority && (
                         <p className="text-xs text-purple-600 mt-2">
@@ -2162,8 +1724,7 @@ const GoalsHabits = () => {
           <Card className="border-l-4 border-teal-400 bg-teal-50 p-3 sm:p-4">
             <p className="text-xs sm:text-sm text-foreground">
               <strong>Building Lasting Habits:</strong> Start small and be
-              consistent. Choose daily, weekly, or custom frequencies. Track
-              completion to build streaks and review progress monthly.
+              consistent. Track completion to build streaks.
             </p>
           </Card>
           <div className="space-y-3">
@@ -2173,21 +1734,20 @@ const GoalsHabits = () => {
                   Habit Tracking
                 </h2>
                 <p className="text-xs sm:text-sm text-muted-foreground">
-                  Track your daily habits throughout month
+                  Track your daily habits throughout the month
                 </p>
               </div>
               <Button
                 className="bg-teal-500 hover:bg-teal-600 text-white w-full sm:w-auto text-sm"
                 onClick={() => setIsHabitDialogOpen(true)}
               >
-                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                <Plus className="h-4 w-4 mr-2" />
                 Add Habit
               </Button>
             </div>
-            <Card className="border-l-4 border-blue-400 bg-blue-50 p-3 sm:p-4">
+            <Card className="border-l-4 border-blue-400 bg-blue-50 p-3">
               <p className="text-xs sm:text-sm text-foreground">
-                <span className="text-blue-700">💡</span> <strong>Tip:</strong>{" "}
-                Track your habits in{" "}
+                💡 <strong>Tip:</strong> Track habits in{" "}
                 <span className="text-blue-600 font-semibold cursor-pointer hover:underline">
                   Daily Journal
                 </span>{" "}
@@ -2195,63 +1755,42 @@ const GoalsHabits = () => {
                 <span className="text-blue-600 font-semibold cursor-pointer hover:underline">
                   Weekly Journal
                 </span>
-                . This page shows your monthly progress!
+                .
               </p>
             </Card>
-            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 py-12 sm:py-16 lg:py-20 px-4">
+            <div
+              className={`rounded-lg border-2 border-dashed border-gray-300 p-4 ${
+                habits.length === 0
+                  ? "flex flex-col items-center justify-center py-16"
+                  : ""
+              }`}
+            >
               {habits.length === 0 ? (
                 <>
-                  <svg
-                    className="mb-3 sm:mb-4 h-10 w-10 sm:h-12 sm:w-12 lg:h-16 lg:w-16 text-muted-foreground/30 mx-auto"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  >
-                    <circle cx="12" cy="12" r="2" fill="currentColor" />
-                    <circle cx="12" cy="12" r="6" fill="none" />
-                    <circle cx="12" cy="12" r="10" fill="none" />
-                  </svg>
-                  <p className="text-xs sm:text-sm sm:text-base text-muted-foreground text-center">
-                    No habits yet. Start building better routines!
+                  <Zap className="mb-3 h-12 w-12 text-muted-foreground/30" />
+                  <p className="text-sm text-muted-foreground text-center">
+                    No habits yet.
                   </p>
                 </>
               ) : (
-                <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {habits.map((habit) => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {habits.map((h) => (
                     <Card
-                      key={habit.id}
+                      key={h.id}
                       className="p-3 sm:p-4 relative group bg-teal-50 border-teal-200"
                     >
-                      <p className="font-semibold text-sm sm:text-base text-foreground pr-8">
-                        {habit.name}
+                      <p className="font-semibold text-sm text-foreground pr-8">
+                        {h.name}
                       </p>
                       <p className="text-xs text-teal-600 mt-1 capitalize">
-                        ⚡ {habit.frequency}
+                        ⚡ {h.frequency}
                       </p>
-                      {habit.time && (
+                      {h.time && (
                         <p className="text-xs text-gray-600 mt-1">
-                          🕐 {habit.time}
+                          🕐 {h.time}
                         </p>
                       )}
-                      <button
-                        onClick={() => handleDeleteHabit(habit.id)}
-                        className="absolute top-3 right-3 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <svg
-                          className="h-4 w-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                      </button>
+                      <DelBtn onClick={() => handleDeleteHabit(h.id)} />
                     </Card>
                   ))}
                 </div>
@@ -2263,18 +1802,34 @@ const GoalsHabits = () => {
 
       {/* Sticky Footer */}
       {currentFooter && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white px-3 py-2.5 flex flex-col items-center justify-center shadow-[0_-2px_10px_rgba(0,0,0,0.08)]">
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white px-3 py-2.5 flex items-center justify-center shadow-[0_-2px_10px_rgba(0,0,0,0.08)]">
           <Button
             className={`w-full max-w-sm text-xs sm:text-sm font-semibold rounded-lg h-9 sm:h-10 ${currentFooter.className}`}
             onClick={currentFooter.onClick}
           >
-            {currentFooter.icon && (
-              <div className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 shrink-0">
-                {currentFooter.icon}
-              </div>
-            )}
+            {currentFooter.icon}
             <span className="truncate">{currentFooter.label}</span>
           </Button>
+        </div>
+      )}
+
+      {/* Ghost card */}
+      {dragState?.isDragging && draggingGoal && (
+        <div style={ghostStyle}>
+          <Card className="bg-white p-2 sm:p-3 border-2 border-teal-400">
+            <div className="flex items-start gap-1.5">
+              <GripVertical className="h-4 w-4 text-teal-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs sm:text-sm font-medium text-foreground line-clamp-2">
+                {draggingGoal.title}
+              </p>
+            </div>
+            <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-gradient-to-r from-blue-500 to-teal-500 h-2 rounded-full"
+                style={{ width: `${draggingGoal.progress || 0}%` }}
+              />
+            </div>
+          </Card>
         </div>
       )}
 
@@ -2287,25 +1842,23 @@ const GoalsHabits = () => {
             <DialogTitle className="text-xl sm:text-2xl">
               🎯 Create New Goal
             </DialogTitle>
-            <DialogDescription className="text-teal-600">
-              Turn your aspirations into achievable milestones
+            <DialogDescription className="sr-only">
+              Form to create a new goal
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="goal-name">Goal Name *</Label>
+              <Label>Goal Name *</Label>
               <Input
-                id="goal-name"
-                placeholder="e.g., Run a marathon, Learn Spanish..."
+                placeholder="e.g., Run a marathon..."
                 value={goalName}
                 onChange={(e) => setGoalName(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="goal-description">Description</Label>
+              <Label>Description</Label>
               <Textarea
-                id="goal-description"
-                placeholder="What does achieving this goal mean to you?"
+                placeholder="Details..."
                 rows={3}
                 value={goalDescription}
                 onChange={(e) => setGoalDescription(e.target.value)}
@@ -2313,9 +1866,9 @@ const GoalsHabits = () => {
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="goal-category">Category</Label>
+                <Label>Category</Label>
                 <Select value={goalCategory} onValueChange={setGoalCategory}>
-                  <SelectTrigger id="goal-category">
+                  <SelectTrigger>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -2329,12 +1882,12 @@ const GoalsHabits = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="goal-status">Status</Label>
+                <Label>Status</Label>
                 <Select
                   value={goalStatus}
-                  onValueChange={(val) => setGoalStatus(val as Goal["status"])}
+                  onValueChange={(v) => setGoalStatus(v as Goal["status"])}
                 >
-                  <SelectTrigger id="goal-status">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -2348,18 +1901,16 @@ const GoalsHabits = () => {
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="goal-start">Start Date</Label>
+                <Label>Start Date</Label>
                 <Input
-                  id="goal-start"
                   type="date"
                   value={goalStartDate}
                   onChange={(e) => setGoalStartDate(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="goal-target">Target Date</Label>
+                <Label>Target Date</Label>
                 <Input
-                  id="goal-target"
                   type="date"
                   value={goalTargetDate}
                   onChange={(e) => setGoalTargetDate(e.target.value)}
@@ -2367,24 +1918,21 @@ const GoalsHabits = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="goal-progress">Progress: {goalProgress}%</Label>
-              <div className="space-y-2">
-                <input
-                  id="goal-progress"
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="5"
-                  value={goalProgress}
-                  onChange={(e) => setGoalProgress(Number(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-teal-500"
+              <Label>Progress: {goalProgress}%</Label>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={goalProgress}
+                onChange={(e) => setGoalProgress(Number(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-teal-500"
+              />
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div
+                  className="bg-gradient-to-r from-blue-500 to-teal-500 h-3 rounded-full"
+                  style={{ width: `${goalProgress}%` }}
                 />
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div
-                    className="bg-gradient-to-r from-blue-500 to-teal-500 h-3 rounded-full transition-all"
-                    style={{ width: `${goalProgress}%` }}
-                  />
-                </div>
               </div>
             </div>
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-4">
@@ -2401,12 +1949,11 @@ const GoalsHabits = () => {
                 Create Goal
               </Button>
             </div>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-4"><Button variant="outline" onClick={() => setIsGoalDialogOpen(false)}>Cancel</Button><Button className="bg-teal-500 hover:bg-teal-600 text-white" onClick={handleCreateGoal}>Create Goal</Button></div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Belief Dialog — create OR edit */}
+      {/* Belief */}
       <Dialog
         open={isBeliefDialogOpen}
         onOpenChange={(open) => {
@@ -2421,107 +1968,52 @@ const GoalsHabits = () => {
           <DialogHeader>
             <DialogTitle className="text-xl sm:text-2xl">
               {editingBeliefId !== null
-                ? "✏️ Edit Limiting Belief"
+                ? "✏️ Edit Belief"
                 : "💭 Identify Limiting Belief"}
             </DialogTitle>
-            <DialogDescription className="text-pink-600">
-              {editingBeliefId !== null
-                ? "Update your belief and its reframe"
-                : "Recognize and reframe thoughts that hold you back"}
+            <DialogDescription className="sr-only">
+              Form to identify or edit a limiting belief
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {/* Inline error */}
-            {beliefSaveError && (
-              <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2 text-sm">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="w-4 h-4 shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
-                  />
-                </svg>
-                {beliefSaveError}
-              </div>
-            )}
-
             <div className="space-y-2">
-              <Label htmlFor="belief-name">Limiting Belief *</Label>
+              <Label>Limiting Belief *</Label>
               <Input
-                id="belief-name"
-                placeholder="e.g., I'm not good enough, I always fail..."
+                placeholder="e.g., I'm not good enough..."
                 value={beliefText}
                 onChange={(e) => setBeliefText(e.target.value)}
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="belief-origin">Origin (Optional)</Label>
+              <Label>Origin (Optional)</Label>
               <Textarea
-                id="belief-origin"
-                placeholder="Where does this belief come from? (e.g., Childhood comparison)"
+                placeholder="Where does this belief come from?"
                 rows={2}
                 value={beliefOrigin}
                 onChange={(e) => setBeliefOrigin(e.target.value)}
               />
             </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="belief-supporting">Supporting Evidence</Label>
-                <Textarea
-                  id="belief-supporting"
-                  placeholder="What makes you believe this? (e.g., Failed twice)"
-                  rows={3}
-                  value={beliefSupportingEvidence}
-                  onChange={(e) => setBeliefSupportingEvidence(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="belief-evidence">Contradicting Evidence</Label>
-                <Textarea
-                  id="belief-evidence"
-                  placeholder="What contradicts this belief? (e.g., Got promoted last year)"
-                  rows={3}
-                  value={beliefEvidence}
-                  onChange={(e) => setBeliefEvidence(e.target.value)}
-                />
-              </div>
-            </div>
-
             <div className="space-y-2">
-              <Label htmlFor="belief-impact">Impact</Label>
+              <Label>Counter Evidence</Label>
               <Textarea
-                id="belief-impact"
-                placeholder="How does this belief affect your life? (e.g., Avoid new opportunities)"
+                placeholder="What evidence challenges this belief?"
                 rows={2}
-                value={beliefImpact}
-                onChange={(e) => setBeliefImpact(e.target.value)}
+                value={beliefEvidence}
+                onChange={(e) => setBeliefEvidence(e.target.value)}
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="belief-reframe">Empowering Reframe</Label>
+              <Label>Empowering Alternative *</Label>
               <Input
-                id="belief-reframe"
-                placeholder='e.g., "I am learning and improving daily"'
+                placeholder='"I am capable and growing"'
                 value={beliefAlternative}
                 onChange={(e) => setBeliefAlternative(e.target.value)}
               />
             </div>
-
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-4">
               <Button
                 variant="outline"
                 onClick={() => setIsBeliefDialogOpen(false)}
-                disabled={beliefSaving}
               >
                 Cancel
               </Button>
@@ -2534,41 +2026,14 @@ const GoalsHabits = () => {
                 }
                 disabled={beliefSaving || !beliefText.trim()}
               >
-                {beliefSaving ? (
-                  <span className="flex items-center gap-2">
-                    <svg
-                      className="w-4 h-4 animate-spin"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8v8z"
-                      />
-                    </svg>
-                    Saving...
-                  </span>
-                ) : editingBeliefId !== null ? (
-                  "Update Belief"
-                ) : (
-                  "Add Belief"
-                )}
+                {editingBeliefId !== null ? "Update Belief" : "Add Belief"}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Pattern Dialog — create OR edit */}
+      {/* Pattern Modal (Updated to match the video) */}
       <Dialog
         open={isPatternDialogOpen}
         onOpenChange={(open) => {
@@ -2615,43 +2080,38 @@ const GoalsHabits = () => {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="pattern-name">Recurring Behavior *</Label>
+              <Label>Recurring Behavior *</Label>
               <Input
-                id="pattern-name"
                 placeholder="e.g., Procrastinating on important tasks..."
                 value={patternName}
                 onChange={(e) => setPatternName(e.target.value)}
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="pattern-trigger">Triggers</Label>
-                <Textarea
-                  id="pattern-trigger"
-                  placeholder="What triggers this behavior? (e.g., Feeling overwhelmed, late at night)"
-                  rows={3}
-                  value={patternTrigger}
-                  onChange={(e) => setPatternTrigger(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="pattern-reason">Underlying Reason</Label>
-                <Textarea
-                  id="pattern-reason"
-                  placeholder="Root cause? (e.g., Fear of failure and perfectionism)"
-                  rows={3}
-                  value={patternUnderlyingReason}
-                  onChange={(e) => setPatternUnderlyingReason(e.target.value)}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Triggers</Label>
+              <Textarea
+                placeholder="What triggers this behavior? (e.g., 'Feeling overwhelmed, late at night')"
+                rows={2}
+                value={patternTrigger}
+                onChange={(e) => setPatternTrigger(e.target.value)}
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pattern-consequence">Impact</Label>
+              <Label>Underlying Reason</Label>
               <Textarea
-                id="pattern-consequence"
-                placeholder="What are the consequences? (e.g., Miss deadlines and feel stressed)"
+                placeholder="What underlying emotion, belief, or need drives this behavior? (e.g., 'Fear of failure', 'Need for control', 'Seeking validation')"
+                rows={3}
+                value={patternUnderlyingReason}
+                onChange={(e) => setPatternUnderlyingReason(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Impact</Label>
+              <Textarea
+                placeholder="How does this behavior impact your life and goals? (e.g., 'Miss deadlines', 'Damage relationships', 'Lower self-esteem')"
                 rows={2}
                 value={patternConsequence}
                 onChange={(e) => setPatternConsequence(e.target.value)}
@@ -2659,42 +2119,46 @@ const GoalsHabits = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pattern-alternative">Desired Behavior</Label>
-              <Input
-                id="pattern-alternative"
-                placeholder="What will you do instead? (e.g., Start tasks immediately using small steps)"
+              <Label>Desired Behavior</Label>
+              <Textarea
+                placeholder="What new, more constructive behavior do you want to adopt instead? (e.g., 'Start tasks immediately', 'Respond calmly and assertively')"
+                rows={2}
                 value={patternAlternative}
                 onChange={(e) => setPatternAlternative(e.target.value)}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pattern-strategies">Strategies</Label>
+              <Label>Strategies for Change</Label>
               <Textarea
-                id="pattern-strategies"
-                placeholder="How will you implement the change? (e.g., Use the 5-minute rule)"
-                rows={2}
+                placeholder="What specific actions or strategies will you use to implement the desired behavior? (e.g., 'Use the 5-minute rule', 'Practice deep breathing before responding')"
+                rows={3}
                 value={patternStrategies}
                 onChange={(e) => setPatternStrategies(e.target.value)}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="pattern-affirmation">
-                Linked Affirmation (Optional)
+            <div className="space-y-2 pt-2">
+              <Label className="flex items-center gap-1.5">
+                <LinkIcon className="w-4 h-4 text-gray-500" />
+                Link to Supporting Affirmation (Optional)
               </Label>
+              <p className="text-xs text-gray-500 mb-1">
+                Link an existing affirmation that supports your desired behavior
+                change
+              </p>
               <Select
                 value={patternAffirmationId || "none"}
                 onValueChange={setPatternAffirmationId}
               >
-                <SelectTrigger id="pattern-affirmation">
-                  <SelectValue placeholder="Select an affirmation" />
+                <SelectTrigger>
+                  <SelectValue placeholder="No affirmation linked" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="none">No affirmation linked</SelectItem>
                   {affirmations.map((a) => (
                     <SelectItem key={a.id} value={String(a.id)}>
-                      {a.text}
+                      {a.text || a.statement}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -2720,31 +2184,13 @@ const GoalsHabits = () => {
               >
                 {patternSaving ? (
                   <span className="flex items-center gap-2">
-                    <svg
-                      className="w-4 h-4 animate-spin"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8v8z"
-                      />
-                    </svg>
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     Saving...
                   </span>
                 ) : editingPatternId !== null ? (
                   "Update Pattern"
                 ) : (
-                  "Add Pattern"
+                  "Save Pattern"
                 )}
               </Button>
             </div>
@@ -2752,39 +2198,22 @@ const GoalsHabits = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Pattern Detail Modal — GET /behavioral_patterns/:id */}
+      {/* Pattern Detail View Modal */}
       <Dialog open={isPatternDetailOpen} onOpenChange={setIsPatternDetailOpen}>
         <DialogContent className="w-[95vw] max-w-[560px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl sm:text-2xl">
-              ⚡ Behavioral Pattern
+              ⚡ Pattern Details
             </DialogTitle>
-            <DialogDescription className="text-orange-600">
-              Full breakdown of this recurring behavior
-            </DialogDescription>
           </DialogHeader>
-
-          {patternDetailLoading ? (
-            // Loading skeleton
-            <div className="space-y-4 py-4 animate-pulse">
-              <div className="h-5 bg-slate-200 rounded w-2/3" />
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="space-y-2">
-                  <div className="h-3 bg-orange-100 rounded w-1/4" />
-                  <div className="h-4 bg-slate-100 rounded w-full" />
-                </div>
-              ))}
-            </div>
-          ) : patternDetail ? (
+          {patternDetail && (
             <div className="space-y-4 py-4">
-              {/* Header */}
               <div className="rounded-xl bg-orange-50 border border-orange-200 px-4 py-3">
                 <p className="font-semibold text-base text-orange-900">
                   {patternDetail.name}
                 </p>
               </div>
 
-              {/* pattern_data fields */}
               {(
                 [
                   {
@@ -2850,23 +2279,12 @@ const GoalsHabits = () => {
                     <p className="text-sm text-gray-800">{field.value}</p>
                   </div>
                 ))}
-
-              <div className="flex justify-end pt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsPatternDetailOpen(false)}
-                >
-                  Close
-                </Button>
-              </div>
             </div>
-          ) : (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              Could not load pattern details.
-            </p>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Affirmation */}
       <Dialog
         open={isAffirmationDialogOpen}
         onOpenChange={setIsAffirmationDialogOpen}
@@ -2876,15 +2294,15 @@ const GoalsHabits = () => {
             <DialogTitle className="text-xl sm:text-2xl">
               ✨ Create Affirmation
             </DialogTitle>
-            <DialogDescription className="text-purple-600">
-              Craft positive statements that empower you daily
+            <DialogDescription className="sr-only">
+              Form to create a new affirmation
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Statement *</Label>
               <Textarea
-                placeholder='"I am confident and capable"'
+                placeholder='"I am confident..."'
                 rows={3}
                 value={affirmationStatement}
                 onChange={(e) => setAffirmationStatement(e.target.value)}
@@ -2934,18 +2352,16 @@ const GoalsHabits = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="habit-name">Habit Name *</Label>
+              <Label>Habit Name *</Label>
               <Input
-                id="habit-name"
-                placeholder="e.g., Morning meditation, Exercise..."
+                placeholder="e.g., Morning meditation, Exercise, Read for 30min..."
                 value={habitName}
                 onChange={(e) => setHabitName(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="habit-description">Description</Label>
+              <Label>Description</Label>
               <Textarea
-                id="habit-description"
                 placeholder="What does this habit involve?"
                 rows={3}
                 value={habitDescription}
@@ -2954,14 +2370,14 @@ const GoalsHabits = () => {
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="habit-frequency">Frequency</Label>
+                <Label>Frequency</Label>
                 <Select
                   value={habitFrequency}
-                  onValueChange={(val) =>
-                    setHabitFrequency(val as Habit["frequency"])
+                  onValueChange={(v) =>
+                    setHabitFrequency(v as Habit["frequency"])
                   }
                 >
-                  <SelectTrigger id="habit-frequency">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -2972,18 +2388,15 @@ const GoalsHabits = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="habit-category">Category</Label>
+                <Label>Category</Label>
                 <Select value={habitCategory} onValueChange={setHabitCategory}>
-                  <SelectTrigger id="habit-category">
+                  <SelectTrigger>
                     <SelectValue placeholder="Other" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="health">🏃 Health & Fitness</SelectItem>
+                    <SelectItem value="health">🏃 Health</SelectItem>
                     <SelectItem value="career">💼 Career</SelectItem>
-                    <SelectItem value="personal">🌱 Personal Growth</SelectItem>
-                    <SelectItem value="relationships">
-                      ❤️ Relationships
-                    </SelectItem>
+                    <SelectItem value="personal">🌱 Growth</SelectItem>
                     <SelectItem value="other">📌 Other</SelectItem>
                   </SelectContent>
                 </Select>
@@ -2991,27 +2404,22 @@ const GoalsHabits = () => {
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="habit-time" className="flex items-center gap-1">
+                <Label className="flex items-center gap-1">
                   <Clock className="h-4 w-4 text-blue-500" />
                   Time (Optional)
                 </Label>
                 <Input
-                  id="habit-time"
                   placeholder="e.g., 7:00 AM, Morning, Evening"
                   value={habitTime}
                   onChange={(e) => setHabitTime(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <Label
-                  htmlFor="habit-place"
-                  className="flex items-center gap-1"
-                >
+                <Label className="flex items-center gap-1">
                   <MapPin className="h-4 w-4 text-blue-500" />
                   Place (Optional)
                 </Label>
                 <Input
-                  id="habit-place"
                   placeholder="e.g., Gym, Home, Office"
                   value={habitPlace}
                   onChange={(e) => setHabitPlace(e.target.value)}
@@ -3019,18 +2427,55 @@ const GoalsHabits = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="habit-start">Start Date</Label>
+              <Label>Start Date</Label>
               <Input
-                id="habit-start"
                 type="date"
                 value={habitStartDate}
                 onChange={(e) => setHabitStartDate(e.target.value)}
               />
             </div>
+
+            {/* NEW: Link to Goals Section */}
+            <div className="space-y-2 pt-2">
+              <Label className="flex items-center gap-1.5">
+                <LinkIcon className="w-4 h-4 text-blue-500" />
+                Link to Goals (Optional)
+              </Label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {goals.map((goal) => (
+                  <button
+                    key={goal.id}
+                    onClick={() => {
+                      setHabitLinkedGoals((prev) =>
+                        prev.includes(goal.id)
+                          ? prev.filter((id) => id !== goal.id)
+                          : [...prev, goal.id],
+                      );
+                    }}
+                    className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                      habitLinkedGoals.includes(goal.id)
+                        ? "bg-blue-50 border-blue-200 text-blue-700 font-medium"
+                        : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    {goal.title}
+                  </button>
+                ))}
+                {goals.length === 0 && (
+                  <p className="text-xs text-gray-400 italic">
+                    No active goals to link.
+                  </p>
+                )}
+              </div>
+            </div>
+
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-4">
               <Button
                 variant="outline"
-                onClick={() => setIsHabitDialogOpen(false)}
+                onClick={() => {
+                  setIsHabitDialogOpen(false);
+                  setHabitLinkedGoals([]); // Reset on cancel
+                }}
               >
                 Cancel
               </Button>
@@ -3041,8 +2486,6 @@ const GoalsHabits = () => {
                 Create Habit
               </Button>
             </div>
-            <div className="space-y-2"><Label>Start Date</Label><Input type="date" value={habitStartDate} onChange={e => setHabitStartDate(e.target.value)} /></div>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-4"><Button variant="outline" onClick={() => setIsHabitDialogOpen(false)}>Cancel</Button><Button className="bg-teal-500 hover:bg-teal-600 text-white" onClick={handleCreateHabit}>Create Habit</Button></div>
           </div>
         </DialogContent>
       </Dialog>

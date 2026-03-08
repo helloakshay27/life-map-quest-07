@@ -10,7 +10,7 @@ import {
   Phone,
   Mail,
   Edit2,
-  Trash2, // 🟢 Added Trash icon for delete
+  Trash2,
 } from "lucide-react";
 import MyProfileModal from "@/components/MyProfileModal";
 import AddPersonModal from "@/components/AddPersonModal";
@@ -162,13 +162,16 @@ const People = () => {
         : b.importance_level - a.importance_level,
     );
 
-  const getInitials = (name: string) =>
-    name
+  // Safe getInitials to prevent crashes if name is empty
+  const getInitials = (name: string) => {
+    if (!name) return "?";
+    return name
       .split(" ")
       .map((n) => n[0])
       .join("")
       .toUpperCase()
       .slice(0, 2);
+  };
 
   const relationshipColors: Record<string, string> = {
     Family: "bg-purple-100 text-purple-700",
@@ -372,7 +375,11 @@ const People = () => {
                           setRelationshipFilter(opt);
                           setIsRelationshipOpen(false);
                         }}
-                        className={`px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 ${relationshipFilter === opt ? "bg-gray-50 font-semibold text-gray-900" : "text-gray-700"}`}
+                        className={`px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 ${
+                          relationshipFilter === opt
+                            ? "bg-gray-50 font-semibold text-gray-900"
+                            : "text-gray-700"
+                        }`}
                       >
                         {opt}
                       </div>
@@ -429,7 +436,11 @@ const People = () => {
                           setPriorityFilter(opt);
                           setIsPriorityOpen(false);
                         }}
-                        className={`px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 ${priorityFilter === opt ? "bg-gray-50 font-semibold text-gray-900" : "text-gray-700"}`}
+                        className={`px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 ${
+                          priorityFilter === opt
+                            ? "bg-gray-50 font-semibold text-gray-900"
+                            : "text-gray-700"
+                        }`}
                       >
                         {opt}
                       </div>
@@ -561,7 +572,6 @@ const People = () => {
                   </div>
 
                   <div className="flex items-center gap-3 pr-16">
-                    {" "}
                     {/* pr-16 ensures text doesn't overlap with buttons */}
                     {person.person_image_base64 ? (
                       <img
@@ -579,7 +589,10 @@ const People = () => {
                         {person.name}
                       </p>
                       <span
-                        className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-md mt-0.5 ${relationshipColors[person.relationship_type] ?? "bg-gray-100 text-gray-600"}`}
+                        className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-md mt-0.5 ${
+                          relationshipColors[person.relationship_type] ??
+                          "bg-gray-100 text-gray-600"
+                        }`}
                       >
                         {person.relationship_type}
                       </span>
@@ -590,7 +603,11 @@ const People = () => {
                     {[1, 2, 3, 4, 5].map((star) => (
                       <Star
                         key={star}
-                        className={`w-3.5 h-3.5 ${star <= person.importance_level ? "text-yellow-400 fill-yellow-400" : "text-gray-200 fill-gray-200"}`}
+                        className={`w-3.5 h-3.5 ${
+                          star <= person.importance_level
+                            ? "text-yellow-400 fill-yellow-400"
+                            : "text-gray-200 fill-gray-200"
+                        }`}
                       />
                     ))}
                   </div>

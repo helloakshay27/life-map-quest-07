@@ -39,7 +39,7 @@ function Vision() {
   const fetchVisionData = async () => {
     try {
       const token = localStorage.getItem("auth_token");
-      const response = await fetch(`${API_BASE_URL}/vision`, {
+      const response = await fetch(`${API_BASE_URL}/vision.json`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

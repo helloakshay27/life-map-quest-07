@@ -41,14 +41,6 @@ const MOODS = [
   "Excited",
 ];
 
-const LIFE_AREAS = [
-  "Career",
-  "Health",
-  "Relationships",
-  "Personal Growth",
-  "Finance",
-];
-
 // ==========================================
 // MAIN COMPONENT
 // ==========================================
@@ -63,6 +55,7 @@ const DailyJournal = () => {
   // Form state
   const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
   const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
+  const [lifeAreas, setLifeAreas] = useState<string[]>([]); // Dynamic Life Areas state
   const [energy, setEnergy] = useState([5]);
   const [alignment, setAlignment] = useState([5]);
   const [gratitude, setGratitude] = useState("");
@@ -149,6 +142,53 @@ const DailyJournal = () => {
   }
 
   const [dailyData, setDailyData] = useState<DailyInfo | null>(null);
+
+  // FETCH LIFE AREAS
+  useEffect(() => {
+    const fetchLifeAreas = async () => {
+      try {
+        const res = await fetch("https://life-api.lockated.com/life_areas", {
+          headers: {
+            Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
+          },
+        });
+        if (!res.ok) throw new Error("Failed to fetch life areas");
+
+        const data = await res.json();
+        // Assuming API returns array of objects like { id: 1, name: 'Health' } or similar
+        const areasArray = Array.isArray(data)
+          ? data
+          : data.life_areas || data.data || [];
+        const mappedAreas = areasArray.map((area: any) =>
+          typeof area === "string" ? area : area.name || area.title,
+        );
+
+        if (mappedAreas.length > 0) {
+          setLifeAreas(mappedAreas.filter(Boolean));
+        } else {
+          // Fallback if empty
+          setLifeAreas([
+            "Career",
+            "Health",
+            "Relationships",
+            "Personal Growth",
+            "Finance",
+          ]);
+        }
+      } catch (err) {
+        console.error("Failed to load life areas", err);
+        // Fallback on error
+        setLifeAreas([
+          "Career",
+          "Health",
+          "Relationships",
+          "Personal Growth",
+          "Finance",
+        ]);
+      }
+    };
+    fetchLifeAreas();
+  }, [token]);
 
   useEffect(() => {
     const fetchDailyInfo = async () => {
@@ -389,7 +429,6 @@ const DailyJournal = () => {
     try {
       const payload = {
         user_journal: {
-          // FIXED KEY HERE
           user_id: user?.id ? parseInt(user.id, 10) : 1,
           journal_type: "daily",
           start_date: format(selectedDate, "yyyy-MM-dd"),
@@ -634,7 +673,7 @@ const DailyJournal = () => {
                   Life Areas Focused On
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {LIFE_AREAS.map((area) => (
+                  {lifeAreas.map((area) => (
                     <Badge
                       key={area}
                       variant={
