@@ -630,6 +630,7 @@ export default function ForFamily() {
               wifeSiblings={wifeSiblings}
               children={children}
               grandchildren={grandchildren}
+              expandedSections={expandedSections}
               onAddHusbandSibling={addHusbandSibling}
               onRemoveHusbandSibling={removeHusbandSibling}
               onUpdateHusbandSibling={updateHusbandSibling}
@@ -642,6 +643,7 @@ export default function ForFamily() {
               onAddGrandchild={addGrandchild}
               onRemoveGrandchild={removeGrandchild}
               onUpdateGrandchild={updateGrandchild}
+              onToggleSection={toggleSection}
             />
           )}
 
@@ -657,7 +659,9 @@ export default function ForFamily() {
           {activeTab === "contacts" && (
             <ContactsSection
               importantContacts={importantContacts}
+               expandedSections={expandedSections}
               onUpdateImportantContact={updateImportantContact}
+               onToggleSection={toggleSection}
             />
           )}
 

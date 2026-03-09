@@ -177,13 +177,66 @@ export default function PersonalSection({
             )}
           </div>
 
+          {/* Current Home Address */}
+          <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
+            <button
+              onClick={() => onToggleSection("currentAddress")}
+              className="w-full flex items-center justify-between p-4 hover:bg-blue-50 font-semibold text-blue-900"
+            >
+              Address Details
+              <ChevronDown className={`h-5 w-5 transition-transform ${expandedSections.currentAddress ? "rotate-180" : ""}`} />
+            </button>
+            {expandedSections.currentAddress && (
+              <div className="p-4 border-t border-blue-200 space-y-4">
+                <div className="space-y-2">
+                  <Label>CURRENT HOME ADDRESS</Label>
+                  <Input 
+                    placeholder="Current Home Address" 
+                    value={personalInfo.currentHomeAddress}
+                    onChange={(e) => onUpdatePersonalInfo("currentHomeAddress", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>NATIVE / PERMANENT ADDRESS</Label>
+                  <Input 
+                    placeholder="Native / Permanent Address" 
+                    value={personalInfo.nativeAddress}
+                    onChange={(e) => onUpdatePersonalInfo("nativeAddress", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>MARITAL STATUS</Label>
+                  <Select value={personalInfo.maritalStatus} onValueChange={(value) => onUpdatePersonalInfo("maritalStatus", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Marital Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="single">Single</SelectItem>
+                      <SelectItem value="married">Married</SelectItem>
+                      <SelectItem value="divorced">Divorced</SelectItem>
+                      <SelectItem value="widowed">Widowed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>DATE & PLACE OF MARRIAGE</Label>
+                  <Input 
+                    placeholder="Date & Place of Marriage" 
+                    value={personalInfo.marriageDate}
+                    onChange={(e) => onUpdatePersonalInfo("marriageDate", e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Personal Documents */}
           <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
             <button
               onClick={() => onToggleSection("personalDocuments")}
               className="w-full flex items-center justify-between p-4 hover:bg-blue-50 font-semibold text-blue-900"
             >
-              Personal Documents
+              Personal Documents (Up to 5)
               <ChevronDown className={`h-5 w-5 transition-transform ${expandedSections.personalDocuments ? "rotate-180" : ""}`} />
             </button>
             {expandedSections.personalDocuments && (
@@ -208,8 +261,195 @@ export default function PersonalSection({
                   onClick={onAddPersonalDocument}
                   className="w-full"
                 >
-                  + Add Document
+                  + Attach Document
                 </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Spouse Information */}
+          <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
+            <button
+              onClick={() => onToggleSection("spouseInfo")}
+              className="w-full flex items-center justify-between p-4 hover:bg-blue-50 font-semibold text-blue-900"
+            >
+              <div>
+                <span>Spouse Information</span>
+                <p className="text-sm text-gray-600 font-normal">Spouse name, Aadhar, PAN, employer</p>
+              </div>
+              <ChevronDown className={`h-5 w-5 transition-transform ${expandedSections.spouseInfo ? "rotate-180" : ""}`} />
+            </button>
+            {expandedSections.spouseInfo && (
+              <div className="p-4 border-t border-blue-200 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>SPOUSE NAME</Label>
+                    <Input 
+                      placeholder="Spouse Name" 
+                      value={personalInfo.spouseName}
+                      onChange={(e) => onUpdatePersonalInfo("spouseName", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>AADHAR NUMBER</Label>
+                    <Input 
+                      placeholder="XXXX XXXX XXXX" 
+                      value={personalInfo.spouseAadharNumber}
+                      onChange={(e) => onUpdatePersonalInfo("spouseAadharNumber", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>PAN NUMBER</Label>
+                    <Input 
+                      placeholder="PAN Number" 
+                      value={personalInfo.spousePanNumber}
+                      onChange={(e) => onUpdatePersonalInfo("spousePanNumber", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>MOBILE NUMBER</Label>
+                    <Input 
+                      placeholder="+91 XXXXX XXXXX" 
+                      value={personalInfo.spouseMobile}
+                      onChange={(e) => onUpdatePersonalInfo("spouseMobile", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>DRIVING LICENSE NUMBER</Label>
+                    <Input 
+                      placeholder="License Number" 
+                      value={personalInfo.spouseDrivingLicenseNumber}
+                      onChange={(e) => onUpdatePersonalInfo("spouseDrivingLicenseNumber", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>LICENSE VALIDITY</Label>
+                    <Input 
+                      type="date"
+                      value={personalInfo.spouseDrivingLicenseValidity}
+                      onChange={(e) => onUpdatePersonalInfo("spouseDrivingLicenseValidity", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>ADDRESS</Label>
+                    <Input 
+                      placeholder="Address" 
+                      value={personalInfo.spouseAddress}
+                      onChange={(e) => onUpdatePersonalInfo("spouseAddress", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>EMPLOYER NAME</Label>
+                    <Input 
+                      placeholder="Employer Name" 
+                      value={personalInfo.spouseEmployer}
+                      onChange={(e) => onUpdatePersonalInfo("spouseEmployer", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>WORK PHONE</Label>
+                    <Input 
+                      placeholder="Work Phone" 
+                      value={personalInfo.spouseWorkPhone}
+                      onChange={(e) => onUpdatePersonalInfo("spouseWorkPhone", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>EMPLOYER ADDRESS</Label>
+                    <Input 
+                      placeholder="Employer Address" 
+                      value={personalInfo.spouseEmployerAddress}
+                      onChange={(e) => onUpdatePersonalInfo("spouseEmployerAddress", e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Spouse Documents */}
+                <div className="mt-6 pt-6 border-t border-blue-200">
+                  <h4 className="font-semibold text-blue-900 mb-4">Uploaded Documents (up to 5)</h4>
+                  <div className="space-y-2 mb-4">
+                    {spouseDocuments.map((doc) => (
+                      <div key={doc.id} className="flex items-center justify-between bg-blue-50 p-3 rounded">
+                        <span className="text-sm">{doc.fileName}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => onRemoveSpouseDocument(doc.id)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <Button 
+                    variant="outline"
+                    onClick={onAddSpouseDocument}
+                    className="w-full"
+                  >
+                    + Attach Document
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Former Spouse Information */}
+          <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
+            <button
+              onClick={() => onToggleSection("formerSpouseInfo")}
+              className="w-full flex items-center justify-between p-4 hover:bg-blue-50 font-semibold text-blue-900"
+            >
+              <div>
+                <span>Former Spouse (if any)</span>
+                <p className="text-sm text-gray-600 font-normal">Fill only if applicable</p>
+              </div>
+              <ChevronDown className={`h-5 w-5 transition-transform ${expandedSections.formerSpouseInfo ? "rotate-180" : ""}`} />
+            </button>
+            {expandedSections.formerSpouseInfo && (
+              <div className="p-4 border-t border-blue-200 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>FORMER SPOUSE NAME</Label>
+                    <Input 
+                      placeholder="Former Spouse Name" 
+                      value={personalInfo.formerSpouseName}
+                      onChange={(e) => onUpdatePersonalInfo("formerSpouseName", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>CONTACT NUMBER</Label>
+                    <Input 
+                      placeholder="+91 XXXXX XXXXX" 
+                      value={personalInfo.formerSpouseContact}
+                      onChange={(e) => onUpdatePersonalInfo("formerSpouseContact", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>ADDRESS</Label>
+                    <Input 
+                      placeholder="Address" 
+                      value={personalInfo.formerSpouseAddress}
+                      onChange={(e) => onUpdatePersonalInfo("formerSpouseAddress", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>MARRIAGE DATE</Label>
+                    <Input 
+                      type="date"
+                      value={personalInfo.formerSpouseMarriageDate}
+                      onChange={(e) => onUpdatePersonalInfo("formerSpouseMarriageDate", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>DIVORCE DATE</Label>
+                    <Input 
+                      type="date"
+                      value={personalInfo.formerSpouseDivorceDate}
+                      onChange={(e) => onUpdatePersonalInfo("formerSpouseDivorceDate", e.target.value)}
+                    />
+                  </div>
+                </div>
               </div>
             )}
           </div>
