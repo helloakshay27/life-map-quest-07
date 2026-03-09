@@ -58,25 +58,61 @@ const Todos = () => {
   const [hoveredStatus, setHoveredStatus] = useState<string | null>(null);
   const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // Load todos
+// Load todos: Initially GET from API, fallback to local storage if API fails
+ // Load todos
   useEffect(() => {
     const loadTodos = async () => {
       try {
-        const savedTodos = localStorage.getItem("user_todos");
-        if (savedTodos) { setTodos(JSON.parse(savedTodos)); return; }
+        const response = await fetchWithAuth("/todos", { method: "GET" });
+        
+        if (response.ok) {
+          const rawData = await response.json();
+          
+          // ─── FORMAT THE API DATA TO MATCH FRONTEND ───
+          const formattedData = rawData.map((item: any) => {
+            // Map backend status to frontend status
+            const statusMap: Record<string, string> = {
+              "not_started": "Not Started",
+              "in_progress": "In Progress",
+              "completed": "Completed",
+              "someday": "Someday"
+            };
+
+            // Map backend priority to frontend priority
+            const priorityMap: Record<string, string> = {
+              "low": "Low",
+              "medium": "Medium",
+              "high": "High",
+              "urgent": "Urgent"
+            };
+
+            return {
+              ...item,
+              id: String(item.id), // Ensure ID is a string for your drag-and-drop
+              lifeArea: item.life_area || "General", // Map snake_case to camelCase
+              status: statusMap[item.status] || "Not Started", 
+              priority: priorityMap[item.priority] || "Medium",
+            };
+          });
+
+          setTodos(formattedData);
+          localStorage.setItem("user_todos", JSON.stringify(formattedData));
+          return;
+        }
+        throw new Error("Failed to fetch from API");
+      } catch (error) {
+        console.log("API unavailable, falling back to local storage", error);
         try {
-          const response = await fetchWithAuth("/todos", { method: "GET" });
-          if (response.ok) {
-            const data = await response.json();
-            setTodos(data);
-            localStorage.setItem("user_todos", JSON.stringify(data));
-          }
-        } catch { console.log("API unavailable, using local storage"); }
-      } catch { console.log("Using local storage for todos"); }
+          const savedTodos = localStorage.getItem("user_todos");
+          if (savedTodos) { setTodos(JSON.parse(savedTodos)); }
+        } catch (parseError) {
+          console.error("Failed to parse local storage todos");
+        }
+      }
     };
+    
     loadTodos();
   }, []);
-
   const statuses = [
     { key: "Not Started", label: "Not Started", color: "bg-indigo-50 border-indigo-200", hoverColor: "bg-indigo-100 border-indigo-500 shadow-lg shadow-indigo-100" },
     { key: "In Progress", label: "In Progress", color: "bg-blue-50 border-blue-200",     hoverColor: "bg-blue-100 border-blue-500 shadow-lg shadow-blue-100"    },

@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const navItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard }, 
   { title: "Daily Journal", url: "/daily-journal", icon: BookOpen },
   { title: "Weekly Journal", url: "/weekly-journal", icon: Notebook },
   { title: "Calendar", url: "/calendar", icon: Calendar },
@@ -52,7 +52,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar className="border-r border-sidebar-border">
-      <SidebarContent className="pt-4">
+      <SidebarContent className="pt-[56px]">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -61,7 +61,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
-                      end={item.url === "/"}
+                      end={item.url === "/" || item.url === "/dashboard"}
                       onClick={() => setOpenMobile(false)}
                       className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-body-5 text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
                       activeClassName="bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary"

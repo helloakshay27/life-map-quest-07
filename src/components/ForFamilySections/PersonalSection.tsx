@@ -88,14 +88,17 @@ export default function PersonalSection({
         </div>
 
         <div className="p-5 space-y-4">
+          
           {/* Basic Details */}
           <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
             <button
               onClick={() => onToggleSection("basicDetails")}
-              className="w-full flex items-center justify-between p-4 hover:bg-blue-50 font-semibold text-blue-900"
+              className="w-full flex items-center justify-between p-4 hover:bg-blue-50 transition-colors"
             >
-              Basic Details
-              <ChevronDown className={`h-5 w-5 transition-transform ${expandedSections.basicDetails ? "rotate-180" : ""}`} />
+              <div className="flex flex-col items-start text-left">
+                <h3 className="text-[16px] font-semibold text-blue-900">Basic Details</h3>
+              </div>
+              <ChevronDown className={`h-5 w-5 text-blue-700 transition-transform duration-200 ${expandedSections.basicDetails ? "rotate-180" : ""}`} />
             </button>
             {expandedSections.basicDetails && (
               <div className="p-4 border-t border-blue-200 space-y-4">
@@ -181,10 +184,12 @@ export default function PersonalSection({
           <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
             <button
               onClick={() => onToggleSection("currentAddress")}
-              className="w-full flex items-center justify-between p-4 hover:bg-blue-50 font-semibold text-blue-900"
+              className="w-full flex items-center justify-between p-4 hover:bg-blue-50 transition-colors"
             >
-              Address Details
-              <ChevronDown className={`h-5 w-5 transition-transform ${expandedSections.currentAddress ? "rotate-180" : ""}`} />
+              <div className="flex flex-col items-start text-left">
+                <h3 className="text-[16px] font-semibold text-blue-900">Address Details</h3>
+              </div>
+              <ChevronDown className={`h-5 w-5 text-blue-700 transition-transform duration-200 ${expandedSections.currentAddress ? "rotate-180" : ""}`} />
             </button>
             {expandedSections.currentAddress && (
               <div className="p-4 border-t border-blue-200 space-y-4">
@@ -234,10 +239,12 @@ export default function PersonalSection({
           <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
             <button
               onClick={() => onToggleSection("personalDocuments")}
-              className="w-full flex items-center justify-between p-4 hover:bg-blue-50 font-semibold text-blue-900"
+              className="w-full flex items-center justify-between p-4 hover:bg-blue-50 transition-colors"
             >
-              Personal Documents (Up to 5)
-              <ChevronDown className={`h-5 w-5 transition-transform ${expandedSections.personalDocuments ? "rotate-180" : ""}`} />
+              <div className="flex flex-col items-start text-left">
+                <h3 className="text-[16px] font-semibold text-blue-900">Personal Documents (Up to 5)</h3>
+              </div>
+              <ChevronDown className={`h-5 w-5 text-blue-700 transition-transform duration-200 ${expandedSections.personalDocuments ? "rotate-180" : ""}`} />
             </button>
             {expandedSections.personalDocuments && (
               <div className="p-4 border-t border-blue-200 space-y-4">
@@ -271,13 +278,13 @@ export default function PersonalSection({
           <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
             <button
               onClick={() => onToggleSection("spouseInfo")}
-              className="w-full flex items-center justify-between p-4 hover:bg-blue-50 font-semibold text-blue-900"
+              className="w-full flex items-center justify-between p-4 hover:bg-blue-50 transition-colors"
             >
-              <div>
-                <span>Spouse Information</span>
-                <p className="text-sm text-gray-600 font-normal">Spouse name, Aadhar, PAN, employer</p>
+              <div className="flex flex-col items-start text-left">
+                <h3 className="text-[16px] font-semibold text-blue-900">Spouse Information</h3>
+                <p className="text-[14px] text-gray-500 mt-0.5">Spouse name, Aadhar, PAN, employer</p>
               </div>
-              <ChevronDown className={`h-5 w-5 transition-transform ${expandedSections.spouseInfo ? "rotate-180" : ""}`} />
+              <ChevronDown className={`h-5 w-5 text-blue-700 transition-transform duration-200 ${expandedSections.spouseInfo ? "rotate-180" : ""}`} />
             </button>
             {expandedSections.spouseInfo && (
               <div className="p-4 border-t border-blue-200 space-y-4">
@@ -398,13 +405,13 @@ export default function PersonalSection({
           <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
             <button
               onClick={() => onToggleSection("formerSpouseInfo")}
-              className="w-full flex items-center justify-between p-4 hover:bg-blue-50 font-semibold text-blue-900"
+              className="w-full flex items-center justify-between p-4 hover:bg-blue-50 transition-colors"
             >
-              <div>
-                <span>Former Spouse (if any)</span>
-                <p className="text-sm text-gray-600 font-normal">Fill only if applicable</p>
+              <div className="flex flex-col items-start text-left">
+                <h3 className="text-[16px] font-semibold text-blue-900">Former Spouse (if any)</h3>
+                <p className="text-[14px] text-gray-500 mt-0.5">Fill only if applicable</p>
               </div>
-              <ChevronDown className={`h-5 w-5 transition-transform ${expandedSections.formerSpouseInfo ? "rotate-180" : ""}`} />
+              <ChevronDown className={`h-5 w-5 text-blue-700 transition-transform duration-200 ${expandedSections.formerSpouseInfo ? "rotate-180" : ""}`} />
             </button>
             {expandedSections.formerSpouseInfo && (
               <div className="p-4 border-t border-blue-200 space-y-4">
@@ -453,6 +460,7 @@ export default function PersonalSection({
               </div>
             )}
           </div>
+          
         </div>
       </div>
     </div>

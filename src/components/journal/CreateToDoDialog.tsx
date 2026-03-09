@@ -18,6 +18,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 const LIFE_AREAS = ["Career", "Health", "Relationships", "Personal Growth", "Finance"];
@@ -30,6 +37,8 @@ interface CreateToDoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (todo: TodoItem) => void;
+  // 🚀 Naya prop availableGoals receive karne ke liye
+  availableGoals?: any[]; 
 }
 
 export interface TodoItem {
@@ -41,9 +50,15 @@ export interface TodoItem {
   status: string;
   targetDate?: Date;
   recurring: boolean;
+  goalId?: string; // 🚀 Linked goal id yahan aayega
 }
 
-const CreateToDoDialog = ({ open, onOpenChange, onSubmit }: CreateToDoDialogProps) => {
+const CreateToDoDialog = ({ 
+  open, 
+  onOpenChange, 
+  onSubmit, 
+  availableGoals = [] 
+}: CreateToDoDialogProps) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [lifeArea, setLifeArea] = useState("Career");
@@ -51,6 +66,7 @@ const CreateToDoDialog = ({ open, onOpenChange, onSubmit }: CreateToDoDialogProp
   const [status, setStatus] = useState("Not Started");
   const [targetDate, setTargetDate] = useState<Date>();
   const [recurring, setRecurring] = useState(false);
+  const [selectedGoal, setSelectedGoal] = useState<string>("none"); // 🚀 State for dropdown
 
   const handleSubmit = () => {
     if (!title.trim()) return;
@@ -63,7 +79,10 @@ const CreateToDoDialog = ({ open, onOpenChange, onSubmit }: CreateToDoDialogProp
       status,
       targetDate,
       recurring,
+      goalId: selectedGoal === "none" ? undefined : selectedGoal, // 🚀 Payload mein add kiya
     });
+    
+    // Reset all fields
     setTitle("");
     setDescription("");
     setLifeArea("Career");
@@ -71,12 +90,13 @@ const CreateToDoDialog = ({ open, onOpenChange, onSubmit }: CreateToDoDialogProp
     setStatus("Not Started");
     setTargetDate(undefined);
     setRecurring(false);
+    setSelectedGoal("none"); // Reset goal
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-title-1 text-foreground">Create New To Do</DialogTitle>
         </DialogHeader>
@@ -165,6 +185,27 @@ const CreateToDoDialog = ({ open, onOpenChange, onSubmit }: CreateToDoDialogProp
               </Popover>
             </div>
           </div>
+
+          {/* 🚀 NAYA DROPDOWN: LINK TO GOAL */}
+          <div>
+            <label className="text-body-5 font-medium text-primary">Link to Goal (Optional)</label>
+            <div className="mt-1">
+              <Select value={selectedGoal} onValueChange={setSelectedGoal}>
+                <SelectTrigger className="w-full bg-white">
+                  <SelectValue placeholder="Select a goal..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {availableGoals.map((goal) => (
+                    <SelectItem key={goal.id} value={goal.id.toString()}>
+                      {goal.title || goal.name || `Goal #${goal.id}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="border-t pt-3">
             <div className="flex items-center gap-2">
               <Checkbox
