@@ -11,6 +11,8 @@ import AssetsSection from "@/components/ForFamilySections/AssetsSection";
 import BenefitsSection from "@/components/ForFamilySections/BenefitsSection";
 import LegalSection from "@/components/ForFamilySections/LegalSection";
 import FinalWishesSection from "@/components/ForFamilySections/FinalWishesSection";
+import FinanceSection from "@/components/ForFamilySections/FinanceSection";
+import OtherInfoSection from "@/components/ForFamilySections/OtherInfoSection";
 
 // Types
 interface Sibling {
@@ -168,6 +170,47 @@ interface UploadedDocument {
   uploadedAt: string;
 }
 
+interface BankAccount {
+  id: string;
+  bankName: string;
+  checkingAccountNo: string;
+  checkingJointAccount: boolean;
+  savingsAccountNo: string;
+  savingsJointAccount: boolean;
+}
+
+interface InvestmentsDocuments {
+  fixedDepositDetails: string;
+  fdBank: string;
+  fdCertificateKeptAt: string;
+  bankLockerNumber: string;
+  lockerBankBranch: string;
+  lockerAccessibleBy: string;
+  lockerKeyLocation: string;
+  dematPortfolioLocation: string;
+  bondsDebenturesLocation: string;
+  ppfAccountLocation: string;
+  npsEpfGratuityDetails: string;
+  goldJewelleryDetails: string;
+  uploadedDocuments: UploadedDocument[];
+}
+
+interface CreditCard {
+  id: string;
+  cardName: string;
+  cardNumber: string;
+  bank: string;
+  expiryDate: string;
+  creditLimit: string;
+}
+
+interface OtherInfoDocument {
+  id: string;
+  fileName: string;
+  description: string;
+  uploadedAt: string;
+}
+
 interface PersonalInfo {
   fullName: string;
   aadharNumber: string;
@@ -321,6 +364,29 @@ export default function ForFamily() {
   });
 
   const [finalWishes, setFinalWishes] = useState<FinalWish[]>([]);
+
+  // Finance State
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [investmentsDocuments, setInvestmentsDocuments] = useState<InvestmentsDocuments>({
+    fixedDepositDetails: "",
+    fdBank: "",
+    fdCertificateKeptAt: "",
+    bankLockerNumber: "",
+    lockerBankBranch: "",
+    lockerAccessibleBy: "",
+    lockerKeyLocation: "",
+    dematPortfolioLocation: "",
+    bondsDebenturesLocation: "",
+    ppfAccountLocation: "",
+    npsEpfGratuityDetails: "",
+    goldJewelleryDetails: "",
+    uploadedDocuments: [],
+  });
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
+
+  // Other Info State
+  const [otherInfoNotes, setOtherInfoNotes] = useState("");
+  const [otherInfoDocuments, setOtherInfoDocuments] = useState<OtherInfoDocument[]>([]);
 
   // Utility function
   const createId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -515,6 +581,88 @@ export default function ForFamily() {
   const updateFinalWish = (id: string, field: keyof FinalWish, value: string | boolean) => {
     setFinalWishes(finalWishes.map(w => (w.id === id ? { ...w, [field]: value } : w)));
   };
+  // Finance Handlers
+  const addBankAccount = () => {
+    const newAccount: BankAccount = {
+      id: createId(),
+      bankName: "",
+      checkingAccountNo: "",
+      checkingJointAccount: false,
+      savingsAccountNo: "",
+      savingsJointAccount: false,
+    };
+    setBankAccounts([...bankAccounts, newAccount]);
+  };
+
+  const removeBankAccount = (id: string) => {
+    setBankAccounts(bankAccounts.filter(acc => acc.id !== id));
+  };
+
+  const updateBankAccount = (id: string, field: keyof BankAccount, value: string | boolean) => {
+    setBankAccounts(bankAccounts.map(acc => (acc.id === id ? { ...acc, [field]: value } : acc)));
+  };
+
+  const updateInvestmentsDocuments = (field: keyof InvestmentsDocuments, value: string) => {
+    setInvestmentsDocuments({ ...investmentsDocuments, [field]: value });
+  };
+
+  const addInvestmentDocument = (file: File) => {
+    const newDoc: UploadedDocument = {
+      id: createId(),
+      fileName: file.name,
+      uploadedAt: new Date().toLocaleDateString(),
+    };
+    setInvestmentsDocuments({
+      ...investmentsDocuments,
+      uploadedDocuments: [...investmentsDocuments.uploadedDocuments, newDoc],
+    });
+  };
+
+  const removeInvestmentDocument = (id: string) => {
+    setInvestmentsDocuments({
+      ...investmentsDocuments,
+      uploadedDocuments: investmentsDocuments.uploadedDocuments.filter(doc => doc.id !== id),
+    });
+  };
+
+  const addCreditCard = () => {
+    const newCard: CreditCard = {
+      id: createId(),
+      cardName: "",
+      cardNumber: "",
+      bank: "",
+      expiryDate: "",
+      creditLimit: "",
+    };
+    setCreditCards([...creditCards, newCard]);
+  };
+
+  const removeCreditCard = (id: string) => {
+    setCreditCards(creditCards.filter(card => card.id !== id));
+  };
+
+  const updateCreditCard = (id: string, field: keyof CreditCard, value: string) => {
+    setCreditCards(creditCards.map(card => (card.id === id ? { ...card, [field]: value } : card)));
+  };
+
+  // Other Info Handlers
+  const updateOtherInfoNotes = (notes: string) => {
+    setOtherInfoNotes(notes);
+  };
+
+  const addOtherInfoDocument = (file: File, description: string) => {
+    const newDoc: OtherInfoDocument = {
+      id: createId(),
+      fileName: file.name,
+      description: description,
+      uploadedAt: new Date().toLocaleDateString(),
+    };
+    setOtherInfoDocuments([...otherInfoDocuments, newDoc]);
+  };
+
+  const removeOtherInfoDocument = (id: string) => {
+    setOtherInfoDocuments(otherInfoDocuments.filter(doc => doc.id !== id));
+  };
 
   return (
     <div className="min-h-screen p-3 sm:p-4 md:p-8 bg-gradient-to-br from-gray-50 to-gray-100">
@@ -589,10 +737,12 @@ export default function ForFamily() {
               { id: "family", label: "Family" },
               { id: "emergency", label: "Emergency" },
               { id: "contacts", label: "Contacts" },
+              { id: "finance", label: "Finance" },
               { id: "assets", label: "Assets" },
               { id: "benefits", label: "Benefits" },
               { id: "legal", label: "Legal" },
               { id: "final", label: "Final" },
+              { id: "other", label: "Other Info" },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -665,6 +815,23 @@ export default function ForFamily() {
             />
           )}
 
+          {activeTab === "finance" && (
+            <FinanceSection
+              bankAccounts={bankAccounts}
+              investmentsDocuments={investmentsDocuments}
+              creditCards={creditCards}
+              onAddBankAccount={addBankAccount}
+              onRemoveBankAccount={removeBankAccount}
+              onUpdateBankAccount={updateBankAccount}
+              onUpdateInvestmentsDocuments={updateInvestmentsDocuments}
+              onAddInvestmentDocument={addInvestmentDocument}
+              onRemoveInvestmentDocument={removeInvestmentDocument}
+              onAddCreditCard={addCreditCard}
+              onRemoveCreditCard={removeCreditCard}
+              onUpdateCreditCard={updateCreditCard}
+            />
+          )}
+
           {activeTab === "assets" && (
             <AssetsSection
               propertyAssets={propertyAssets}
@@ -703,6 +870,16 @@ export default function ForFamily() {
               onAddFinalWish={addFinalWish}
               onRemoveFinalWish={removeFinalWish}
               onUpdateFinalWish={updateFinalWish}
+            />
+          )}
+
+          {activeTab === "other" && (
+            <OtherInfoSection
+              notes={otherInfoNotes}
+              documents={otherInfoDocuments}
+              onUpdateNotes={updateOtherInfoNotes}
+              onAddDocument={addOtherInfoDocument}
+              onRemoveDocument={removeOtherInfoDocument}
             />
           )}
         </div>
