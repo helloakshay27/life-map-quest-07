@@ -46,9 +46,86 @@ const Login = () => {
         throw new Error(data.message || data.error || "Invalid credentials");
       }
 
+      // Extract user data from the API response
+      const userData = data.user || data;
+
+      console.log("Login - Full API Response:", data);
+      console.log("Login - userData:", userData);
+      console.log("Login - All keys in userData:", Object.keys(userData));
+
+      // Construct a proper user object with all required fields
+      const bestName =
+        [
+          userData.name,
+          userData.full_name,
+          [userData.first_name, userData.last_name].filter(Boolean).join(" "),
+          userData.username,
+          userData.given_name,
+        ].find((n) => n && typeof n === "string" && n.trim() !== "") || "User";
+
+      const userObject = {
+        id: userData.id || userData.user_id || "",
+        name: bestName,
+        email: userData.email || emailOrMobile || "",
+        avatar: userData.avatar || userData.profile_photo || undefined,
+      };
+
+      console.log("Login - Final userObject before login:", userObject);
+
       // Success! Pass the token and user data to your AuthContext
-      // Note: Adjust 'data.token' or 'data.user' based on what your API actually returns
-      login(data.token || data.auth_token, data.user || data);
+      const token = data.token || data.auth_token;
+      login(token, userObject);
+
+      console.log(
+        "Login - After login, checking localStorage:",
+        localStorage.getItem("user"),
+      );
+
+      // Also try to fetch complete user profile from API
+      try {
+        const profileRes = await fetch(
+          "https://life-api.lockated.com/profile",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          console.log("Login - Profile API Response:", profileData);
+
+          // Update user with complete profile data
+          const bestProfileName =
+            [
+              profileData.name,
+              profileData.full_name,
+              [profileData.first_name, profileData.last_name]
+                .filter(Boolean)
+                .join(" "),
+              profileData.username,
+              profileData.given_name,
+            ].find((n) => n && typeof n === "string" && n.trim() !== "") ||
+            userObject.name;
+
+          const completeUser = {
+            id: profileData.id || userObject.id,
+            name: bestProfileName,
+            email: profileData.email || userObject.email,
+            avatar:
+              profileData.avatar ||
+              profileData.profile_photo ||
+              userObject.avatar,
+          };
+
+          console.log("Login - Complete user from profile:", completeUser);
+          if (completeUser.name !== "User") {
+            login(token, completeUser);
+          }
+        }
+      } catch (profileError) {
+        console.log("Profile fetch not available:", profileError);
+      }
 
       toast({ title: "Login successful" });
       navigate("/");

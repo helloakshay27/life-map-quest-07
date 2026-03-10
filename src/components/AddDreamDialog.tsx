@@ -53,6 +53,9 @@ export function AddDreamDialog({
   const [isDeletingNoteId, setIsDeletingNoteId] = useState<
     string | number | null
   >(null);
+  const [localDraftNotes, setLocalDraftNotes] = useState<
+    { id: string; content: string; created_at: string }[]
+  >([]);
 
   // Initialize form when dialog opens
   React.useEffect(() => {
@@ -65,6 +68,7 @@ export function AddDreamDialog({
       setCoreValues([]);
       setGoals([]);
       setNotes([]);
+      setLocalDraftNotes([]); // Clear draft notes
 
       if (initialData?.id && !initialData.id.startsWith("s")) {
         const fetchDetails = async () => {
@@ -116,13 +120,22 @@ export function AddDreamDialog({
   };
 
   const handleAddNote = async () => {
-    if (
-      !initialData?.id ||
-      initialData.id.startsWith("s") ||
-      !progressNotes.trim()
-    )
-      return;
+    if (!progressNotes.trim()) return;
 
+    // For new dreams (no ID yet), save as draft locally
+    if (!initialData?.id || initialData.id.startsWith("s")) {
+      const draftNote = {
+        id: `draft-${Date.now()}`,
+        content: progressNotes,
+        created_at: new Date().toISOString(),
+      };
+      setLocalDraftNotes((prev) => [...prev, draftNote]);
+      setProgressNotes("");
+      toast.success("Note will be added once the dream is created!");
+      return;
+    }
+
+    // For existing dreams, add via API
     setIsAddingNote(true);
     try {
       const response = await fetch(
@@ -134,15 +147,29 @@ export function AddDreamDialog({
         },
       );
 
-      if (!response.ok) throw new Error("Failed to add note");
+      if (!response.ok) {
+        throw new Error(
+          `Failed to add note: ${response.status} ${response.statusText}`,
+        );
+      }
 
       const newNote = await response.json();
-      setNotes((prev) => [...prev, newNote]);
+      
+      // Ensure the note object has the expected structure
+      const normalizedNote = {
+        id: newNote.id || `note-${Date.now()}`,
+        content: newNote.content || newNote.note || progressNotes,
+        message: newNote.message,
+        created_at: newNote.created_at || new Date().toISOString(),
+        ...newNote,
+      };
+
+      setNotes((prev) => [...prev, normalizedNote]);
       setProgressNotes("");
       toast.success("Progress note added successfully!");
     } catch (error) {
-      console.error(error);
-      toast.error("Failed to add progress note.");
+      console.error("Error adding note:", error);
+      toast.error("Failed to add progress note. Please try again.");
     } finally {
       setIsAddingNote(false);
     }
@@ -390,15 +417,19 @@ export function AddDreamDialog({
                   placeholder="Add a progress update... What steps have you taken? What did you learn? (Ctrl+Enter to add)"
                   className="w-full bg-white border border-[#5eead4] rounded-lg px-3 py-3 text-sm outline-none resize-none focus:ring-2 focus:ring-[#99f6e4] min-h-[80px]"
                 />
+                {!initialData?.id || initialData.id.startsWith("s") ? (
+                  <p className="text-xs text-blue-600 mt-2 font-medium flex items-center gap-1">
+                    <span>ℹ️</span>
+                    <span>
+                      Notes will be saved as drafts and added after the dream is
+                      created
+                    </span>
+                  </p>
+                ) : null}
                 <div className="flex justify-end mt-2">
                   <button
                     onClick={handleAddNote}
-                    disabled={
-                      isAddingNote ||
-                      !progressNotes.trim() ||
-                      !initialData?.id ||
-                      initialData.id.startsWith("s")
-                    }
+                    disabled={isAddingNote || !progressNotes.trim()}
                     className="bg-[#76dec9] text-white hover:bg-[#5fcbb5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded-md px-4 py-2 text-sm font-semibold flex items-center gap-2 shadow-sm"
                   >
                     {isAddingNote ? (
@@ -412,7 +443,7 @@ export function AddDreamDialog({
               </div>
 
               <h4 className="text-xs font-bold text-[#134e4a] mb-2 font-sans">
-                Progress History ({notes.length})
+                Progress History ({notes.length + localDraftNotes.length})
               </h4>
 
               {isLoadingDetails ? (
@@ -420,8 +451,43 @@ export function AddDreamDialog({
                   <Loader2 className="w-3.5 h-3.5 animate-spin" /> Fetching
                   notes...
                 </div>
-              ) : notes.length > 0 ? (
+              ) : notes.length > 0 || localDraftNotes.length > 0 ? (
                 <div className="space-y-2">
+                  {localDraftNotes.map((n) => {
+                    const dateStr = new Intl.DateTimeFormat("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    }).format(new Date(n.created_at));
+
+                    return (
+                      <div
+                        key={n.id}
+                        className="flex flex-col gap-1.5 bg-yellow-50 border-2 border-yellow-300 rounded-lg p-3 shadow-sm text-xs relative opacity-75"
+                      >
+                        <div className="flex justify-between items-center w-full">
+                          <span className="font-bold text-yellow-700">
+                            {dateStr} (Draft)
+                          </span>
+                          <button
+                            onClick={() =>
+                              setLocalDraftNotes((prev) =>
+                                prev.filter((note) => note.id !== n.id),
+                              )
+                            }
+                            className="p-1 text-yellow-600 hover:bg-yellow-100 hover:text-yellow-800 rounded-md transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="text-yellow-800 w-full text-left text-sm leading-relaxed">
+                          {n.content}
+                        </div>
+                      </div>
+                    );
+                  })}
                   {notes.map((n, idx) => {
                     const dateStr = n.created_at
                       ? new Intl.DateTimeFormat("en-US", {

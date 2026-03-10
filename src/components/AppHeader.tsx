@@ -72,7 +72,7 @@ const handleLogout = async () => {
     : "U";
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-card px-4">
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-card px-2 sm:px-3">
       <div className="flex items-center gap-3">
         <SidebarTrigger className="text-foreground" />
         <div className="flex items-center gap-2">
@@ -84,7 +84,7 @@ const handleLogout = async () => {
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-muted">
+          <button className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-muted cursor-pointer">
             <Avatar className="h-8 w-8">
               <AvatarFallback className="bg-primary text-body-6 text-primary-foreground">
                 {initials}
@@ -93,10 +93,33 @@ const handleLogout = async () => {
             <span className="hidden text-body-5 sm:inline">{user?.name}</span>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={handleLogout} className="text-destructive">
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
+        <DropdownMenuContent align="end" className="w-72">
+          {/* User Info Section */}
+          <div className="px-3 py-3 border-b">
+            <div className="flex items-start gap-3 mb-2">
+              <Avatar className="h-10 w-10 flex-shrink-0">
+                <AvatarFallback className="bg-primary text-primary-foreground font-bold">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {user?.name}
+                </p>
+                <p className="text-xs text-muted-foreground break-words line-clamp-2">
+                  {user?.email}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Logout Button */}
+          <DropdownMenuItem 
+            onClick={handleLogout} 
+            className="text-destructive cursor-pointer flex items-center gap-2 mt-2"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Logout</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

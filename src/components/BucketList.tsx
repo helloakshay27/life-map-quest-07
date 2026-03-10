@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { List, LayoutGrid, Sparkles, Plus, Filter, Star } from "lucide-react";
+import { List, LayoutGrid, Sparkles, Plus, Filter, Star, Edit, Trash2 } from "lucide-react";
 import { AddDreamDialog } from "@/components/AddDreamDialog";
 import { toast } from "sonner";
 import { getAuthHeaders } from "@/config/api";
@@ -315,8 +315,34 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    // Optimistic UI update - remove from state immediately
+    const deletedItem = items.find((item) => item.id === id);
     setItems((prev) => prev.filter((item) => item.id !== id));
+
+    try {
+      const response = await fetch(
+        `https://life-api.lockated.com/dreams/${id}`,
+        {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete dream: ${response.status}`);
+      }
+
+      toast.success("Dream deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting dream:", error);
+      toast.error("Failed to delete dream. Please try again.");
+      
+      // Rollback: restore the deleted item if API call failed
+      if (deletedItem) {
+        setItems((prev) => [...prev, deletedItem]);
+      }
+    }
   };
 
   const filteredItems = items.filter(
@@ -495,8 +521,110 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
 
       {/* List View placeholder if needed */}
       {viewMode === "list" && (
-        <div className="flex-1 flex items-center justify-center text-gray-400 font-medium pb-20">
-          List view coming soon!
+        <div className="flex-1 flex flex-col">
+          {filteredItems.length > 0 ? (
+            <div className="overflow-x-auto border border-gray-200 rounded-lg">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      Dream Title
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      Category
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      Description
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredItems.map((item) => (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-8 h-8 rounded-md flex items-center justify-center text-white shadow-sm ${CATEGORY_COLORS[item.category] || "bg-gray-400"}`}
+                          >
+                            <Star className="w-4 h-4 fill-current" />
+                          </div>
+                          <p className="font-semibold text-gray-900 text-sm">
+                            {item.title}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="inline-block px-3 py-1 text-xs font-bold text-white rounded-full bg-gray-400"
+                          style={{
+                            backgroundColor:
+                              CATEGORY_COLORS[item.category] || "#9ca3af",
+                          }}
+                        >
+                          {item.category}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-block px-3 py-1 text-xs font-bold rounded-full ${
+                            item.progress === "Dreaming & Ideas"
+                              ? "bg-blue-100 text-blue-800"
+                              : item.progress === "Planning & Research"
+                                ? "bg-purple-100 text-purple-800"
+                                : item.progress === "In Progress"
+                                  ? "bg-orange-100 text-orange-800"
+                                  : "bg-teal-100 text-teal-800"
+                          }`}
+                        >
+                          {item.progress}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-sm text-gray-600 truncate max-w-xs">
+                          {item.description || "—"}
+                        </p>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <div className="flex justify-center gap-2">
+                          <AddDreamDialog
+                            initialData={item}
+                            onSave={handleSave}
+                            onDelete={handleDelete}
+                          >
+                            <button
+                              title="Edit dream"
+                              className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          </AddDreamDialog>
+                          <button
+                            onClick={() => handleDelete(item.id)}
+                            title="Delete dream"
+                            className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-gray-400 font-medium">
+              No dreams yet. Create your first dream!
+            </div>
+          )}
         </div>
       )}
     </div>
