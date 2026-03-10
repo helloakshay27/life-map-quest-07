@@ -255,193 +255,197 @@ const Todos = () => {
   const draggingTodo = dragState ? todos.find((t) => t.id === dragState.todoId) : null;
 
   return (
-    <div className="animate-fade-in space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <div className="relative w-full animate-fade-in space-y-8">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <button onClick={() => window.history.back()} className="flex items-center justify-center text-gray-600 hover:text-black transition-colors">
             <ArrowLeft className="h-5 w-5" strokeWidth={2.5} />
           </button>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-black">To Do's</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">Manage your tasks and action items</p>
+            <h1 className="text-3xl font-bold text-foreground">To Do's</h1>
+            <p className="text-sm text-muted-foreground">Manage your tasks and action items</p>
           </div>
         </div>
-        <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white w-full sm:w-auto" onClick={() => setIsCreateDialogOpen(true)}>
+        <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white w-full sm:w-auto px-4 py-2.5" onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />New To Do
         </Button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-          <Select value={selectedArea} onValueChange={setSelectedArea}>
-            <SelectTrigger className="w-full text-sm"><SelectValue placeholder="All Areas" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all-areas">All Areas</SelectItem>
-              {LIFE_AREAS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={selectedPriority} onValueChange={setSelectedPriority}>
-            <SelectTrigger className="w-full text-sm"><SelectValue placeholder="All Priorities" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all-priorities">All Priorities</SelectItem>
-              {PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-            <SelectTrigger className="w-full text-sm"><SelectValue placeholder="All Statuses" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all-statuses">All Statuses</SelectItem>
-              {statuses.map((s) => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
+      <div className="w-full min-h-[520px] flex flex-col bg-[#fafafa] rounded-2xl border border-gray-100 overflow-hidden">
+        {/* Filters */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 border-b border-gray-100 bg-white">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full sm:w-auto">
+            <Select value={selectedArea} onValueChange={setSelectedArea}>
+              <SelectTrigger className="w-full text-sm"><SelectValue placeholder="All Areas" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all-areas">All Areas</SelectItem>
+                {LIFE_AREAS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={selectedPriority} onValueChange={setSelectedPriority}>
+              <SelectTrigger className="w-full text-sm"><SelectValue placeholder="All Priorities" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all-priorities">All Priorities</SelectItem>
+                {PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger className="w-full text-sm"><SelectValue placeholder="All Statuses" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all-statuses">All Statuses</SelectItem>
+                {statuses.map((s) => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button variant={viewMode === "list" ? "default" : "outline"} size="sm" onClick={() => setViewMode("list")} className="flex-1 sm:flex-none text-xs sm:text-sm">
+              <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />List
+            </Button>
+            <Button variant={viewMode === "kanban" ? "default" : "outline"} size="sm" onClick={() => setViewMode("kanban")} className="flex-1 sm:flex-none text-xs sm:text-sm">
+              Kanban
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <Button variant={viewMode === "list" ? "default" : "outline"} size="sm" onClick={() => setViewMode("list")} className="flex-1 sm:flex-none text-xs sm:text-sm">
-            <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />List
-          </Button>
-          <Button variant={viewMode === "kanban" ? "default" : "outline"} size="sm" onClick={() => setViewMode("kanban")} className="flex-1 sm:flex-none text-xs sm:text-sm">
-            Kanban
-          </Button>
-        </div>
-      </div>
 
-      {/* Kanban View */}
-      {viewMode === "kanban" && (
-        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {statuses.map((status) => {
-            const statusTodos = getTodosByStatus(status.key);
-            const isHovered = hoveredStatus === status.key && dragState?.isDragging;
+        <div className="p-4 sm:p-6 min-h-[420px]">
+          {/* Kanban View */}
+          {viewMode === "kanban" && (
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {statuses.map((status) => {
+                const statusTodos = getTodosByStatus(status.key);
+                const isHovered = hoveredStatus === status.key && dragState?.isDragging;
 
-            return (
-              <div key={status.key} className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-foreground text-sm sm:text-base">{status.label}</h3>
-                  <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs sm:text-sm font-medium text-gray-700">
-                    {statusTodos.length}
-                  </span>
-                </div>
-
-                {/* Drop Column */}
-                <div
-                  ref={(el) => { columnRefs.current[status.key] = el; }}
-                  className={`
-                    min-h-64 sm:min-h-80 lg:min-h-96 rounded-lg border-2 border-dashed p-3 sm:p-4
-                    transition-all duration-150
-                    ${isHovered ? status.hoverColor : status.color}
-                    ${dragState?.isDragging && !isHovered ? "opacity-70" : ""}
-                  `}
-                >
-                  {/* Animated drop indicator */}
-                  {isHovered && (
-                    <div className="mb-3 rounded-lg border-2 border-dashed border-gray-400 bg-white/70 h-14 flex items-center justify-center gap-2">
-                      <div className="w-1.5 h-5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <div className="w-1.5 h-7 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "80ms" }} />
-                      <div className="w-1.5 h-4 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "160ms" }} />
-                      <span className="text-xs text-gray-500 font-semibold ml-1">Drop here</span>
+                return (
+                  <div key={status.key} className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-foreground text-sm sm:text-base">{status.label}</h3>
+                      <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs sm:text-sm font-medium text-gray-700">
+                        {statusTodos.length}
+                      </span>
                     </div>
-                  )}
 
-                  {statusTodos.length === 0 && !isHovered ? (
-                    <div className="flex h-full min-h-48 sm:min-h-56 flex-col items-center justify-center">
-                      <svg className="mb-3 h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground/30 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <circle cx="12" cy="12" r="2" fill="currentColor" />
-                        <circle cx="12" cy="12" r="6" fill="none" />
-                        <circle cx="12" cy="12" r="10" fill="none" />
-                      </svg>
-                      <p className="text-center text-xs sm:text-sm text-muted-foreground">No tasks</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 sm:space-y-3">
-                      {statusTodos.map((todo) => {
-                        const isBeingDragged = dragState?.todoId === todo.id && dragState?.isDragging;
-                        return (
-                          <Card
-                            key={todo.id}
-                            onPointerDown={(e) => handlePointerDown(e, todo.id)}
-                            onPointerMove={handlePointerMove}
-                            onPointerUp={handlePointerUp}
-                            onPointerCancel={handlePointerCancel}
-                            className={`
-                              bg-white p-2 sm:p-3 shadow-sm select-none touch-none
-                              transition-all duration-150
-                              ${isBeingDragged
-                                ? "opacity-25 scale-95 shadow-none"
-                                : "cursor-grab hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5 active:cursor-grabbing"
-                              }
-                            `}
-                          >
-                            <div className="space-y-2">
-                              <div className="flex items-start justify-between gap-2">
-                                <GripVertical className="h-4 w-4 text-muted-foreground/40 flex-shrink-0 mt-0.5" />
-                                <p className="text-sm sm:text-base font-medium text-foreground flex-1 line-clamp-2">{todo.title}</p>
-                                <button
-                                  onPointerDown={(e) => e.stopPropagation()}
-                                  onClick={() => handleDeleteTodo(todo.id)}
-                                  className="text-muted-foreground hover:text-red-500 transition-colors flex-shrink-0"
-                                >
-                                  <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />
-                                </button>
-                              </div>
-                              <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1">{todo.description}</p>
-                              <div className="flex flex-wrap gap-1 sm:gap-2 mt-2">
-                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{todo.lifeArea}</span>
-                                <span className={`text-xs font-medium px-2 py-1 rounded ${getPriorityColor(todo.priority)}`}>{todo.priority}</span>
-                                <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">{todo.status}</span>
-                              </div>
-                            </div>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                    {/* Drop Column */}
+                    <div
+                      ref={(el) => { columnRefs.current[status.key] = el; }}
+                      className={`
+                        min-h-64 sm:min-h-80 lg:min-h-96 rounded-lg border-2 border-dashed p-3 sm:p-4
+                        transition-all duration-150
+                        ${isHovered ? status.hoverColor : status.color}
+                        ${dragState?.isDragging && !isHovered ? "opacity-70" : ""}
+                      `}
+                    >
+                      {/* Animated drop indicator */}
+                      {isHovered && (
+                        <div className="mb-3 rounded-lg border-2 border-dashed border-gray-400 bg-white/70 h-14 flex items-center justify-center gap-2">
+                          <div className="w-1.5 h-5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                          <div className="w-1.5 h-7 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "80ms" }} />
+                          <div className="w-1.5 h-4 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "160ms" }} />
+                          <span className="text-xs text-gray-500 font-semibold ml-1">Drop here</span>
+                        </div>
+                      )}
 
-      {/* List View */}
-      {viewMode === "list" && (
-        <div className="space-y-3">
-          {filteredTodos.length === 0 ? (
-            <Card className="p-6 sm:p-8 text-center">
-              <p className="text-muted-foreground">No tasks match your filters</p>
-            </Card>
-          ) : (
-            <div className="grid gap-3 sm:gap-4">
-              {filteredTodos.map((todo) => (
-                <Card key={todo.id} className="p-3 sm:p-4 hover:shadow-md transition-shadow">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-foreground text-sm sm:text-base line-clamp-1">{todo.title}</h3>
-                      <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mt-1">{todo.description}</p>
-                      <div className="flex flex-wrap gap-1 sm:gap-2 mt-2">
-                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{todo.lifeArea}</span>
-                        <span className={`text-xs font-medium px-2 py-1 rounded ${getPriorityColor(todo.priority)}`}>{todo.priority}</span>
-                        <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">{todo.status}</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Select value={todo.status} onValueChange={(value) => handleUpdateStatus(todo.id, value)}>
-                        <SelectTrigger className="w-24 sm:w-32 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {statuses.map((s) => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeleteTodo(todo.id)} className="flex-shrink-0">
-                        <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />
-                      </Button>
+                      {statusTodos.length === 0 && !isHovered ? (
+                        <div className="flex h-full min-h-48 sm:min-h-56 flex-col items-center justify-center">
+                          <svg className="mb-3 h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground/30 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                            <circle cx="12" cy="12" r="2" fill="currentColor" />
+                            <circle cx="12" cy="12" r="6" fill="none" />
+                            <circle cx="12" cy="12" r="10" fill="none" />
+                          </svg>
+                          <p className="text-center text-xs sm:text-sm text-muted-foreground">No tasks</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 sm:space-y-3">
+                          {statusTodos.map((todo) => {
+                            const isBeingDragged = dragState?.todoId === todo.id && dragState?.isDragging;
+                            return (
+                              <Card
+                                key={todo.id}
+                                onPointerDown={(e) => handlePointerDown(e, todo.id)}
+                                onPointerMove={handlePointerMove}
+                                onPointerUp={handlePointerUp}
+                                onPointerCancel={handlePointerCancel}
+                                className={`
+                                  bg-white p-2 sm:p-3 shadow-sm select-none touch-none
+                                  transition-all duration-150
+                                  ${isBeingDragged
+                                    ? "opacity-25 scale-95 shadow-none"
+                                    : "cursor-grab hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5 active:cursor-grabbing"
+                                  }
+                                `}
+                              >
+                                <div className="space-y-2">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <GripVertical className="h-4 w-4 text-muted-foreground/40 flex-shrink-0 mt-0.5" />
+                                    <p className="text-sm sm:text-base font-medium text-foreground flex-1 line-clamp-2">{todo.title}</p>
+                                    <button
+                                      onPointerDown={(e) => e.stopPropagation()}
+                                      onClick={() => handleDeleteTodo(todo.id)}
+                                      className="text-muted-foreground hover:text-red-500 transition-colors flex-shrink-0"
+                                    >
+                                      <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />
+                                    </button>
+                                  </div>
+                                  <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1">{todo.description}</p>
+                                  <div className="flex flex-wrap gap-1 sm:gap-2 mt-2">
+                                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{todo.lifeArea}</span>
+                                    <span className={`text-xs font-medium px-2 py-1 rounded ${getPriorityColor(todo.priority)}`}>{todo.priority}</span>
+                                    <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">{todo.status}</span>
+                                  </div>
+                                </div>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* List View */}
+          {viewMode === "list" && (
+            <div className="space-y-3">
+              {filteredTodos.length === 0 ? (
+                <Card className="p-6 sm:p-8 text-center">
+                  <p className="text-muted-foreground">No tasks match your filters</p>
                 </Card>
-              ))}
+              ) : (
+                <div className="grid gap-3 sm:gap-4">
+                  {filteredTodos.map((todo) => (
+                    <Card key={todo.id} className="p-3 sm:p-4 hover:shadow-md transition-shadow">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-foreground text-sm sm:text-base line-clamp-1">{todo.title}</h3>
+                          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mt-1">{todo.description}</p>
+                          <div className="flex flex-wrap gap-1 sm:gap-2 mt-2">
+                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{todo.lifeArea}</span>
+                            <span className={`text-xs font-medium px-2 py-1 rounded ${getPriorityColor(todo.priority)}`}>{todo.priority}</span>
+                            <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">{todo.status}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Select value={todo.status} onValueChange={(value) => handleUpdateStatus(todo.id, value)}>
+                            <SelectTrigger className="w-24 sm:w-32 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {statuses.map((s) => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteTodo(todo.id)} className="flex-shrink-0">
+                            <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
+      </div>
 
       {/* Floating Ghost Card while dragging */}
       {dragState?.isDragging && draggingTodo && (

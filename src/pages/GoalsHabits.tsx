@@ -7,6 +7,8 @@ import {
   Clock,
   MapPin,
   Target,
+  Columns3,
+  LayoutGrid,
   Link as LinkIcon,
   Loader2,
 } from "lucide-react";
@@ -560,7 +562,14 @@ const GoalsHabits = () => {
 
   const handlePointerDown = (e: React.PointerEvent, goalId: string) => {
     if (e.button !== 0) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
+    e.preventDefault();
+    if ((e.currentTarget as HTMLElement).setPointerCapture) {
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        // no-op: some environments can fail to capture pointer
+      }
+    }
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setDragState({ goalId, startX: e.clientX, startY: e.clientY, currentX: e.clientX, currentY: e.clientY, cardWidth: r.width, cardHeight: r.height, isDragging: false });
   };
@@ -592,6 +601,52 @@ const GoalsHabits = () => {
     document.body.style.cursor = ""; document.body.style.userSelect = "";
   }, []);
 
+  useEffect(() => {
+    if (!dragState) return;
+
+    const onWindowPointerMove = (e: PointerEvent) => {
+      const dist = Math.sqrt((e.clientX - dragState.startX) ** 2 + (e.clientY - dragState.startY) ** 2);
+      if (dist > 6 || dragState.isDragging) {
+        setDragState((p) => p ? { ...p, currentX: e.clientX, currentY: e.clientY, isDragging: true } : null);
+        setHoveredStatus(getHoveredColumn(e.clientX, e.clientY));
+        document.body.style.cursor = "grabbing";
+        document.body.style.userSelect = "none";
+      }
+    };
+
+    const onWindowPointerUp = (e: PointerEvent) => {
+      if (!dragState) return;
+      if (dragState.isDragging) {
+        const target = getHoveredColumn(e.clientX, e.clientY);
+        const goal = goals.find((g) => g.id === dragState.goalId);
+        if (target && goal && goal.status !== target) {
+          handleUpdateGoalStatus(dragState.goalId, target);
+        }
+      }
+      setDragState(null);
+      setHoveredStatus(null);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    const onWindowPointerCancel = () => {
+      setDragState(null);
+      setHoveredStatus(null);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    window.addEventListener("pointermove", onWindowPointerMove);
+    window.addEventListener("pointerup", onWindowPointerUp);
+    window.addEventListener("pointercancel", onWindowPointerCancel);
+
+    return () => {
+      window.removeEventListener("pointermove", onWindowPointerMove);
+      window.removeEventListener("pointerup", onWindowPointerUp);
+      window.removeEventListener("pointercancel", onWindowPointerCancel);
+    };
+  }, [dragState, getHoveredColumn, goals, handleUpdateGoalStatus]);
+
   const ghostStyle = dragState?.isDragging
     ? { position: "fixed" as const, left: dragState.currentX - dragState.cardWidth / 2, top: dragState.currentY - dragState.cardHeight / 2, width: dragState.cardWidth, pointerEvents: "none" as const, zIndex: 9999, transform: "rotate(2deg) scale(1.04)", boxShadow: "0 25px 50px rgba(0,0,0,0.25)", transition: "none" }
     : undefined;
@@ -619,21 +674,21 @@ const GoalsHabits = () => {
 
   // ─── RENDER ───────────────────────────────────────────────────────────────
   return (
-    <div className="animate-fade-in space-y-4 sm:space-y-6 relative min-h-screen pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <div className="relative w-full animate-fade-in space-y-8">
       <div>
-        <h1 className="text-2xl sm:text-3xl text-foreground">Goals & Habits</h1>
+        <h1 className="text-3xl font-bold text-foreground">Goals & Habits</h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-1">Transform beliefs and achieve your aspirations</p>
       </div>
 
-      <Card className="border-l-4 border-blue-400 bg-blue-50 p-3 sm:p-4">
-        <p className="text-sm text-foreground">
+      <Card className="border-l-4 border-blue-400 bg-blue-50 p-4">
+        <p className="text-sm text-foreground leading-relaxed">
           <strong>Setting SMART Goals:</strong> Create Specific, Measurable, Achievable, Relevant, and Time-bound goals. Break big goals into smaller milestones.
         </p>
       </Card>
 
-      <Tabs defaultValue="goals" className="space-y-4" onValueChange={setActiveTab}>
+      <Tabs defaultValue="goals" className="space-y-5" onValueChange={setActiveTab}>
         <div className="overflow-x-auto">
-          <TabsList className="grid w-full min-w-[280px] grid-cols-4">
+          <TabsList className="grid w-full max-w-md min-w-[280px] grid-cols-4">
             <TabsTrigger value="goals" className="text-xs sm:text-sm">Goals</TabsTrigger>
             <TabsTrigger value="beliefs" className="text-xs sm:text-sm">Beliefs</TabsTrigger>
             <TabsTrigger value="affirmations" className="text-xs sm:text-sm">Affirmations</TabsTrigger>
@@ -642,7 +697,7 @@ const GoalsHabits = () => {
         </div>
 
         {/* ── GOALS ── */}
-        <TabsContent value="goals" className="space-y-4">
+        <TabsContent value="goals" className="space-y-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Select value={selectedArea} onValueChange={setSelectedArea}>
               <SelectTrigger className="w-full sm:w-48 text-sm"><SelectValue placeholder="Select area" /></SelectTrigger>
@@ -656,8 +711,12 @@ const GoalsHabits = () => {
               </SelectContent>
             </Select>
             <div className="flex items-center gap-1 sm:gap-2">
-              <Button variant={viewMode === "kanban" ? "default" : "outline"} size="sm" className="flex-1 sm:flex-none text-xs sm:text-sm" onClick={() => setViewMode("kanban")}>Kanban</Button>
-              <Button variant={viewMode === "grid" ? "default" : "outline"} size="sm" className="flex-1 sm:flex-none text-xs sm:text-sm" onClick={() => setViewMode("grid")}>Grid</Button>
+              <Button variant={viewMode === "kanban" ? "default" : "outline"} size="sm" className="flex-1 sm:flex-none text-xs sm:text-sm" onClick={() => setViewMode("kanban")}>
+                <Columns3 className="h-3.5 w-3.5 mr-1.5" /> Kanban
+              </Button>
+              <Button variant={viewMode === "grid" ? "default" : "outline"} size="sm" className="flex-1 sm:flex-none text-xs sm:text-sm" onClick={() => setViewMode("grid")}>
+                <LayoutGrid className="h-3.5 w-3.5 mr-1.5" /> Grid
+              </Button>
               <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white flex-1 sm:flex-none text-xs sm:text-sm" onClick={() => setIsGoalDialogOpen(true)}>
                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" /> New Goal
               </Button>
@@ -671,14 +730,14 @@ const GoalsHabits = () => {
                 const isHovered = hoveredStatus === status.key && dragState?.isDragging;
                 return (
                   <div key={status.key} className="space-y-2">
-                    <div className={`flex items-center justify-between rounded-xl border ${status.border} ${status.bg} px-2 sm:px-3 py-2`}>
+                    <div className={`flex items-center justify-between rounded-xl border ${status.border} ${status.bg} px-3 py-2.5`}>
                       <div className="flex items-center gap-1 sm:gap-2">
                         <span className="text-sm">{status.icon}</span>
                         <h3 className="font-semibold text-foreground text-xs sm:text-sm">{status.label}</h3>
                       </div>
                       <span className="rounded-md bg-white border border-gray-200 px-1.5 py-0.5 text-xs font-medium text-gray-600">{cols.length}</span>
                     </div>
-                    <div ref={(el) => { columnRefs.current[status.key] = el; }} className={`min-h-56 sm:min-h-64 lg:min-h-80 rounded-xl border p-2 sm:p-3 lg:p-4 transition-all duration-150 ${isHovered ? `${status.hoverBg} ${status.hoverBorder} border-2 border-dashed shadow-lg scale-[1.015]` : `${status.bg} ${status.border} border`} ${dragState?.isDragging && !isHovered ? "opacity-70" : ""}`}>
+                    <div ref={(el) => { columnRefs.current[status.key] = el; }} className={`min-h-[420px] rounded-xl border p-3 sm:p-4 transition-all duration-150 ${isHovered ? `${status.hoverBg} ${status.hoverBorder} border-2 border-dashed shadow-lg scale-[1.015]` : `${status.bg} ${status.border} border`} ${dragState?.isDragging && !isHovered ? "opacity-70" : ""}`}>
                       {isHovered && (
                         <div className="mb-3 rounded-lg border-2 border-dashed border-gray-400 bg-white/70 h-14 flex items-center justify-center gap-2">
                           <div className="w-1.5 h-5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0ms" }} />
@@ -695,7 +754,7 @@ const GoalsHabits = () => {
                           </div>
                         )}
                         {cols.map((goal) => (
-                          <Card key={goal.id} onPointerDown={(e) => handlePointerDown(e, goal.id)} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerCancel} className={`p-3 sm:p-4 relative group cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${dragState?.goalId === goal.id ? "opacity-30 scale-95" : ""}`}>
+                          <Card key={goal.id} onPointerDown={(e) => handlePointerDown(e, goal.id)} className={`p-3 sm:p-4 relative group cursor-grab active:cursor-grabbing touch-none select-none hover:shadow-md transition-shadow ${dragState?.goalId === goal.id ? "opacity-30 scale-95" : ""}`}>
                             <p className="font-semibold text-sm sm:text-base text-foreground pr-8">{goal.title}</p>
                             <div className="mt-3">
                               <div className="flex items-center justify-between mb-1">
@@ -896,11 +955,11 @@ const GoalsHabits = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Sticky Footer */}
+      {/* Footer Action */}
       {currentFooter && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white px-3 py-2.5 flex items-center justify-center shadow-[0_-2px_10px_rgba(0,0,0,0.08)]">
-          <Button className={`w-full max-w-sm text-xs sm:text-sm font-semibold rounded-lg h-9 sm:h-10 ${currentFooter.className}`} onClick={currentFooter.onClick}>
-            {currentFooter.icon}
+        <div className="flex items-center justify-center pt-2 pb-1">
+          <Button className={`h-8 rounded-md px-4 text-xs sm:text-sm font-semibold shadow-sm ${currentFooter.className}`} onClick={currentFooter.onClick}>
+            <Plus className="h-3.5 w-3.5 mr-1.5 shrink-0" />
             <span className="truncate">{currentFooter.label}</span>
           </Button>
         </div>

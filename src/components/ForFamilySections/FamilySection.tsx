@@ -93,7 +93,7 @@ export default function FamilySection({
           <div className="bg-white border border-green-200 rounded-lg overflow-hidden">
             <button
               onClick={() => onToggleSection("children")}
-              className="w-full flex items-center justify-between p-4 hover:bg-green-50 transition-colors"
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex flex-col items-start text-left">
                 <h3 className="text-[16px] font-semibold text-green-900">Children</h3>
@@ -171,7 +171,7 @@ export default function FamilySection({
                 <Button 
                   variant="outline" 
                   onClick={onAddChild} 
-                  className="w-full border-dashed border-green-300 text-green-700 hover:bg-green-50"
+                  className="w-full border-dashed border-gray-300 text-gray-700 hover:bg-gray-50"
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add Child
                 </Button>
@@ -183,7 +183,7 @@ export default function FamilySection({
           <div className="bg-white border border-green-200 rounded-lg overflow-hidden">
             <button
               onClick={() => onToggleSection("grandchildren")}
-              className="w-full flex items-center justify-between p-4 hover:bg-green-50 transition-colors"
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex flex-col items-start text-left">
                 <h3 className="text-[16px] font-semibold text-green-900">Grandchildren</h3>
@@ -243,7 +243,7 @@ export default function FamilySection({
                 <Button 
                   variant="outline" 
                   onClick={onAddGrandchild} 
-                  className="w-full border-dashed border-green-300 text-green-700 hover:bg-green-50"
+                  className="w-full border-dashed border-gray-300 text-gray-700 hover:bg-gray-50"
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add Grandchild
                 </Button>
@@ -255,7 +255,7 @@ export default function FamilySection({
           <div className="bg-white border border-green-200 rounded-lg overflow-hidden">
             <button
               onClick={() => onToggleSection("husbandFamily")}
-              className="w-full flex items-center justify-between p-4 hover:bg-green-50 transition-colors"
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex flex-col items-start text-left">
                 <h3 className="text-[16px] font-semibold text-green-900">Husband's Family</h3>
@@ -315,7 +315,7 @@ export default function FamilySection({
                 <Button 
                   variant="outline" 
                   onClick={onAddHusbandSibling} 
-                  className="w-full border-dashed border-green-300 text-green-700 hover:bg-green-50"
+                  className="w-full border-dashed border-gray-300 text-gray-700 hover:bg-gray-50"
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add Family Member
                 </Button>
@@ -327,7 +327,7 @@ export default function FamilySection({
           <div className="bg-white border border-green-200 rounded-lg overflow-hidden">
             <button
               onClick={() => onToggleSection("wifeFamily")}
-              className="w-full flex items-center justify-between p-4 hover:bg-green-50 transition-colors"
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex flex-col items-start text-left">
                 <h3 className="text-[16px] font-semibold text-green-900">Wife's Family</h3>
@@ -387,7 +387,7 @@ export default function FamilySection({
                 <Button 
                   variant="outline" 
                   onClick={onAddWifeSibling} 
-                  className="w-full border-dashed border-green-300 text-green-700 hover:bg-green-50"
+                  className="w-full border-dashed border-gray-300 text-gray-700 hover:bg-gray-50"
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add Family Member
                 </Button>
@@ -399,7 +399,7 @@ export default function FamilySection({
           <div className="bg-white border border-green-200 rounded-lg overflow-hidden">
             <button
               onClick={() => onToggleSection("otherFamily")}
-              className="w-full flex items-center justify-between p-4 hover:bg-green-50 transition-colors"
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex flex-col items-start text-left">
                 <h3 className="text-[16px] font-semibold text-green-900">Other Family Members</h3>

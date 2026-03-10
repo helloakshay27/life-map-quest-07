@@ -93,7 +93,7 @@ export default function PersonalSection({
           <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
             <button
               onClick={() => onToggleSection("basicDetails")}
-              className="w-full flex items-center justify-between p-4 hover:bg-blue-50 transition-colors"
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex flex-col items-start text-left">
                 <h3 className="text-[16px] font-semibold text-blue-900">Basic Details</h3>
@@ -184,7 +184,7 @@ export default function PersonalSection({
           <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
             <button
               onClick={() => onToggleSection("currentAddress")}
-              className="w-full flex items-center justify-between p-4 hover:bg-blue-50 transition-colors"
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex flex-col items-start text-left">
                 <h3 className="text-[16px] font-semibold text-blue-900">Address Details</h3>
@@ -239,7 +239,7 @@ export default function PersonalSection({
           <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
             <button
               onClick={() => onToggleSection("personalDocuments")}
-              className="w-full flex items-center justify-between p-4 hover:bg-blue-50 transition-colors"
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex flex-col items-start text-left">
                 <h3 className="text-[16px] font-semibold text-blue-900">Personal Documents (Up to 5)</h3>
@@ -278,7 +278,7 @@ export default function PersonalSection({
           <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
             <button
               onClick={() => onToggleSection("spouseInfo")}
-              className="w-full flex items-center justify-between p-4 hover:bg-blue-50 transition-colors"
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex flex-col items-start text-left">
                 <h3 className="text-[16px] font-semibold text-blue-900">Spouse Information</h3>
@@ -405,7 +405,7 @@ export default function PersonalSection({
           <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
             <button
               onClick={() => onToggleSection("formerSpouseInfo")}
-              className="w-full flex items-center justify-between p-4 hover:bg-blue-50 transition-colors"
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex flex-col items-start text-left">
                 <h3 className="text-[16px] font-semibold text-blue-900">Former Spouse (if any)</h3>

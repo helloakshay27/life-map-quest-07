@@ -55,7 +55,7 @@ function SectionHeader({
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center justify-between p-4 hover:bg-purple-50 font-semibold text-purple-900"
+      className="w-full flex items-center justify-between p-4 hover:bg-gray-50 font-semibold text-purple-900"
     >
       <div className="text-left">
         <span>{title}</span>

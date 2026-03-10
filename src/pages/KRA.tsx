@@ -512,129 +512,118 @@ export default function KraSelfEvaluation() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 py-10 px-4 md:px-8 font-sans">
-      <div className="max-w-4xl mx-auto">
-        {/* Page Header */}
-        <div className="flex justify-between items-start mb-7">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center">
-                <LayoutDashboard className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-extrabold text-gray-900">
-                  KRA Self-Evaluation
-                </h1>
-                <p className="text-sm text-gray-500 mt-0.5">
-                  Assess your performance across key result areas
-                </p>
-              </div>
-            </div>
-          </div>
+    <div className="relative w-full animate-fade-in space-y-8">
+      {/* HEADER */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">KRA Self-Evaluation</h1>
+          <p className="text-sm text-muted-foreground">
+            Assess your performance across key result areas
+          </p>
         </div>
+      </div>
 
-        {/* Tabs */}
-        <div className="flex bg-gray-200/50 p-1 rounded-xl mb-5">
-          {["MD", "Team"].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-                activeTab === tab
-                  ? "bg-white shadow-sm text-purple-600"
-                  : "text-gray-400 hover:text-gray-600"
-              }`}
-            >
-              {tab === "MD" ? "MD's Evaluation" : "Team's Evaluation"}
-            </button>
-          ))}
-        </div>
-
-        {/* Content */}
-        <div
-          style={{
-            background: "rgba(237,233,254,0.3)",
-            borderRadius: 16,
-            border: "1px solid rgba(167,139,250,0.2)",
-            padding: 16,
-            display: "flex",
-            flexDirection: "column",
-            gap: 16,
-          }}
-        >
-          <ScoreCard data={scoreData} />
-
-          {/* Questions Form */}
-          <QuestionsAndAnswers
-            header={
-              activeTab === "MD"
-                ? "MD/Owner Self-Evaluation"
-                : "Team Self-Evaluation"
-            }
-            questions={questions}
-            onScoreChange={handleScoreChange}
-            notes={notes}
-            setNotes={setNotes}
-            onSubmit={handleSubmit}
-            isSubmitting={isSubmitting}
-          />
-        </div>
-
-        {/* History Table */}
-        {evaluations.length > 0 && (
-          <div
-            style={{ marginTop: 32 }}
-            className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
+      {/* Tabs */}
+      <div className="flex bg-gray-200/50 p-1 rounded-xl mb-5">
+        {["MD", "Team"].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+              activeTab === tab
+                ? "bg-white shadow-sm text-purple-600"
+                : "text-gray-400 hover:text-gray-600"
+            }`}
           >
-            <h2
-              style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}
-              className="text-gray-900"
-            >
-              Previous {evaluationType === "md" ? "MD" : "Team"} Evaluations
-            </h2>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="whitespace-nowrap">Date</TableHead>
-                    <TableHead>Notes</TableHead>
+            {tab === "MD" ? "MD's Evaluation" : "Team's Evaluation"}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div
+        style={{
+          background: "rgba(237,233,254,0.3)",
+          borderRadius: 16,
+          border: "1px solid rgba(167,139,250,0.2)",
+          padding: 16,
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+        }}
+      >
+        <ScoreCard data={scoreData} />
+
+        {/* Questions Form */}
+        <QuestionsAndAnswers
+          header={
+            activeTab === "MD"
+              ? "MD/Owner Self-Evaluation"
+              : "Team Self-Evaluation"
+          }
+          questions={questions}
+          onScoreChange={handleScoreChange}
+          notes={notes}
+          setNotes={setNotes}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+        />
+      </div>
+
+      {/* History Table */}
+      {evaluations.length > 0 && (
+        <div
+          style={{ marginTop: 32 }}
+          className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
+        >
+          <h2
+            style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}
+            className="text-gray-900"
+          >
+            Previous {evaluationType === "md" ? "MD" : "Team"} Evaluations
+          </h2>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="whitespace-nowrap">Date</TableHead>
+                  <TableHead>Notes</TableHead>
+                  {questions.map((q) => (
+                    <TableHead key={q.key} className="min-w-[150px]">
+                      {q.title}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[...evaluations].reverse().map((ev, idx) => (
+                  <TableRow key={ev.id ?? idx}>
+                    <TableCell className="font-medium">
+                      {ev.evaluation_date
+                        ? new Date(ev.evaluation_date).toLocaleDateString()
+                        : ev.date || "-"}
+                    </TableCell>
+                    <TableCell
+                      className="text-gray-600 max-w-[200px] truncate"
+                      title={ev.notes}
+                    >
+                      {ev.notes || "-"}
+                    </TableCell>
                     {questions.map((q) => (
-                      <TableHead key={q.key} className="min-w-[150px]">
-                        {q.title}
-                      </TableHead>
+                      <TableCell
+                        key={q.key}
+                        className="text-center font-semibold text-purple-600"
+                      >
+                        {ev.scores && q.key ? ev.scores[q.key] : "-"}
+                      </TableCell>
                     ))}
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {[...evaluations].reverse().map((ev, idx) => (
-                    <TableRow key={ev.id ?? idx}>
-                      <TableCell className="font-medium">
-                        {ev.evaluation_date
-                          ? new Date(ev.evaluation_date).toLocaleDateString()
-                          : ev.date || "-"}
-                      </TableCell>
-                      <TableCell
-                        className="text-gray-600 max-w-[200px] truncate"
-                        title={ev.notes}
-                      >
-                        {ev.notes || "-"}
-                      </TableCell>
-                      {questions.map((q) => (
-                        <TableCell
-                          key={q.key}
-                          className="text-center font-semibold text-purple-600"
-                        >
-                          {ev.scores && q.key ? ev.scores[q.key] : "-"}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                ))}
+              </TableBody>
+            </Table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
