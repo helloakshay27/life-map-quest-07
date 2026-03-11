@@ -19,18 +19,24 @@ function MissionHabitsConnection({
   setHabitsText,
 }: MissionHabitsConnectionProps) {
   return (
-    <div className="w-full max-w-4xl p-6 md:p-8 rounded-2xl border border-purple-100 bg-gradient-to-br from-[#fcfaff] to-white shadow-sm font-sans">
-      {/* HEADER */}
-      <div className="flex items-center gap-3 mb-8">
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#9b51e0] shadow-sm">
-          <TrendingUp className="text-white w-5 h-5" strokeWidth={2.5} />
+    <div className="w-full font-sans">
+      {/* Purple Header */}
+      <div className="px-6 pt-5 pb-4 border-b border-purple-100 bg-white">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#9b51e0] shadow-sm shrink-0">
+            <TrendingUp className="text-white w-5 h-5" strokeWidth={2.5} />
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-[17px] font-bold text-gray-900">Mission & Habits Connection</h2>
+              <Info className="w-4 h-4 text-gray-400 cursor-help" />
+            </div>
+            <p className="text-[13px] text-gray-500 mt-0.5">Align your week with your mission and values</p>
+          </div>
         </div>
-        <h2 className="text-xl font-bold text-gray-900">
-          Mission & Habits Connection
-        </h2>
       </div>
 
-      <div className="space-y-6">
+      <div className="p-6 md:p-8 space-y-6">
         {/* SECTION 1: CORE VALUE */}
         <section>
           <div className="flex items-center gap-1.5 mb-2">

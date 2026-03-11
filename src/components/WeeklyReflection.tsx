@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   Edit,
   Trash2,
+  BookOpen,
 } from "lucide-react";
 import { apiRequest } from "@/config/api";
 import { format, startOfWeek, endOfWeek } from "date-fns";
@@ -216,65 +217,79 @@ function WeeklyReflection() {
   // =========================================
   if (currentView === "list") {
     return (
-      <div className="max-w-5xl mx-auto p-6 md:p-8 font-sans space-y-6 bg-[#fdfbf9] min-h-screen">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Weekly Reflections
-          </h1>
-          <button
-            onClick={handleAddNew}
-            className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors"
-          >
-            <Plus className="w-4 h-4" /> New Reflection
-          </button>
+      <div className="font-sans">
+        {/* Orange Header */}
+        <div className="px-6 pt-5 pb-4 border-b border-orange-100 bg-white">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-orange-500 shadow-sm shrink-0">
+                <BookOpen className="w-5 h-5 text-white" strokeWidth={2} />
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <h2 className="text-[17px] font-bold text-gray-900">Review of Your Week</h2>
+                  <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                </div>
+                <p className="text-[13px] text-gray-500 mt-0.5">Reflect on wins, challenges, and insights</p>
+              </div>
+            </div>
+            <button
+              onClick={handleAddNew}
+              className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm shrink-0"
+            >
+              <Plus className="w-4 h-4" /> New Reflection
+            </button>
+          </div>
         </div>
 
-        {isLoadingList ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-          </div>
-        ) : journals.length === 0 ? (
-          <div className="text-center py-20 text-gray-500 border-2 border-dashed border-gray-200 rounded-xl">
-            No reflections found. Start writing your first one!
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {journals.map((journal: JournalEntry) => (
-              <div
-                key={journal.id}
-                className="bg-white border border-gray-200 p-5 rounded-xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
-              >
-                <div>
-                  <p className="text-sm text-gray-500 font-medium">
-                    {journal.start_date} to {journal.end_date}
-                  </p>
-                  <h3 className="text-lg font-bold text-gray-900 mt-1 line-clamp-1">
-                    {journal.gratitude_note || "Weekly Reflection"}
-                  </h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Alignment Score: {journal.alignment_score}/5
-                  </p>
+        <div className="p-6 space-y-4">
+          {isLoadingList ? (
+            <div className="flex justify-center py-16">
+              <Loader2 className="w-8 h-8 animate-spin text-orange-400" />
+            </div>
+          ) : journals.length === 0 ? (
+            <div className="text-center py-16 text-gray-500 border-2 border-dashed border-orange-200 rounded-xl bg-orange-50/30">
+              No reflections found. Start writing your first one!
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {journals.map((journal: JournalEntry) => (
+                <div
+                  key={journal.id}
+                  className="bg-white border-l-4 border-l-orange-400 border border-orange-100 p-5 rounded-xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
+                >
+                  <div>
+                    <p className="text-sm text-gray-500 font-medium">
+                      {journal.start_date} to {journal.end_date}
+                    </p>
+                    <h3 className="text-lg font-bold text-gray-900 mt-1 line-clamp-1">
+                      {journal.gratitude_note || "Weekly Reflection"}
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Alignment Score: {journal.alignment_score}/5
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleEdit(journal)}
+                      className="p-2 text-orange-600 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors"
+                      title="Edit"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(journal.id)}
+                      className="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleEdit(journal)}
-                    className="p-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                    title="Edit"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(journal.id)}
-                    className="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -283,21 +298,31 @@ function WeeklyReflection() {
   // RENDER: FORM VIEW (CREATE/EDIT)
   // =========================================
   return (
-    <div className="max-w-5xl mx-auto p-6 md:p-8 font-sans space-y-10 bg-[#fdfbf9] min-h-screen">
-      {/* Form Header with Back Button */}
-      <div className="flex items-center justify-between pb-4 border-b border-gray-200">
-        <button
-          onClick={() => setCurrentView("list")}
-          className="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to List
-        </button>
-        <h1 className="text-xl font-bold text-gray-900">
-          {currentJournalId
-            ? "Edit Weekly Reflection"
-            : "New Weekly Reflection"}
-        </h1>
+    <div className="font-sans">
+      {/* Orange Header */}
+      <div className="px-6 pt-5 pb-4 border-b border-orange-100 bg-white">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-orange-500 shadow-sm shrink-0">
+              <BookOpen className="w-5 h-5 text-white" strokeWidth={2} />
+            </div>
+            <div>
+              <h2 className="text-[17px] font-bold text-gray-900">
+                {currentJournalId ? "Edit Weekly Reflection" : "New Weekly Reflection"}
+              </h2>
+              <p className="text-[13px] text-gray-500 mt-0.5">Wins, challenges, gratitude & life balance</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setCurrentView("list")}
+            className="flex items-center gap-2 text-sm font-semibold text-orange-600 hover:text-orange-800 bg-orange-50 hover:bg-orange-100 px-3 py-2 rounded-lg transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back
+          </button>
+        </div>
       </div>
+
+      <div className="p-6 md:p-8 space-y-10">
 
       {/* 1. WINS OF PAST WEEK */}
       <section>
@@ -427,7 +452,7 @@ function WeeklyReflection() {
         <button
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="bg-gray-900 text-white px-8 py-3 rounded-xl font-semibold hover:bg-gray-800 transition-colors disabled:opacity-70 flex items-center gap-2"
+          className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-xl font-semibold transition-colors disabled:opacity-70 flex items-center gap-2"
         >
           {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
           {isSubmitting
@@ -437,6 +462,7 @@ function WeeklyReflection() {
               : "Save Reflection"}
         </button>
       </section>
+      </div>
     </div>
   );
 }

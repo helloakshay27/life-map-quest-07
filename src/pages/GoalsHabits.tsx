@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Plus,
   Heart,
@@ -77,6 +78,8 @@ const DelBtn = ({ onClick, disabled }: { onClick: () => void; disabled?: boolean
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 const GoalsHabits = () => {
   const { toast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [selectedArea, setSelectedArea] = useState("all-areas");
   const [viewMode, setViewMode] = useState<"kanban" | "grid">("kanban");
   const [activeTab, setActiveTab] = useState("goals");
@@ -153,6 +156,14 @@ const GoalsHabits = () => {
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [hoveredStatus, setHoveredStatus] = useState<string | null>(null);
   const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    if (location.state?.openGoalDialog) {
+      setActiveTab("goals");
+      setIsGoalDialogOpen(true);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.pathname, location.state, navigate]);
 
   const save = <T,>(key: string, items: T[]) => localStorage.setItem(key, JSON.stringify(items));
 

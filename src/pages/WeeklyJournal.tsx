@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import {
-  ArrowLeft,
   HelpCircle,
   Loader2,
   Lightbulb,
@@ -68,6 +67,7 @@ const WeeklyJournal = () => {
     alignment_score: number | null;
     affirmation: string | null;
     priorities: string[] | null;
+    gratitude_note?: string | null;
     data?: {
       key_insight?: string;
       weekly_story?: string;
@@ -294,50 +294,44 @@ const WeeklyJournal = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#fdfbf9] animate-fade-in font-sans relative pb-24">
-      <div className="py-8 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
-        {/* Header Area */}
-        <div className="mb-8 flex items-start justify-between">
-          <div className="flex items-center gap-5">
-            <button
-              onClick={() => navigate(-1)}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm hover:bg-gray-50 hover:shadow-md transition-all duration-200"
-            >
-              <ArrowLeft className="h-5 w-5 text-gray-700" />
-            </button>
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
-                Weekly Journal
-              </h1>
-              <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">
-                Strategic review and planning
-              </p>
-            </div>
+    <div className="relative w-full animate-fade-in space-y-6">
+        {/* HEADER */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Weekly Journal</h1>
+            <p className="text-sm text-muted-foreground">Strategic review and planning</p>
           </div>
-
-          <button className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-gray-900 bg-white/50 px-3 py-1.5 rounded-lg border border-transparent hover:border-gray-200 transition-all mt-2">
-            <HelpCircle className="h-4 w-4" /> Help
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate("/help")}
+              className="flex items-center gap-2 rounded-md border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted"
+              title="Help"
+            >
+              <HelpCircle className="h-4 w-4" />
+              Help?
+            </button>
+          </div>
         </div>
+      <div className="w-full">
 
         {/* Tabs Area */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-10 w-full p-1.5 bg-gray-100/80 border border-gray-200/60 rounded-xl h-auto shadow-inner flex">
+          <TabsList className="mb-6 w-full p-1 bg-gray-100 border border-gray-200 rounded-xl h-auto shadow-inner flex">
             <TabsTrigger
               value="new"
-              className="flex-1 py-2.5 rounded-lg text-sm font-bold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all text-gray-500 tracking-wide"
+              className="flex-1 py-2.5 rounded-lg text-sm font-bold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all text-gray-500"
             >
               New
             </TabsTrigger>
             <TabsTrigger
               value="past"
-              className="flex-1 py-2.5 rounded-lg text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all text-gray-500 tracking-wide"
+              className="flex-1 py-2.5 rounded-lg text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all text-gray-500"
             >
               Past ({pastJournals.length})
             </TabsTrigger>
             <TabsTrigger
               value="insights"
-              className="flex-1 py-2.5 rounded-lg text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all text-gray-500 tracking-wide"
+              className="flex-1 py-2.5 rounded-lg text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all text-gray-500"
             >
               Insights
             </TabsTrigger>
@@ -345,25 +339,23 @@ const WeeklyJournal = () => {
 
           {/* NEW TAB CONTENT */}
           <TabsContent value="new" className="focus:outline-none">
-            <div className="flex flex-col w-full space-y-12">
-              <WeekStrip
-                selectedDate={currentDate}
-                onDateChange={(newDate) => setCurrentDate(newDate)}
-                filledDates={myFilledDates}
-              />
-              <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
-                <WeeklyReflection
-                  challenge={challenge}
-                  setChallenge={setChallenge}
-                  gratitude={gratitude}
-                  setGratitude={setGratitude}
-                  insight={insight}
-                  setInsight={setInsight}
-                  balanceRating={balanceRating}
-                  setBalanceRating={setBalanceRating}
+            <div className="flex flex-col w-full gap-6">
+              {/* Week Strip */}
+              <div className="bg-blue-50/30 border-2 border-blue-200 rounded-2xl p-6">
+                <WeekStrip
+                  selectedDate={currentDate}
+                  onDateChange={(newDate) => setCurrentDate(newDate)}
+                  filledDates={myFilledDates}
                 />
               </div>
-              <div className="w-full flex justify-center animate-in fade-in slide-in-from-bottom-4 duration-1000">
+
+              {/* Weekly Reflection */}
+              <div className="border-2 border-orange-300 bg-orange-50/20 rounded-2xl overflow-hidden">
+                <WeeklyReflection />
+              </div>
+
+              {/* Mission & Habits Connection */}
+              <div className="border-2 border-purple-300 bg-purple-50/20 rounded-2xl overflow-hidden">
                 <MissionHabitsConnection
                   coreValue={coreValue}
                   setCoreValue={setCoreValue}
@@ -373,10 +365,26 @@ const WeeklyJournal = () => {
                   setHabitsText={setHabitsText}
                 />
               </div>
-              <WeeklyPlanComponent />
-              <FocusAndBoundaries />
-              <ReviewToDos />
-              <BucketListProgress />
+
+              {/* Weekly Plan */}
+              <div className="border-2 border-red-300 bg-red-50/20 rounded-2xl overflow-hidden">
+                <WeeklyPlanComponent />
+              </div>
+
+              {/* Focus & Boundaries */}
+              <div className="border-2 border-violet-300 bg-violet-50/20 rounded-2xl overflow-hidden">
+                <FocusAndBoundaries />
+              </div>
+
+              {/* Review ToDos */}
+              <div className="border-2 border-indigo-300 bg-indigo-50/20 rounded-2xl overflow-hidden">
+                <ReviewToDos />
+              </div>
+
+              {/* Bucket List Progress */}
+              <div className="rounded-2xl overflow-hidden">
+                <BucketListProgress />
+              </div>
             </div>
           </TabsContent>
 
@@ -384,23 +392,22 @@ const WeeklyJournal = () => {
           <TabsContent value="past" className="focus:outline-none">
             {isLoadingPast ? (
               <div className="py-20 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
-                <p className="text-gray-500 font-medium">
-                  Loading past entries...
-                </p>
+                <div className="flex items-center justify-center gap-3">
+                  <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                  <p className="text-gray-500 font-medium">Loading past entries...</p>
+                </div>
               </div>
             ) : pastJournals.length === 0 ? (
               <div className="py-20 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
-                <p className="text-gray-500 font-medium">
-                  No past entries yet.
-                </p>
+                <p className="text-gray-500 font-medium">No past entries yet.</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4">
                 {pastJournals.map((journal) => (
                   <div
                     key={journal.id}
                     onClick={() => fetchPastJournalById(journal.id)}
-                    className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 transition-all text-left cursor-pointer hover:border-gray-300 hover:shadow-md"
+                    className="p-6 bg-white rounded-2xl shadow-sm border border-gray-100 transition-all text-left cursor-pointer hover:border-gray-300 hover:shadow-md"
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div>
@@ -607,39 +614,6 @@ const WeeklyJournal = () => {
         </Tabs>
       </div>
 
-      {/* FOOTER (Normal Flow, Not Fixed) */}
-      <div className="bg-white/80 backdrop-blur-md border-t border-gray-200 p-4 shadow-[0_-4px_10px_rgba(0,0,0,0.02)] mt-8">
-        <div className="max-w-5xl mx-auto flex items-center justify-end gap-3 px-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="px-6 py-2.5 rounded-lg border border-gray-300 bg-white text-[#0f4c81] font-semibold text-[15px] hover:bg-gray-50 transition-colors shadow-sm"
-          >
-            Cancel
-          </button>
-
-          <button
-            onClick={handleSavePlan}
-            disabled={isSaving}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#c69cf4] hover:bg-[#b58ce3] text-white font-bold text-[15px] transition-colors shadow-sm disabled:opacity-50"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              strokeWidth="2.5"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-              />
-            </svg>
-            {isSaving ? "Saving..." : "Save Plan"}
-          </button>
-        </div>
-      </div>
-
       {/* Detail Dialog */}
       <Dialog open={isJournalModalOpen} onOpenChange={setIsJournalModalOpen}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
@@ -770,6 +744,34 @@ const WeeklyJournal = () => {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      {/* STICKY FOOTER - Save / Cancel */}
+      <div className="sticky bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+        <div className="flex items-center gap-3 px-6 py-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="px-6 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors shadow-sm"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSavePlan}
+            disabled={isSaving}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-bold text-sm transition-colors shadow-sm disabled:opacity-50"
+          >
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+              </svg>
+            )}
+            {isSaving
+              ? "Saving..."
+              : `Save Plan WK#${format(startOfWeek(currentDate, { weekStartsOn: 0 }), "ww")} ${format(startOfWeek(currentDate, { weekStartsOn: 0 }), "MMM d")}-${format(endOfWeek(currentDate, { weekStartsOn: 0 }), "d")}`}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
