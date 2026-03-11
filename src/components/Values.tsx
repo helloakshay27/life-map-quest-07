@@ -167,7 +167,7 @@ function Values() {
         core_value: {
           name: formData.name,
           description: formData.meaning, 
-          priority: parseInt(formData.priority),
+          priority: Number(formData.priority),
           color: formData.color
         }
       };
@@ -275,7 +275,7 @@ function Values() {
           
           <button
             onClick={openAddModal}
-            className="bg-[#f97316] hover:bg-[#ea580c] text-white px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors shadow-sm self-start sm:self-auto"
+            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors shadow-sm self-start sm:self-auto"
           >
             <Plus size={18} />
             Add Value
@@ -440,14 +440,14 @@ function Values() {
                 <button
                   onClick={closeModal}
                   disabled={isSaving}
-                  className="text-gray-500 hover:text-gray-700 text-sm font-medium px-4 py-2 disabled:opacity-50"
+                  className="text-red-500 hover:text-red-700 text-sm font-medium px-4 py-2 disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveValue}
                   disabled={isSaving || isFetchingDetails}
-                  className="bg-[#f97316] hover:bg-[#ea580c] text-white px-5 py-2 rounded-md font-medium text-sm transition-colors shadow-sm disabled:opacity-70 flex items-center gap-2"
+                  className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-md font-medium text-sm transition-colors shadow-sm disabled:opacity-70 flex items-center gap-2"
                 >
                   {isSaving ? "Saving..." : (modalMode === "add" ? "Create" : "Update")}
                 </button>

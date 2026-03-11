@@ -267,7 +267,7 @@ function KraItem({
 
         <button
           onClick={() => setOpen(!open)}
-          className="bg-transparent border-none cursor-pointer p-1"
+          className="bg-transparent border-none cursor-pointer p-1 text-red-400 hover:text-red-600 transition-colors"
         >
           <svg
             width="16"
@@ -348,14 +348,14 @@ function QuestionsAndAnswers({
           width: "100%",
           padding: "16px",
           borderRadius: 12,
-          background: "linear-gradient(135deg,#7c3aed,#6d28d9)",
+          background: "linear-gradient(135deg,#ef4444,#dc2626)",
           color: "#fff",
           fontWeight: 700,
           fontSize: 15,
           border: "none",
           cursor: "pointer",
           letterSpacing: "0.02em",
-          boxShadow: "0 4px 14px rgba(109,40,217,0.35)",
+          boxShadow: "0 4px 14px rgba(220,38,38,0.35)",
           transition: "opacity 0.2s",
           display: "flex",
           alignItems: "center",
@@ -531,8 +531,8 @@ export default function KraSelfEvaluation() {
             onClick={() => setActiveTab(tab)}
             className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
               activeTab === tab
-                ? "bg-white shadow-sm text-purple-600"
-                : "text-gray-400 hover:text-gray-600"
+                ? "bg-red-50 border border-red-200 shadow-sm text-red-600"
+                : "text-red-400 hover:text-red-600"
             }`}
           >
             {tab === "MD" ? "MD's Evaluation" : "Team's Evaluation"}

@@ -88,8 +88,8 @@ function VisionAndValues() {
               onClick={() => handleTabChange(tab)}
               className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 truncate px-2 ${
                 activeTab === tab
-                  ? "bg-white text-purple-700 shadow-sm border border-gray-200/50"
-                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
+                  ? "bg-red-50 text-red-700 shadow-sm border border-red-200"
+                  : "text-red-500 hover:text-red-700 hover:bg-red-100/70"
               }`}
             >
               {tab}

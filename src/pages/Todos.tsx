@@ -259,7 +259,7 @@ const Todos = () => {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={() => window.history.back()} className="flex items-center justify-center text-gray-600 hover:text-black transition-colors">
+          <button onClick={() => window.history.back()} className="flex items-center justify-center text-red-500 hover:text-red-700 transition-colors">
             <ArrowLeft className="h-5 w-5" strokeWidth={2.5} />
           </button>
           <div>
@@ -267,7 +267,7 @@ const Todos = () => {
             <p className="text-sm text-muted-foreground">Manage your tasks and action items</p>
           </div>
         </div>
-        <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white w-full sm:w-auto px-4 py-2.5" onClick={() => setIsCreateDialogOpen(true)}>
+        <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto px-4 py-2.5" onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />New To Do
         </Button>
       </div>
@@ -299,10 +299,10 @@ const Todos = () => {
             </Select>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
-            <Button variant={viewMode === "list" ? "default" : "outline"} size="sm" onClick={() => setViewMode("list")} className="flex-1 sm:flex-none text-xs sm:text-sm">
+            <Button variant="outline" size="sm" onClick={() => setViewMode("list")} className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "list" ? "bg-red-500 text-white border-red-500 hover:bg-red-600 hover:text-white" : "text-red-600 border-red-200 hover:bg-red-50"}`}>
               <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />List
             </Button>
-            <Button variant={viewMode === "kanban" ? "default" : "outline"} size="sm" onClick={() => setViewMode("kanban")} className="flex-1 sm:flex-none text-xs sm:text-sm">
+            <Button variant="outline" size="sm" onClick={() => setViewMode("kanban")} className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "kanban" ? "bg-red-500 text-white border-red-500 hover:bg-red-600 hover:text-white" : "text-red-600 border-red-200 hover:bg-red-50"}`}>
               Kanban
             </Button>
           </div>
@@ -381,7 +381,7 @@ const Todos = () => {
                                     <button
                                       onPointerDown={(e) => e.stopPropagation()}
                                       onClick={() => handleDeleteTodo(todo.id)}
-                                      className="text-muted-foreground hover:text-red-500 transition-colors flex-shrink-0"
+                                      className="text-red-500 hover:text-red-700 transition-colors flex-shrink-0"
                                     >
                                       <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />
                                     </button>
@@ -433,7 +433,7 @@ const Todos = () => {
                               {statuses.map((s) => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
                             </SelectContent>
                           </Select>
-                          <Button variant="ghost" size="sm" onClick={() => handleDeleteTodo(todo.id)} className="flex-shrink-0">
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteTodo(todo.id)} className="flex-shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50">
                             <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                         </div>

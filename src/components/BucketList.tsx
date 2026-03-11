@@ -367,13 +367,13 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
           <div className="flex items-center border border-gray-200 rounded-md p-1 bg-white">
             <button
               onClick={() => setViewMode("list")}
-              className={`p-1.5 rounded-sm ${viewMode === "list" ? "bg-gray-100 text-gray-900" : "text-gray-400 hover:text-gray-900"}`}
+              className={`p-1.5 rounded-sm ${viewMode === "list" ? "bg-red-100 text-red-700" : "text-red-400 hover:text-red-700 hover:bg-red-50"}`}
             >
               <List className="w-[18px] h-[18px]" strokeWidth={2} />
             </button>
             <button
               onClick={() => setViewMode("board")}
-              className={`p-1.5 rounded-sm ${viewMode === "board" ? "bg-gray-100 text-gray-900" : "text-gray-400 hover:text-gray-900"}`}
+              className={`p-1.5 rounded-sm ${viewMode === "board" ? "bg-red-100 text-red-700" : "text-red-400 hover:text-red-700 hover:bg-red-50"}`}
             >
               <LayoutGrid className="w-[18px] h-[18px]" strokeWidth={2} />
             </button>
@@ -382,7 +382,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
           {!samplesLoaded && (
             <button
               onClick={loadSamples}
-              className="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 rounded-md text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-4 py-2 bg-red-50 border border-red-200 rounded-md text-sm font-semibold text-red-700 hover:bg-red-100 transition-colors shadow-sm"
             >
               <Sparkles className="w-4 h-4" />
               Load Samples
@@ -390,7 +390,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
           )}
 
           <AddDreamDialog onSave={handleSave}>
-            <button className="flex items-center gap-1.5 px-4 py-2 bg-[#f97316] text-white rounded-md text-sm font-semibold hover:bg-[#ea580c] transition-colors shadow-sm">
+            <button className="flex items-center gap-1.5 px-4 py-2 bg-red-500 text-white rounded-md text-sm font-semibold hover:bg-red-600 transition-colors shadow-sm">
               <Plus className="w-4 h-4 stroke-[2.5]" />
               Add Dream
             </button>
@@ -601,7 +601,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
                           >
                             <button
                               title="Edit dream"
-                              className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
+                              className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
                             >
                               <Edit className="w-4 h-4" />
                             </button>

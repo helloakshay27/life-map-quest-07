@@ -675,10 +675,10 @@ const GoalsHabits = () => {
   const areaLabels: Record<string, string> = { "all-areas": "Create Your First Goal", health: "Create Your Health & Fitness Goal", career: "Create Your Career Goal", personal: "Create Your Personal Growth Goal", relationships: "Create Your Relationships Goal", financial: "Create Your Financial Goal" };
 
   const footerConfig = {
-    goals: { onClick: () => setIsGoalDialogOpen(true), label: areaLabels[selectedArea] || "Create Your First Goal", className: "bg-teal-500 hover:bg-teal-600 text-white", icon: <Target className="h-4 w-4 mr-2 shrink-0" /> },
-    beliefs: { onClick: () => setIsBeliefDialogOpen(true), label: "Identify Your First Belief", className: "bg-pink-500 hover:bg-pink-600 text-white", icon: <Heart className="h-4 w-4 mr-2 shrink-0" /> },
-    affirmations: { onClick: () => setIsAffirmationDialogOpen(true), label: "Add Your First Affirmation", className: "bg-purple-500 hover:bg-purple-600 text-white", icon: <Sparkles className="h-4 w-4 mr-2 shrink-0" /> },
-    habits: { onClick: () => setIsHabitDialogOpen(true), label: "Create Your First Habit", className: "bg-teal-500 hover:bg-teal-600 text-white", icon: <Zap className="h-4 w-4 mr-2 shrink-0" /> },
+    goals: { onClick: () => setIsGoalDialogOpen(true), label: areaLabels[selectedArea] || "Create Your First Goal", className: "bg-red-500 hover:bg-red-600 text-white", icon: <Target className="h-4 w-4 mr-2 shrink-0" /> },
+    beliefs: { onClick: () => setIsBeliefDialogOpen(true), label: "Identify Your First Belief", className: "bg-red-500 hover:bg-red-600 text-white", icon: <Heart className="h-4 w-4 mr-2 shrink-0" /> },
+    affirmations: { onClick: () => setIsAffirmationDialogOpen(true), label: "Add Your First Affirmation", className: "bg-red-500 hover:bg-red-600 text-white", icon: <Sparkles className="h-4 w-4 mr-2 shrink-0" /> },
+    habits: { onClick: () => setIsHabitDialogOpen(true), label: "Create Your First Habit", className: "bg-red-500 hover:bg-red-600 text-white", icon: <Zap className="h-4 w-4 mr-2 shrink-0" /> },
   };
 
   const currentFooter = footerConfig[activeTab as keyof typeof footerConfig];
@@ -700,10 +700,10 @@ const GoalsHabits = () => {
       <Tabs defaultValue="goals" className="space-y-5" onValueChange={setActiveTab}>
         <div className="overflow-x-auto">
           <TabsList className="grid w-full max-w-md min-w-[280px] grid-cols-4">
-            <TabsTrigger value="goals" className="text-xs sm:text-sm">Goals</TabsTrigger>
-            <TabsTrigger value="beliefs" className="text-xs sm:text-sm">Beliefs</TabsTrigger>
-            <TabsTrigger value="affirmations" className="text-xs sm:text-sm">Affirmations</TabsTrigger>
-            <TabsTrigger value="habits" className="text-xs sm:text-sm">Habits</TabsTrigger>
+            <TabsTrigger value="goals" className="text-xs sm:text-sm data-[state=active]:bg-red-500 data-[state=active]:text-white">Goals</TabsTrigger>
+            <TabsTrigger value="beliefs" className="text-xs sm:text-sm data-[state=active]:bg-red-500 data-[state=active]:text-white">Beliefs</TabsTrigger>
+            <TabsTrigger value="affirmations" className="text-xs sm:text-sm data-[state=active]:bg-red-500 data-[state=active]:text-white">Affirmations</TabsTrigger>
+            <TabsTrigger value="habits" className="text-xs sm:text-sm data-[state=active]:bg-red-500 data-[state=active]:text-white">Habits</TabsTrigger>
           </TabsList>
         </div>
 
@@ -722,13 +722,13 @@ const GoalsHabits = () => {
               </SelectContent>
             </Select>
             <div className="flex items-center gap-1 sm:gap-2">
-              <Button variant={viewMode === "kanban" ? "default" : "outline"} size="sm" className="flex-1 sm:flex-none text-xs sm:text-sm" onClick={() => setViewMode("kanban")}>
+              <Button variant="outline" size="sm" className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "kanban" ? "bg-red-500 text-white border-red-500 hover:bg-red-600 hover:text-white" : "text-red-600 border-red-200 hover:bg-red-50"}`} onClick={() => setViewMode("kanban")}>
                 <Columns3 className="h-3.5 w-3.5 mr-1.5" /> Kanban
               </Button>
-              <Button variant={viewMode === "grid" ? "default" : "outline"} size="sm" className="flex-1 sm:flex-none text-xs sm:text-sm" onClick={() => setViewMode("grid")}>
+              <Button variant="outline" size="sm" className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "grid" ? "bg-red-500 text-white border-red-500 hover:bg-red-600 hover:text-white" : "text-red-600 border-red-200 hover:bg-red-50"}`} onClick={() => setViewMode("grid")}>
                 <LayoutGrid className="h-3.5 w-3.5 mr-1.5" /> Grid
               </Button>
-              <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white flex-1 sm:flex-none text-xs sm:text-sm" onClick={() => setIsGoalDialogOpen(true)}>
+              <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white flex-1 sm:flex-none text-xs sm:text-sm" onClick={() => setIsGoalDialogOpen(true)}>
                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" /> New Goal
               </Button>
             </div>
@@ -832,7 +832,7 @@ const GoalsHabits = () => {
                   <h2 className="text-lg sm:text-xl text-foreground">Limiting Beliefs</h2>
                   <p className="text-xs sm:text-sm text-muted-foreground">Identify and reframe thoughts that hold you back</p>
                 </div>
-                <Button className="bg-pink-500 hover:bg-pink-600 text-white w-full sm:w-auto text-sm" onClick={() => setIsBeliefDialogOpen(true)}>
+                <Button className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto text-sm" onClick={() => setIsBeliefDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" /> Add Belief
                 </Button>
               </div>
@@ -862,7 +862,7 @@ const GoalsHabits = () => {
                   <h2 className="text-lg sm:text-xl text-foreground">Behavioral Patterns</h2>
                   <p className="text-xs sm:text-sm text-muted-foreground">Understand and change your recurring actions</p>
                 </div>
-                <Button className="bg-orange-500 hover:bg-orange-600 text-white w-full sm:w-auto text-sm" onClick={() => setIsPatternDialogOpen(true)}>
+                <Button className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto text-sm" onClick={() => setIsPatternDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" /> Add Pattern
                 </Button>
               </div>
@@ -901,7 +901,7 @@ const GoalsHabits = () => {
                 <h2 className="text-lg sm:text-xl text-foreground">Your Affirmations</h2>
                 <p className="text-xs sm:text-sm text-muted-foreground">Positive statements that empower you daily</p>
               </div>
-              <Button className="bg-purple-500 hover:bg-purple-600 text-white w-full sm:w-auto text-sm" onClick={() => setIsAffirmationDialogOpen(true)}>
+              <Button className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto text-sm" onClick={() => setIsAffirmationDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" /> Add
               </Button>
             </div>
@@ -939,7 +939,7 @@ const GoalsHabits = () => {
                 <h2 className="text-lg sm:text-xl text-foreground">Habit Tracking</h2>
                 <p className="text-xs sm:text-sm text-muted-foreground">Track your daily habits throughout the month</p>
               </div>
-              <Button className="bg-teal-500 hover:bg-teal-600 text-white w-full sm:w-auto text-sm" onClick={() => setIsHabitDialogOpen(true)}>
+              <Button className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto text-sm" onClick={() => setIsHabitDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" /> Add Habit
               </Button>
             </div>
@@ -1023,8 +1023,8 @@ const GoalsHabits = () => {
               <div className="w-full bg-gray-200 rounded-full h-3"><div className="bg-gradient-to-r from-blue-500 to-teal-500 h-3 rounded-full" style={{ width: `${goalProgress}%` }} /></div>
             </div>
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setIsGoalDialogOpen(false)} disabled={goalSaving}>Cancel</Button>
-              <Button className="bg-teal-500 hover:bg-teal-600 text-white" onClick={handleCreateGoal} disabled={goalSaving || !goalName.trim()}>
+              <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" onClick={() => setIsGoalDialogOpen(false)} disabled={goalSaving}>Cancel</Button>
+              <Button className="bg-red-500 hover:bg-red-600 text-white" onClick={handleCreateGoal} disabled={goalSaving || !goalName.trim()}>
                 {goalSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : "Create Goal"}
               </Button>
             </div>
@@ -1052,8 +1052,8 @@ const GoalsHabits = () => {
               </Select>
             </div>
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setIsBeliefDialogOpen(false)} disabled={beliefSaving}>Cancel</Button>
-              <Button className="bg-pink-500 hover:bg-pink-600 text-white" onClick={editingBeliefId !== null ? handleUpdateBelief : handleCreateBelief} disabled={beliefSaving || !beliefText.trim()}>
+              <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" onClick={() => setIsBeliefDialogOpen(false)} disabled={beliefSaving}>Cancel</Button>
+              <Button className="bg-red-500 hover:bg-red-600 text-white" onClick={editingBeliefId !== null ? handleUpdateBelief : handleCreateBelief} disabled={beliefSaving || !beliefText.trim()}>
                 {beliefSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : editingBeliefId !== null ? "Update Belief" : "Add Belief"}
               </Button>
             </div>
@@ -1086,8 +1086,8 @@ const GoalsHabits = () => {
               </Select>
             </div>
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setIsPatternDialogOpen(false)} disabled={patternSaving}>Cancel</Button>
-              <Button className="bg-orange-500 hover:bg-orange-600 text-white" onClick={editingPatternId !== null ? handleUpdatePattern : handleCreatePattern} disabled={patternSaving || !patternName.trim()}>
+              <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" onClick={() => setIsPatternDialogOpen(false)} disabled={patternSaving}>Cancel</Button>
+              <Button className="bg-red-500 hover:bg-red-600 text-white" onClick={editingPatternId !== null ? handleUpdatePattern : handleCreatePattern} disabled={patternSaving || !patternName.trim()}>
                 {patternSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : editingPatternId !== null ? "Update Pattern" : "Save Pattern"}
               </Button>
             </div>
@@ -1115,7 +1115,7 @@ const GoalsHabits = () => {
                 </div>
               ))}
               <div className="flex justify-end pt-2">
-                <Button className="bg-orange-500 hover:bg-orange-600 text-white" onClick={() => openEditPattern(patternDetail)}>
+                <Button className="bg-red-500 hover:bg-red-600 text-white" onClick={() => openEditPattern(patternDetail)}>
                   ✏️ Edit Pattern
                 </Button>
               </div>
@@ -1132,8 +1132,8 @@ const GoalsHabits = () => {
             <div className="space-y-2"><Label>Statement *</Label><Textarea placeholder='"I am confident..."' rows={3} value={affirmationStatement} onChange={(e) => setAffirmationStatement(e.target.value)} /></div>
             <div className="space-y-2"><Label>Priority (1-10)</Label><Input type="number" min="1" max="10" value={affirmationPriority} onChange={(e) => setAffirmationPriority(parseInt(e.target.value) || 5)} /></div>
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setIsAffirmationDialogOpen(false)} disabled={affirmationSaving}>Cancel</Button>
-              <Button className="bg-purple-500 hover:bg-purple-600 text-white" onClick={handleCreateAffirmation} disabled={affirmationSaving || !affirmationStatement.trim()}>
+              <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" onClick={() => setIsAffirmationDialogOpen(false)} disabled={affirmationSaving}>Cancel</Button>
+              <Button className="bg-red-500 hover:bg-red-600 text-white" onClick={handleCreateAffirmation} disabled={affirmationSaving || !affirmationStatement.trim()}>
                 {affirmationSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : "Add Affirmation"}
               </Button>
             </div>
@@ -1182,15 +1182,15 @@ const GoalsHabits = () => {
               <Label className="flex items-center gap-1.5"><LinkIcon className="w-4 h-4 text-blue-500" /> Link Goals</Label>
               <div className="flex flex-wrap gap-2 mt-1">
                 {goals.map((goal) => (
-                  <button key={goal.id} onClick={() => setHabitLinkedGoals((p) => p.includes(goal.id) ? p.filter((id) => id !== goal.id) : [...p, goal.id])} className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${habitLinkedGoals.includes(goal.id) ? "bg-blue-50 border-blue-200 text-blue-700 font-medium" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
+                  <button key={goal.id} onClick={() => setHabitLinkedGoals((p) => p.includes(goal.id) ? p.filter((id) => id !== goal.id) : [...p, goal.id])} className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${habitLinkedGoals.includes(goal.id) ? "bg-red-50 border-red-200 text-red-700 font-medium" : "bg-white border-gray-200 text-gray-600 hover:bg-red-50"}`}>
                     {goal.title}
                   </button>
                 ))}
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => { setIsHabitDialogOpen(false); setHabitLinkedGoals([]); }} disabled={habitSaving}>Cancel</Button>
-              <Button className="bg-teal-500 hover:bg-teal-600 text-white" onClick={handleCreateHabit} disabled={habitSaving || !habitName.trim()}>
+              <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" onClick={() => { setIsHabitDialogOpen(false); setHabitLinkedGoals([]); }} disabled={habitSaving}>Cancel</Button>
+              <Button className="bg-red-500 hover:bg-red-600 text-white" onClick={handleCreateHabit} disabled={habitSaving || !habitName.trim()}>
                 {habitSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : "Create Habit"}
               </Button>
             </div>

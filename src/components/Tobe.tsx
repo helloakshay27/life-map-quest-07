@@ -568,7 +568,7 @@ function Tobe() {
               />
               <button
                 onClick={handleAddCustomGoal}
-                className="bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-lg font-medium flex items-center gap-1.5 transition-colors text-sm shadow-sm"
+                className="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-lg font-medium flex items-center gap-1.5 transition-colors text-sm shadow-sm"
               >
                 <Plus size={18} />
                 Add
@@ -583,7 +583,7 @@ function Tobe() {
             <button
               onClick={handleAnalyzeAI}
               disabled={isAnalyzing}
-              className={`flex-1 bg-[#f1ebff] hover:bg-[#e6dcff] text-[#6d28d9] py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors ${
+              className={`flex-1 bg-red-100 hover:bg-red-200 text-red-700 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors ${
                 isAnalyzing ? "opacity-50 cursor-not-allowed" : ""
               }`}
             >
@@ -594,7 +594,7 @@ function Tobe() {
             <button
               onClick={saveExerciseToBackend}
               disabled={isSaving}
-              className={`flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm ${
+              className={`flex-1 bg-red-500 hover:bg-red-600 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm ${
                 isSaving ? "opacity-50 cursor-not-allowed" : ""
               }`}
             >
@@ -621,7 +621,7 @@ function Tobe() {
             <div className="flex gap-3 justify-end">
               <button
                 onClick={cancelDelete}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                className="px-4 py-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
               >
                 Cancel
               </button>

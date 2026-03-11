@@ -225,7 +225,7 @@ const People = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsProfileModalOpen(true)}
-              className="flex items-center gap-2 rounded-md border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted"
+              className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 shadow-sm transition-colors hover:bg-red-100"
             >
               <User className="h-4 w-4" />
               My Profile
@@ -235,7 +235,7 @@ const People = () => {
                 setPersonToEdit(null);
                 setIsAddPersonModalOpen(true);
               }}
-              className="flex items-center gap-2 rounded-md bg-[#e83e8c] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#d63384]"
+              className="flex items-center gap-2 rounded-md bg-red-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-red-600"
             >
               <Plus className="h-4 w-4" />
               Add Person
@@ -340,7 +340,7 @@ const People = () => {
                     setIsRelationshipOpen(!isRelationshipOpen);
                     setIsPriorityOpen(false);
                   }}
-                  className="flex items-center justify-between w-48 px-3 py-2 bg-white border border-gray-200 rounded-md text-sm text-gray-800 hover:bg-gray-50 focus:outline-none"
+                  className="flex items-center justify-between w-48 px-3 py-2 bg-white border border-red-200 rounded-md text-sm text-red-700 hover:bg-red-50 focus:outline-none"
                 >
                   {relationshipFilter}
                   <svg
@@ -410,7 +410,7 @@ const People = () => {
                     setIsPriorityOpen(!isPriorityOpen);
                     setIsRelationshipOpen(false);
                   }}
-                  className="flex items-center justify-between w-48 px-3 py-2 bg-white border border-gray-200 rounded-md text-sm text-gray-800 hover:bg-gray-50 focus:outline-none"
+                  className="flex items-center justify-between w-48 px-3 py-2 bg-white border border-red-200 rounded-md text-sm text-red-700 hover:bg-red-50 focus:outline-none"
                 >
                   {priorityFilter}
                   <svg
@@ -461,8 +461,8 @@ const People = () => {
                   onClick={() => setActiveSort(sort)}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     activeSort === sort
-                      ? "bg-[#1a1a1a] text-white"
-                      : "bg-white text-gray-800 border border-gray-200 hover:bg-gray-50"
+                      ? "bg-red-500 text-white"
+                      : "bg-white text-red-700 border border-red-200 hover:bg-red-50"
                   }`}
                 >
                   {sort}
@@ -486,7 +486,7 @@ const People = () => {
               <p className="text-sm text-red-500 font-medium">{peopleError}</p>
               <button
                 onClick={fetchPeople}
-                className="px-4 py-2 text-sm font-medium bg-gray-900 text-white rounded-md hover:bg-gray-700 transition-colors"
+                className="px-4 py-2 text-sm font-medium bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
               >
                 Retry
               </button>
@@ -521,7 +521,7 @@ const People = () => {
               {people.length === 0 && (
                 <button
                   onClick={() => setIsAddPersonModalOpen(true)}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-[#e83e8c] text-white text-sm font-medium rounded-md hover:bg-[#d63384] transition-colors shadow-sm"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-red-500 text-white text-sm font-medium rounded-md hover:bg-red-600 transition-colors shadow-sm"
                 >
                   <Plus className="w-5 h-5" />
                   Add Your First Person
@@ -548,7 +548,7 @@ const People = () => {
                         setPersonToEdit(person);
                         setIsAddPersonModalOpen(true);
                       }}
-                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                      className="p-1.5 text-red-400 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
                       title="Edit Person"
                     >
                       <Edit2 className="w-4 h-4" />
@@ -560,7 +560,7 @@ const People = () => {
                         handleDeletePerson(person.id, person.name, e)
                       }
                       disabled={deletingId === person.id}
-                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                      className="p-1.5 text-red-400 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
                       title="Delete Person"
                     >
                       {deletingId === person.id ? (

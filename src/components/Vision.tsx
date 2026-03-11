@@ -338,7 +338,7 @@ function Vision() {
                 />
                 <button
                   onClick={handleAddUrl}
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md font-medium flex items-center gap-2 text-sm transition-colors"
+                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md font-medium flex items-center gap-2 text-sm transition-colors"
                 >
                   <Plus size={16} />({images.length}/12)
                 </button>
@@ -355,7 +355,7 @@ function Vision() {
             </h2>
             <button
               onClick={handleCopyPrompt}
-              className="bg-purple-100 hover:bg-purple-200 text-purple-700 text-sm font-medium py-2 px-4 rounded-md flex items-center gap-2 transition-colors"
+              className="bg-red-100 hover:bg-red-200 text-red-700 text-sm font-medium py-2 px-4 rounded-md flex items-center gap-2 transition-colors"
             >
               <Copy size={16} /> Copy Image Prompt
             </button>
@@ -422,7 +422,7 @@ function Vision() {
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="bg-[#20b2aa] hover:bg-[#1a968f] text-white px-6 py-2.5 rounded-md font-medium flex items-center gap-2 transition-colors shadow-sm disabled:opacity-70"
+              className="bg-red-500 hover:bg-red-600 text-white px-6 py-2.5 rounded-md font-medium flex items-center gap-2 transition-colors shadow-sm disabled:opacity-70"
             >
               <Save size={18} />
               {isSaving ? "Saving..." : "Save Vision & Mission"}
