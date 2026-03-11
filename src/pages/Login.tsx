@@ -141,7 +141,7 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen items-center justify-center px-4" style={{ backgroundImage: 'url(/loginBG.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
       <div className="w-full max-w-md animate-fade-in">
         <div className="rounded-2xl border bg-card p-8 shadow-lg">
           {/* Logo */}
