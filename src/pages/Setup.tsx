@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronLeft, Heart, BookOpen, Target, CheckCircle2 } from "lucide-react";
+import {
+  ChevronLeft,
+  Heart,
+  BookOpen,
+  Target,
+  CheckCircle2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface SetupStep {
@@ -17,6 +23,7 @@ interface SetupStep {
 
 const Setup = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [steps, setSteps] = useState<SetupStep[]>([
     {
       id: 1,
@@ -27,7 +34,7 @@ const Setup = () => {
       bgColor: "bg-blue-50",
       badgeColor: "bg-blue-100 text-blue-700",
       completed: false,
-      link: "/vision-values",
+      link: "/vision-values?tab=Values",
     },
     {
       id: 2,
@@ -38,7 +45,7 @@ const Setup = () => {
       bgColor: "bg-purple-50",
       badgeColor: "bg-purple-100 text-purple-700",
       completed: false,
-      link: "/vision-values",
+      link: "/vision-values?tab=Vision",
     },
     {
       id: 3,
@@ -49,7 +56,7 @@ const Setup = () => {
       bgColor: "bg-pink-50",
       badgeColor: "bg-pink-100 text-pink-700",
       completed: false,
-      link: "/vision-values",
+      link: "/vision-values?tab=Vision",
     },
     {
       id: 4,
@@ -59,7 +66,7 @@ const Setup = () => {
       color: "bg-green-500",
       bgColor: "bg-green-50",
       badgeColor: "bg-green-100 text-green-700",
-      completed: true,
+      completed: false,
       link: "/daily-journal",
     },
     {
@@ -70,10 +77,77 @@ const Setup = () => {
       color: "bg-green-500",
       bgColor: "bg-green-50",
       badgeColor: "bg-green-100 text-green-700",
-      completed: true,
+      completed: false,
       link: "/goals-habits",
     },
   ]);
+
+  const API_BASE_URL = "https://life-api.lockated.com";
+
+  useEffect(() => {
+    const fetchCompletionStatus = async () => {
+      try {
+        const token = localStorage.getItem("auth_token");
+        const headers = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        };
+
+        // Fetch Core Values
+        const valuesRes = await fetch(`${API_BASE_URL}/core_values`, {
+          headers,
+        });
+        const valuesData = await valuesRes.json();
+        const hasValues = Array.isArray(valuesData) && valuesData.length > 0;
+
+        // Fetch Vision/Mission
+        const visionRes = await fetch(`${API_BASE_URL}/vision.json`, {
+          headers,
+        });
+        const visionDataRaw = await visionRes.json();
+        const visionData = Array.isArray(visionDataRaw)
+          ? visionDataRaw[0]
+          : visionDataRaw;
+        const hasVision =
+          visionData &&
+          visionData.vision_statement &&
+          visionData.vision_statement.trim().length > 0;
+        const hasMission =
+          visionData &&
+          visionData.mission_statement &&
+          visionData.mission_statement.trim().length > 0;
+
+        // Fetch Goals
+        const goalsRes = await fetch(`${API_BASE_URL}/goals`, { headers });
+        const goalsData = await goalsRes.json();
+        const hasGoals = Array.isArray(goalsData) && goalsData.length > 0;
+
+        // Check Daily Journal
+        const journalRes = await fetch(`${API_BASE_URL}/daily_journals`, {
+          headers,
+        });
+        const journalData = await journalRes.json();
+        const hasJournal = Array.isArray(journalData) && journalData.length > 0;
+
+        setSteps((prev) =>
+          prev.map((step) => {
+            if (step.id === 1) return { ...step, completed: hasValues };
+            if (step.id === 2) return { ...step, completed: !!hasVision };
+            if (step.id === 3) return { ...step, completed: !!hasMission };
+            if (step.id === 4) return { ...step, completed: hasJournal };
+            if (step.id === 5) return { ...step, completed: hasGoals };
+            return step;
+          }),
+        );
+      } catch (error) {
+        console.error("Error fetching completion status:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCompletionStatus();
+  }, []);
 
   const completedSteps = steps.filter((step) => step.completed).length;
   const totalSteps = steps.length;
@@ -81,9 +155,11 @@ const Setup = () => {
 
   // Save completed count to localStorage
   useEffect(() => {
-    localStorage.setItem("setupCompletedCount", completedSteps.toString());
-    localStorage.setItem("setupTotalCount", totalSteps.toString());
-  }, [completedSteps, totalSteps]);
+    if (!loading) {
+      localStorage.setItem("setupCompletedCount", completedSteps.toString());
+      localStorage.setItem("setupTotalCount", totalSteps.toString());
+    }
+  }, [completedSteps, totalSteps, loading]);
 
   const handleGetStarted = (step: SetupStep) => {
     if (step.link) {
@@ -94,10 +170,21 @@ const Setup = () => {
   const handleDone = (stepId: number) => {
     setSteps((prevSteps) =>
       prevSteps.map((step) =>
-        step.id === stepId ? { ...step, completed: true } : step
-      )
+        step.id === stepId ? { ...step, completed: true } : step,
+      ),
     );
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-slate-600 font-medium">Loading your progress...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 sm:p-6 lg:p-8">

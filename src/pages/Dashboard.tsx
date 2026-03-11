@@ -26,7 +26,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 const Dashboard = () => {
   const { user, token, login } = useAuth();
@@ -75,39 +75,56 @@ const Dashboard = () => {
   }, [user, token, login]);
 
   const [summaryData, setSummaryData] = useState<{
-    energy_average?: number | null;
-    alignment_average?: number | null;
+    energy_average?: string | number | null;
+    alignment_average?: string | number | null;
     total_score?: number;
     highest_badge?: string | null;
     current_streak?: number;
     life_balance?: {
-      [key: string]: number;
+      career?: number;
+      health?: number;
+      relationships?: number;
+      growth?: number;
+      finance?: number;
     };
   } | null>(null);
 
-  const [setupCount, setSetupCount] = useState<{ completed: number; total: number }>({
+  const [setupCount, setSetupCount] = useState<{
+    completed: number;
+    total: number;
+  }>({
     completed: 2,
     total: 5,
   });
 
   // Load setup count from localStorage
   useEffect(() => {
-    const completed = parseInt(localStorage.getItem("setupCompletedCount") || "2");
+    const completed = parseInt(
+      localStorage.getItem("setupCompletedCount") || "2",
+    );
     const total = parseInt(localStorage.getItem("setupTotalCount") || "5");
     setSetupCount({ completed, total });
 
     // Listen for changes from other tabs/windows
     const handleStorageChange = () => {
-      const updatedCompleted = parseInt(localStorage.getItem("setupCompletedCount") || "2");
-      const updatedTotal = parseInt(localStorage.getItem("setupTotalCount") || "5");
+      const updatedCompleted = parseInt(
+        localStorage.getItem("setupCompletedCount") || "2",
+      );
+      const updatedTotal = parseInt(
+        localStorage.getItem("setupTotalCount") || "5",
+      );
       setSetupCount({ completed: updatedCompleted, total: updatedTotal });
     };
 
     // Listen for visibility changes to refresh when tab becomes active
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        const updatedCompleted = parseInt(localStorage.getItem("setupCompletedCount") || "2");
-        const updatedTotal = parseInt(localStorage.getItem("setupTotalCount") || "5");
+        const updatedCompleted = parseInt(
+          localStorage.getItem("setupCompletedCount") || "2",
+        );
+        const updatedTotal = parseInt(
+          localStorage.getItem("setupTotalCount") || "5",
+        );
         setSetupCount({ completed: updatedCompleted, total: updatedTotal });
       }
     };
@@ -168,6 +185,8 @@ const Dashboard = () => {
       [key: string]: unknown;
     }>;
     leaderboard_preview: Array<{ name: string; points: number }>;
+    vision_images: string[];
+    vision_statement: string | null;
   }>({
     daily_motivator: null,
     priorities: [],
@@ -176,7 +195,60 @@ const Dashboard = () => {
     mission: null,
     bucket_preview: [],
     leaderboard_preview: [],
+    vision_images: [],
+    vision_statement: null,
   });
+
+  // Calendar Logic
+  const [calendarDate, setCalendarDate] = useState(new Date());
+
+  const weekData = useMemo(() => {
+    const start = new Date(calendarDate);
+    // Move to Sunday of current week
+    start.setDate(calendarDate.getDate() - calendarDate.getDay());
+
+    return Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const isToday = d.toDateString() === new Date().toDateString();
+      const isPast = d < new Date(new Date().setHours(0, 0, 0, 0));
+
+      return {
+        day: ["Su", "M", "Tu", "W", "Th", "F", "Sa"][i],
+        date: d.getDate().toString(),
+        fullDate: d,
+        active: isToday,
+        state: isPast ? "missed" : isToday ? "filled" : "upcoming",
+      };
+    });
+  }, [calendarDate]);
+
+  const handlePrevWeek = () => {
+    const newDate = new Date(calendarDate);
+    newDate.setDate(calendarDate.getDate() - 7);
+    setCalendarDate(newDate);
+  };
+
+  const handleNextWeek = () => {
+    const newDate = new Date(calendarDate);
+    newDate.setDate(calendarDate.getDate() + 7);
+    setCalendarDate(newDate);
+  };
+
+  const getWeekLabel = () => {
+    const today = new Date();
+    const start = new Date(calendarDate);
+    start.setDate(calendarDate.getDate() - calendarDate.getDay());
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+
+    const isCurrentWeek =
+      today >= start && today <= new Date(end.setHours(23, 59, 59, 999));
+
+    if (isCurrentWeek) return "This Week";
+
+    return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+  };
 
   useEffect(() => {
     const fetchSummary = async () => {
@@ -242,21 +314,101 @@ const Dashboard = () => {
         );
         if (res.ok) {
           const data = await res.json();
-          setPreviewData({
+          setPreviewData((prev) => ({
+            ...prev,
             daily_motivator: data.daily_motivator || null,
             priorities: data.priorities || [],
             upcoming_dates: data.upcoming_dates || [],
             story_of_the_day: data.story_of_the_day || null,
-            mission: data.mission || null,
+            mission: data.mission || prev.mission,
             bucket_preview: data.bucket_preview || [],
             leaderboard_preview: data.leaderboard_preview || [],
-          });
+          }));
         }
       } catch (err) {
         console.error("Failed to fetch preview:", err);
       }
     };
     fetchPreview();
+  }, [token]);
+
+  // Debugging state for vision
+  useEffect(() => {
+    console.log("Dashboard - Preview Data Updated:", previewData);
+  }, [previewData]);
+
+  // Fetch Vision Data specifically for images and statement
+  useEffect(() => {
+    const fetchVision = async () => {
+      try {
+        const authToken = token || localStorage.getItem("auth_token") || "";
+        const res = await fetch("https://life-api.lockated.com/vision.json", {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          console.log("Dashboard - Vision API Raw Data:", data);
+          const vision = Array.isArray(data) ? data[0] : data?.vision || data;
+
+          if (vision) {
+            // Priority: images at root if not in vision object, or vision.images
+            const images = vision.images || data.images || [];
+            console.log("Dashboard - Resolved Vision Data:", {
+              vision,
+              images,
+            });
+
+            setPreviewData((prev) => ({
+              ...prev,
+              vision_images: images,
+              vision_statement: vision.vision_statement || null,
+              mission: vision.mission_statement || prev.mission,
+            }));
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch vision data:", err);
+      }
+    };
+
+    // Fetch on mount
+    fetchVision();
+
+    // Listen for tab visibility changes to refetch when returning from other pages
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log(
+          "Dashboard - Tab became visible, refetching vision data...",
+        );
+        fetchVision();
+      }
+    };
+
+    // Listen for storage changes (in case data is updated from another tab/window)
+    const handleStorageChange = () => {
+      console.log("Dashboard - Storage changed, refetching vision data...");
+      fetchVision();
+    };
+
+    // Listen for custom event when vision data is updated from Vision component
+    const handleVisionUpdated = () => {
+      console.log(
+        "Dashboard - Vision data updated event received, refetching...",
+      );
+      fetchVision();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("vision_data_updated", handleVisionUpdated);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("vision_data_updated", handleVisionUpdated);
+    };
   }, [token]);
 
   // Fetch actual dreams API to populate Bucket List Dreams directly from source
@@ -327,7 +479,7 @@ const Dashboard = () => {
           const rawData = await response.json();
           const activeTodos = Array.isArray(rawData)
             ? rawData
-                .filter((t: any) => {
+                .filter((t: { status: string; title: string }) => {
                   const status = String(t.status).toLowerCase();
                   return status !== "completed";
                 })
@@ -352,7 +504,7 @@ const Dashboard = () => {
             const savedTodos = JSON.parse(savedTodosStr);
             const activeTodos = Array.isArray(savedTodos)
               ? savedTodos
-                  .filter((t: any) => {
+                  .filter((t: { status: string; title: string }) => {
                     const status = String(t.status).toLowerCase();
                     return status !== "completed";
                   })
@@ -710,24 +862,24 @@ const Dashboard = () => {
 
           <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-slate-100 shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
             <div className="flex justify-between items-center mb-4 px-2">
-              <ChevronLeft className="w-4 h-4 text-[#FF6B2C] cursor-pointer" />
-              <h4 className="font-bold text-sm text-slate-700">This Week</h4>
-              <ChevronRight className="w-4 h-4 text-[#FF6B2C] cursor-pointer" />
+              <ChevronLeft
+                className="w-4 h-4 text-[#FF6B2C] cursor-pointer hover:scale-110 transition-transform"
+                onClick={handlePrevWeek}
+              />
+              <h4 className="font-bold text-sm text-slate-700">
+                {getWeekLabel()}
+              </h4>
+              <ChevronRight
+                className="w-4 h-4 text-[#FF6B2C] cursor-pointer hover:scale-110 transition-transform"
+                onClick={handleNextWeek}
+              />
             </div>
 
             <div className="flex justify-between gap-1 mb-4">
-              {[
-                { day: "Su", date: "8", state: "missed" },
-                { day: "M", date: "9", state: "missed" },
-                { day: "Tu", date: "10", state: "upcoming", active: true },
-                { day: "W", date: "11", state: "upcoming" },
-                { day: "Th", date: "12", state: "upcoming" },
-                { day: "F", date: "13", state: "upcoming" },
-                { day: "Sa", date: "14", state: "upcoming" },
-              ].map((d) => (
+              {weekData.map((d) => (
                 <div
-                  key={d.day}
-                  className={`flex flex-col items-center justify-center py-2 px-1 w-9 rounded-xl ${d.active ? "border-[1.5px] border-[#FF6B2C] shadow-sm bg-white" : ""}`}
+                  key={d.day + d.date}
+                  className={`flex flex-col items-center justify-center py-2 px-1 w-9 rounded-xl transition-all ${d.active ? "border-[1.5px] border-[#FF6B2C] shadow-sm bg-white" : ""}`}
                 >
                   <span className="text-[10px] text-slate-500 font-bold mb-1">
                     {d.day}
@@ -767,7 +919,7 @@ const Dashboard = () => {
             <h3 className="font-bold text-[#C2410C] flex items-center gap-2">
               <Trophy className="w-5 h-5 text-[#C2410C]" /> Highest Rank
             </h3>
-            <Link 
+            <Link
               to="/achievements"
               className="text-xs font-bold text-[#EA580C] hover:underline transition-colors"
             >
@@ -875,23 +1027,71 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Purpose & Direction Banner */}
+      {/* Purpose & Direction Section */}
       <div className="mt-8 mb-8">
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-4">
           <Heart className="w-4 h-4 text-[#E63946]" strokeWidth={2.5} />
           <h2 className="text-sm font-bold text-slate-800">
             Purpose & Direction
           </h2>
         </div>
-        <Card className="p-10 bg-[#E03C3E] text-white text-center rounded-xl border-0 shadow-[0_4px_20px_rgba(224,60,62,0.3)] transition-shadow hover:shadow-[0_4px_25px_rgba(224,60,62,0.4)]">
-          <div className="flex justify-center mb-4">
-            <Sparkles className="w-8 h-8 text-white" strokeWidth={2} />
+
+        <Card
+          className={`bg-[#FFF8F8] border-2 border-[#E63946] rounded-[20px] transition-all duration-500 overflow-hidden relative ${previewData.vision_images && previewData.vision_images.length > 0 ? "p-8 md:p-10" : "p-6"}`}
+        >
+          {/* Mission Section */}
+          <div
+            className={`${previewData.vision_images && previewData.vision_images.length > 0 ? "mb-8" : "mb-0"} relative z-10`}
+          >
+            <div className="flex items-center gap-2.5 mb-2">
+              <Sparkles className="w-5 h-5 text-slate-800" />
+              <h3 className="text-[15px] font-extrabold text-slate-800 tracking-tight">
+                My Mission
+              </h3>
+            </div>
+            {previewData.mission && (
+              <p className="text-xl md:text-2xl font-black text-slate-900 tracking-tight uppercase leading-tight">
+                {previewData.mission}
+              </p>
+            )}
           </div>
-          <h3 className="font-medium text-[15px]">
-            {previewData.mission
-              ? previewData.mission
-              : "Define your mission to guide your journey"}
-          </h3>
+
+          {/* Vision Board Card - Only visible when images exist */}
+          {previewData.vision_images &&
+            previewData.vision_images.length > 0 && (
+              <Card className="bg-white rounded-[24px] p-6 border-0 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative z-10">
+                <div className="flex items-center gap-2.5 mb-5">
+                  <div className="bg-[#FFF5F5] p-2 rounded-xl">
+                    <Heart className="w-4 h-4 text-[#E63946] fill-[#E63946]/10" />
+                  </div>
+                  <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">
+                    Vision Board
+                  </h4>
+                </div>
+
+                <div className="relative rounded-[20px] overflow-hidden aspect-[16/9] bg-slate-50 border border-slate-100 mb-2 group">
+                  <img
+                    src={previewData.vision_images[0]}
+                    alt="My Vision"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    onError={(e) => {
+                      console.error(
+                        "Dashboard - Failed to load main vision image",
+                      );
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                </div>
+
+                {previewData.vision_statement && (
+                  <div className="pt-4 border-t border-slate-100">
+                    <p className="text-sm font-medium text-slate-600 italic leading-relaxed text-center">
+                      "{previewData.vision_statement}"
+                    </p>
+                  </div>
+                )}
+              </Card>
+            )}
         </Card>
       </div>
 
@@ -966,21 +1166,43 @@ const Dashboard = () => {
               <h4 className="text-xs font-bold text-slate-600 mb-6">
                 Life Balance (Last 7 Days)
               </h4>
-              <div className="relative w-full aspect-square max-w-[200px] mx-auto opacity-40 mix-blend-multiply">
-                {/* Visual Radar Mockup for empty state matching layout */}
+              <div className="relative w-full aspect-square max-w-[200px] mx-auto">
                 <svg
                   viewBox="0 0 100 100"
-                  className="w-full h-full stroke-slate-400 fill-none"
+                  className="w-full h-full stroke-slate-200 fill-none"
                   strokeWidth="0.5"
                 >
-                  <polygon points="50,10 90,40 75,90 25,90 10,40" />
-                  <polygon points="50,25 80,48 68,80 32,80 20,48" />
-                  <polygon points="50,40 70,55 62,70 38,70 30,55" />
+                  {/* Grid lines */}
+                  <polygon
+                    points="50,10 90,40 75,90 25,90 10,40"
+                    strokeDasharray="2,2"
+                  />
+                  <polygon
+                    points="50,30 70,45 62,70 38,70 30,45"
+                    strokeDasharray="1,1"
+                  />
                   <line x1="50" y1="50" x2="50" y2="10" />
                   <line x1="50" y1="50" x2="90" y2="40" />
                   <line x1="50" y1="50" x2="75" y2="90" />
                   <line x1="50" y1="50" x2="25" y2="90" />
                   <line x1="50" y1="50" x2="10" y2="40" />
+
+                  {/* Dynamic Data Polygon */}
+                  {summaryData?.life_balance && (
+                    <polygon
+                      points={`
+                        50,${50 - (summaryData.life_balance.career || 0) * 4} 
+                        ${50 + (summaryData.life_balance.health || 0) * 4},${50 - (summaryData.life_balance.health || 0) * 1}
+                        ${50 + (summaryData.life_balance.relationships || 0) * 2.5},${50 + (summaryData.life_balance.relationships || 0) * 4}
+                        ${50 - (summaryData.life_balance.growth || 0) * 2.5},${50 + (summaryData.life_balance.growth || 0) * 4}
+                        ${50 - (summaryData.life_balance.finance || 0) * 4},${50 - (summaryData.life_balance.finance || 0) * 1}
+                      `}
+                      fill="rgba(230, 57, 70, 0.2)"
+                      stroke="#E63946"
+                      strokeWidth="1.5"
+                      className="transition-all duration-1000"
+                    />
+                  )}
                 </svg>
 
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[9px] font-bold text-slate-500">
@@ -1027,13 +1249,15 @@ const Dashboard = () => {
               <h3 className="font-bold text-slate-800 text-[15px]">
                 Recent Journal Entries
               </h3>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs font-semibold text-slate-600 border-slate-200"
-              >
-                <Plus className="w-3.5 h-3.5 mr-1" /> Add Entry
-              </Button>
+              <Link to="/daily-journal#bucket-list-progress">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs font-semibold text-slate-600 border-slate-200"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Add Entry
+                </Button>
+              </Link>
             </div>
 
             <div className="flex-1 flex flex-col items-center justify-center">
@@ -1126,7 +1350,7 @@ const Dashboard = () => {
               </div>
               <div>
                 <h3 className="font-bold text-slate-800 text-[15px]">
-                  Bucket List Dreams
+                  Bucket List Progress
                 </h3>
                 <p className="text-xs text-slate-500 font-medium">
                   {previewData.bucket_preview.length} dreams

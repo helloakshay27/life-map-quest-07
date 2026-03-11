@@ -73,6 +73,20 @@ const DailyJournal = () => {
     content?: string;
   }
   const [pastLetters, setPastLetters] = useState<PastLetter[]>([]);
+  // Handle deep linking via hash (e.g., from Dashboard)
+  useEffect(() => {
+    if (window.location.hash === "#bucket-list-progress") {
+      setActiveTab("new");
+      // Small timeout to ensure tab content is rendered
+      setTimeout(() => {
+        const element = document.getElementById("bucket-list-progress");
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 600);
+    }
+  }, []);
+
   const [isLoadingLetters, setIsLoadingLetters] = useState(false);
 
   // Insights state
@@ -159,8 +173,9 @@ const DailyJournal = () => {
         const areasArray = Array.isArray(data)
           ? data
           : data.life_areas || data.data || [];
-        const mappedAreas = areasArray.map((area: any) =>
-          typeof area === "string" ? area : area.name || area.title,
+        const mappedAreas = areasArray.map(
+          (area: string | { name?: string; title?: string }) =>
+            typeof area === "string" ? area : area.name || area.title,
         );
 
         if (mappedAreas.length > 0) {
@@ -220,10 +235,12 @@ const DailyJournal = () => {
           );
           setSelectedMoods(data.journal.mood_tags || []);
           setAchievements(
-            data.journal.accomplishments?.map((a: any) => ({
-              title: a.title,
-              points: a.points || 10,
-            })) || [],
+            data.journal.accomplishments?.map(
+              (a: { title: string; points?: number }) => ({
+                title: a.title,
+                points: a.points || 10,
+              }),
+            ) || [],
           );
         } else {
           setJournalId(null);

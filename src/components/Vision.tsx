@@ -29,14 +29,7 @@ function Vision() {
     setToast({ message, type });
   };
 
-  // =========================================
-  // FETCH VISION DATA (GET)
-  // =========================================
-  useEffect(() => {
-    fetchVisionData();
-  }, []);
-
-  const fetchVisionData = async () => {
+  const fetchVisionData = React.useCallback(async () => {
     try {
       const token = localStorage.getItem("auth_token");
       const response = await fetch(`${API_BASE_URL}/vision.json`, {
@@ -78,7 +71,14 @@ function Vision() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // =========================================
+  // FETCH VISION DATA (GET)
+  // =========================================
+  useEffect(() => {
+    fetchVisionData();
+  }, [fetchVisionData]);
 
   // =========================================
   // FILE HELPERS & UPLOAD
@@ -212,6 +212,11 @@ function Vision() {
       const data = await response.json();
       setVisionId(data.id || null);
       showToast("Vision & Mission saved successfully! 🎉", "success");
+
+      // Trigger Dashboard refresh by dispatching a custom event
+      window.dispatchEvent(new Event("vision_data_updated"));
+      // Also update a localStorage flag to trigger storage listeners
+      localStorage.setItem("vision_last_updated", new Date().toISOString());
     } catch (error) {
       console.error("Error saving data:", error);
       // Seedha backend ka error Toast me dikhega

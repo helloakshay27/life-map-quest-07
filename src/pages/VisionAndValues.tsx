@@ -1,24 +1,37 @@
 import Tobe from "@/components/Tobe";
 import Values from "@/components/Values";
 import Vision from "@/components/Vision";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+
+const TABS = ["Vision", "Values", "Be-Do-Have"];
 
 function VisionAndValues() {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("Vision");
-  const tabs = ["Vision", "Values", "Be-Do-Have"];
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab && TABS.includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+  };
 
   return (
     <>
-      {/* 2. Added bg-white and border so the shadow-sm actually looks like a card */}
       <div className="w-full  mx-auto bg-white p-4 sm:p-8 rounded-2xl shadow-sm border border-gray-100">
-        {/* ==============================
-            SECTION 1: HEADER
-        ============================== */}
-        {/* 3. Changed items-start to items-center for perfect vertical alignment */}
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-3 sm:gap-4">
-            {/* Back Button */}
-            <button className="p-2 rounded-full border border-gray-200 hover:bg-gray-100 hover:text-gray-900 text-gray-500 transition-colors flex-shrink-0">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 rounded-full border border-gray-200 hover:bg-gray-100 hover:text-gray-900 text-gray-500 transition-colors flex-shrink-0"
+            >
               <svg
                 className="w-5 h-5"
                 fill="none"
@@ -69,11 +82,11 @@ function VisionAndValues() {
         ============================== */}
         {/* 4. Made the tabs slightly thicker and gave the active tab a purple accent */}
         <div className="flex bg-gray-100 p-1.5 rounded-xl mb-6">
-          {tabs.map((tab) => (
+          {TABS.map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2 sm:py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 truncate px-2 ${
+              onClick={() => handleTabChange(tab)}
+              className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 truncate px-2 ${
                 activeTab === tab
                   ? "bg-white text-purple-700 shadow-sm border border-gray-200/50"
                   : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"

@@ -212,7 +212,10 @@ const BucketListProgress = () => {
   });
 
   return (
-    <div className="bg-purple-50/50 rounded-xl p-4 border border-purple-100 font-sans">
+    <div
+      id="bucket-list-progress"
+      className="bg-purple-50/50 rounded-xl p-4 border border-purple-100 font-sans"
+    >
       {/* Header */}
       <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
