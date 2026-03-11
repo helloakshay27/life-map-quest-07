@@ -304,7 +304,7 @@ const WeeklyJournal = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate("/help")}
-              className="flex items-center gap-2 rounded-md border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted"
+              className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 shadow-sm transition-colors hover:bg-red-100"
               title="Help"
             >
               <HelpCircle className="h-4 w-4" />
@@ -319,19 +319,19 @@ const WeeklyJournal = () => {
           <TabsList className="mb-6 w-full p-1 bg-gray-100 border border-gray-200 rounded-xl h-auto shadow-inner flex">
             <TabsTrigger
               value="new"
-              className="flex-1 py-2.5 rounded-lg text-sm font-bold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all text-gray-500"
+              className="flex-1 py-2.5 rounded-lg text-sm font-bold data-[state=active]:bg-red-50 data-[state=active]:text-red-700 data-[state=active]:border data-[state=active]:border-red-200 data-[state=active]:shadow-sm transition-all text-red-500"
             >
               New
             </TabsTrigger>
             <TabsTrigger
               value="past"
-              className="flex-1 py-2.5 rounded-lg text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all text-gray-500"
+              className="flex-1 py-2.5 rounded-lg text-sm font-semibold data-[state=active]:bg-red-50 data-[state=active]:text-red-700 data-[state=active]:border data-[state=active]:border-red-200 data-[state=active]:shadow-sm transition-all text-red-500"
             >
               Past ({pastJournals.length})
             </TabsTrigger>
             <TabsTrigger
               value="insights"
-              className="flex-1 py-2.5 rounded-lg text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all text-gray-500"
+              className="flex-1 py-2.5 rounded-lg text-sm font-semibold data-[state=active]:bg-red-50 data-[state=active]:text-red-700 data-[state=active]:border data-[state=active]:border-red-200 data-[state=active]:shadow-sm transition-all text-red-500"
             >
               Insights
             </TabsTrigger>
@@ -426,7 +426,7 @@ const WeeklyJournal = () => {
                       </div>
                       <button
                         onClick={(e) => handleDeletePastJournal(journal.id, e)}
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                        className="p-2 text-red-400 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
                         title="Delete entry"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -750,14 +750,14 @@ const WeeklyJournal = () => {
         <div className="flex items-center gap-3 px-6 py-4">
           <button
             onClick={() => navigate(-1)}
-            className="px-6 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors shadow-sm"
+            className="px-6 py-2.5 rounded-lg border border-red-200 bg-white text-red-700 font-semibold text-sm hover:bg-red-50 transition-colors shadow-sm"
           >
             Cancel
           </button>
           <button
             onClick={handleSavePlan}
             disabled={isSaving}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-bold text-sm transition-colors shadow-sm disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-red-500 hover:bg-red-600 text-white font-bold text-sm transition-colors shadow-sm disabled:opacity-50"
           >
             {isSaving ? (
               <Loader2 className="w-4 h-4 animate-spin" />
