@@ -62,7 +62,7 @@ const WeekStrip = ({ selectedDate, onDateChange, filledDates = [] }: WeekStripPr
       <div className="mb-2.5 text-center text-base font-semibold text-slate-500">This Week</div>
 
       {/* Day Cards */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-2">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5">
         <button
           onClick={goToPrevWeek}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-slate-100 text-slate-500 shadow-sm transition-colors hover:bg-slate-200"
@@ -89,27 +89,29 @@ const WeekStrip = ({ selectedDate, onDateChange, filledDates = [] }: WeekStripPr
             <button
               key={day.date.toISOString()}
               onClick={() => onDateChange(day.date)}
-              className={`relative min-w-[108px] sm:min-w-[116px] rounded-2xl border p-2.5 sm:p-3 text-center shadow-sm transition-all hover:opacity-95 ${cardStyles} ${
-                isSelected ? "ring-2 ring-orange-400 ring-offset-1" : ""
+              className={`relative min-w-[92px] sm:min-w-[100px] rounded-xl border p-2 sm:p-2.5 text-center shadow-sm transition-all hover:opacity-95 ${cardStyles} ${
+                isSelected
+                  ? "ring-1 ring-orange-300 border-orange-300"
+                  : ""
               }`}
             >
               <div className="text-[11px] font-semibold uppercase leading-none opacity-80 sm:text-xs">
                 {format(day.date, "EEE")}
               </div>
 
-              <div className="mt-1.5 text-xl font-bold leading-none sm:text-2xl">
+              <div className="mt-1 text-lg font-bold leading-none sm:text-xl">
                 {format(day.date, "d")}
               </div>
 
               {isMissed && (
-                <div className="mx-auto mt-1.5 inline-flex rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white sm:text-xs">
+                <div className="mx-auto mt-1 inline-flex rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold text-white sm:text-[10px]">
                   -10
                 </div>
               )}
 
               {(day.isFilled || isSelected) && (
-                <div className="mx-auto mt-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-green-700 px-1 text-white">
-                  <Check className="h-3 w-3" />
+                <div className="mx-auto mt-1 inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-green-700 px-1 text-white">
+                  <Check className="h-2.5 w-2.5" />
                 </div>
               )}
             </button>
