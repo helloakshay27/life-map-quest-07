@@ -87,8 +87,6 @@ function Tobe() {
   const showSuccess = (msg) => setToast({ type: "success", message: msg });
 
   // ── FETCH DREAMS ───────────────────────────────────────────────────────
-  useEffect(() => { fetchBucketList(); }, []);
-
   const fetchBucketList = async () => {
     setIsLoading(true);
     try {
@@ -120,11 +118,11 @@ function Tobe() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     fetchBucketList();
-  }, [fetchBucketList]);
+  }, []);;
 
   // ── ADD CUSTOM GOAL  →  POST /dreams ──────────────────────────────────
   const handleAddCustomGoal = async () => {
