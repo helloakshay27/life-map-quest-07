@@ -46,29 +46,29 @@ const WeekStrip = ({ selectedDate, onDateChange, filledDates = [] }: WeekStripPr
   const isTodayWeek = isSameWeek(selectedDate, today, { weekStartsOn: 0 });
 
   return (
-    <div className="w-full rounded-3xl border-2 border-orange-300 bg-orange-50/40 p-4 sm:p-5">
+    <div className="w-full rounded-3xl border-2 border-orange-300 bg-orange-50/40 p-3.5 sm:p-4">
       {/* Header */}
-      <div className="mb-5 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-500 text-white shadow-sm">
-          <CalendarDays className="h-5 w-5" />
+      <div className="mb-4 flex items-center gap-2.5">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500 text-white shadow-sm">
+          <CalendarDays className="h-4.5 w-4.5" />
         </div>
         <div>
-          <h3 className="text-2xl font-bold tracking-tight text-slate-800 sm:text-3xl">
+          <h3 className="text-xl font-bold tracking-tight text-slate-800 sm:text-2xl">
             {format(selectedDate, "EEEE, MMMM d, yyyy")}
           </h3>
         </div>
       </div>
 
-      <div className="mb-3 text-center text-lg font-semibold text-slate-500">This Week</div>
+      <div className="mb-2.5 text-center text-base font-semibold text-slate-500">This Week</div>
 
       {/* Day Cards */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-2">
         <button
           onClick={goToPrevWeek}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-slate-100 text-slate-500 shadow-sm transition-colors hover:bg-slate-200"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-slate-100 text-slate-500 shadow-sm transition-colors hover:bg-slate-200"
           title="Previous week"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-3.5 w-3.5" />
         </button>
 
         {weekDays.map((day) => {
@@ -89,27 +89,27 @@ const WeekStrip = ({ selectedDate, onDateChange, filledDates = [] }: WeekStripPr
             <button
               key={day.date.toISOString()}
               onClick={() => onDateChange(day.date)}
-              className={`relative min-w-[120px] sm:min-w-[128px] rounded-2xl border p-3 sm:p-4 text-center shadow-sm transition-all hover:opacity-95 ${cardStyles} ${
+              className={`relative min-w-[108px] sm:min-w-[116px] rounded-2xl border p-2.5 sm:p-3 text-center shadow-sm transition-all hover:opacity-95 ${cardStyles} ${
                 isSelected ? "ring-2 ring-orange-400 ring-offset-1" : ""
               }`}
             >
-              <div className="text-sm font-semibold uppercase leading-none opacity-80 sm:text-base">
+              <div className="text-xs font-semibold uppercase leading-none opacity-80 sm:text-sm">
                 {format(day.date, "EEE")}
               </div>
 
-              <div className="mt-2 text-3xl font-bold leading-none sm:text-4xl">
+              <div className="mt-1.5 text-2xl font-bold leading-none sm:text-3xl">
                 {format(day.date, "d")}
               </div>
 
               {isMissed && (
-                <div className="mx-auto mt-2 inline-flex rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white sm:text-sm">
+                <div className="mx-auto mt-1.5 inline-flex rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white sm:text-xs">
                   -10
                 </div>
               )}
 
               {(day.isFilled || isSelected) && (
-                <div className="mx-auto mt-2 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-green-700 px-1.5 text-white">
-                  <Check className="h-3.5 w-3.5" />
+                <div className="mx-auto mt-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-green-700 px-1 text-white">
+                  <Check className="h-3 w-3" />
                 </div>
               )}
             </button>
@@ -118,15 +118,15 @@ const WeekStrip = ({ selectedDate, onDateChange, filledDates = [] }: WeekStripPr
 
         <button
           onClick={goToNextWeek}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-slate-100 text-slate-500 shadow-sm transition-colors hover:bg-slate-200"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-slate-100 text-slate-500 shadow-sm transition-colors hover:bg-slate-200"
           title="Next week"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-3.5 w-3.5" />
         </button>
       </div>
 
       {/* Legend */}
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-4 border-t border-orange-200 pt-3 text-sm">
+      <div className="mt-3.5 flex flex-wrap items-center justify-center gap-3 border-t border-orange-200 pt-2.5 text-xs">
         <div className="flex items-center gap-2">
           <div className="h-3 w-3 rounded-full bg-green-500"></div>
           <span className="text-slate-500">Filled</span>
