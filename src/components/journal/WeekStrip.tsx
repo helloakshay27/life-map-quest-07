@@ -1,6 +1,14 @@
 import { useMemo } from "react";
-import { format, startOfWeek, addDays, isSameWeek, isAfter, getWeek } from "date-fns";
-import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  addDays,
+  format,
+  isAfter,
+  isBefore,
+  isSameDay,
+  isSameWeek,
+  startOfWeek,
+} from "date-fns";
+import { CalendarDays, Check, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface WeekStripProps {
   selectedDate: Date;
@@ -8,127 +16,143 @@ interface WeekStripProps {
   filledDates?: Date[];
 }
 
-  const WeekStrip = ({ selectedDate, onDateChange, filledDates = [] }: WeekStripProps) => {
+const WeekStrip = ({ selectedDate, onDateChange, filledDates = [] }: WeekStripProps) => {
   const today = useMemo(() => new Date(), []);
-  const selectedWeekStart = useMemo(() => startOfWeek(selectedDate, { weekStartsOn: 0 }), [selectedDate]);
+  const selectedWeekStart = useMemo(
+    () => startOfWeek(selectedDate, { weekStartsOn: 0 }),
+    [selectedDate],
+  );
 
-  // Generate weeks (from 6 weeks ago to 5 weeks ahead)
-  const weeks = useMemo(() => {
-    const weeksArray = [];
-    for (let i = -6; i <= 5; i++) {
-      const weekStartDate = addDays(selectedWeekStart, i * 7);
-      const weekEndDate = addDays(weekStartDate, 6);
-      const weekNum = getWeek(weekStartDate);
-      const isCurrentWeek = isSameWeek(weekStartDate, today, { weekStartsOn: 0 });
-      const isFilled = filledDates.some((d) => isSameWeek(d, weekStartDate, { weekStartsOn: 0 }));
-      const isPast = isAfter(today, weekEndDate);
-      
-      weeksArray.push({
-        start: weekStartDate,
-        end: weekEndDate,
-        weekNum,
-        isCurrentWeek,
+  const weekDays = useMemo(() => {
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const day = addDays(selectedWeekStart, i);
+      const isFilled = filledDates.some((d) => isSameDay(d, day));
+      const isPast = isBefore(day, today) && !isSameDay(day, today);
+      const isUpcoming = isAfter(day, today) && !isSameDay(day, today);
+
+      days.push({
+        date: day,
         isFilled,
         isPast,
+        isUpcoming,
       });
     }
-    return weeksArray;
+    return days;
   }, [selectedWeekStart, today, filledDates]);
 
   const goToPrevWeek = () => onDateChange(addDays(selectedWeekStart, -7));
   const goToNextWeek = () => onDateChange(addDays(selectedWeekStart, 7));
+  const isTodayWeek = isSameWeek(selectedDate, today, { weekStartsOn: 0 });
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full rounded-3xl border-2 border-orange-300 bg-orange-50/40 p-4 sm:p-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Calendar className="h-5 w-5 text-gray-600" />
-          <div>
-            <h3 className="text-lg font-bold text-gray-900">
-              Creating Wk#{weeks.find(w => w.isCurrentWeek)?.weekNum || 1}, {format(today, "MMM d")}
-            </h3>
-          </div>
+      <div className="mb-5 flex items-center gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-500 text-white shadow-sm">
+          <CalendarDays className="h-5 w-5" />
         </div>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={goToPrevWeek} 
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Previous week"
-          >
-            <ChevronLeft className="h-5 w-5 text-gray-600" />
-          </button>
-          <button
-            onClick={() => onDateChange(today)}
-            className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            Today
-          </button>
-          <button 
-            onClick={goToNextWeek} 
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Next week"
-          >
-            <ChevronRight className="h-5 w-5 text-gray-600" />
-          </button>
+        <div>
+          <h3 className="text-2xl font-bold tracking-tight text-slate-800 sm:text-3xl">
+            {format(selectedDate, "EEEE, MMMM d, yyyy")}
+          </h3>
         </div>
       </div>
 
-      {/* Week Cards */}
-      <div className="flex gap-3 overflow-x-auto pb-4 px-1">
-        {weeks.map((week) => {
-          const isSelected = isSameWeek(week.start, selectedDate, { weekStartsOn: 0 });
-          let bgColor = "bg-red-100 border-red-300 text-red-700";
-          
-          if (week.isCurrentWeek) {
-            bgColor = "bg-red-500 border-red-600 text-white";
-          } else if (!week.isPast && !week.isCurrentWeek) {
-            bgColor = "bg-red-100 border-red-300 text-red-700";
+      <div className="mb-3 text-center text-lg font-semibold text-slate-500">This Week</div>
+
+      {/* Day Cards */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+        <button
+          onClick={goToPrevWeek}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-slate-100 text-slate-500 shadow-sm transition-colors hover:bg-slate-200"
+          title="Previous week"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+
+        {weekDays.map((day) => {
+          const isSelected = isSameDay(day.date, selectedDate);
+
+          let cardStyles =
+            "border-slate-300 bg-slate-200 text-slate-500";
+          if (day.isPast && !day.isFilled) {
+            cardStyles = "border-red-400 bg-red-400 text-white";
+          }
+          if (day.isFilled || isSelected) {
+            cardStyles = "border-green-500 bg-green-500 text-white";
           }
 
-          if (isSelected) {
-            bgColor = "bg-green-50 border-green-500 text-gray-900 border-2";
-          }
+          const isMissed = day.isPast && !day.isFilled;
 
           return (
             <button
-              key={week.start.toISOString()}
-              onClick={() => onDateChange(week.start)}
-              className={`flex-shrink-0 w-32 p-4 rounded-xl border-2 transition-all hover:shadow-md ${bgColor}`}
+              key={day.date.toISOString()}
+              onClick={() => onDateChange(day.date)}
+              className={`relative min-w-[120px] sm:min-w-[128px] rounded-2xl border p-3 sm:p-4 text-center shadow-sm transition-all hover:opacity-95 ${cardStyles} ${
+                isSelected ? "ring-2 ring-orange-400 ring-offset-1" : ""
+              }`}
             >
-              <div className="flex items-start justify-between mb-2">
-                <Calendar className="h-5 w-5 opacity-70" />
+              <div className="text-sm font-semibold uppercase leading-none opacity-80 sm:text-base">
+                {format(day.date, "EEE")}
               </div>
-              <div className="text-center">
-                <div className="text-xs font-bold opacity-75 mb-1">
-                  WK#{String(week.weekNum).padStart(2, '0')}
-                </div>
-                <div className="text-sm font-bold">
-                  {format(week.start, "MMM d")}-{format(week.end, "d")}
-                </div>
+
+              <div className="mt-2 text-3xl font-bold leading-none sm:text-4xl">
+                {format(day.date, "d")}
               </div>
+
+              {isMissed && (
+                <div className="mx-auto mt-2 inline-flex rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white sm:text-sm">
+                  -10
+                </div>
+              )}
+
+              {(day.isFilled || isSelected) && (
+                <div className="mx-auto mt-2 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-green-700 px-1.5 text-white">
+                  <Check className="h-3.5 w-3.5" />
+                </div>
+              )}
             </button>
           );
         })}
+
+        <button
+          onClick={goToNextWeek}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-slate-100 text-slate-500 shadow-sm transition-colors hover:bg-slate-200"
+          title="Next week"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-6 text-sm px-1 border-t border-gray-200 pt-3">
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-4 border-t border-orange-200 pt-3 text-sm">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-green-500"></div>
-          <span className="text-gray-600">Filled</span>
+          <div className="h-3 w-3 rounded-full bg-green-500"></div>
+          <span className="text-slate-500">Filled</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-red-500"></div>
-          <span className="text-gray-600">Missed</span>
+          <div className="h-3 w-3 rounded-full bg-red-400"></div>
+          <span className="text-slate-500">Missed</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded bg-amber-400"></div>
-          <span className="text-gray-600">Current/Upcoming</span>
+          <div className="h-3 w-3 rounded-full bg-slate-300"></div>
+          <span className="text-slate-500">Upcoming</span>
         </div>
       </div>
+
+      {!isTodayWeek && (
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => onDateChange(today)}
+            className="rounded-full border border-orange-300 bg-orange-100 px-5 py-2 text-sm font-semibold text-orange-700 transition-colors hover:bg-orange-200"
+          >
+            Jump to this week
+          </button>
+        </div>
+      )}
     </div>
   );
-}
+};
 
 export default WeekStrip;
