@@ -51,7 +51,7 @@ export default function MyProfileModal({ setIsProfileModalOpen }: MyProfileModal
 
         const token = localStorage.getItem("auth_token");
 
-        const res = await fetch(`${API_BASE_URL}/users/profile`, {
+        const res = await fetch(`${API_BASE_URL}/users/profile.json`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -88,43 +88,49 @@ export default function MyProfileModal({ setIsProfileModalOpen }: MyProfileModal
 
   // ── Save profile ──────────────────────────────────────────────────────────
   const handleSave = async () => {
-    try {
-      setIsSaving(true);
+  try {
+    setIsSaving(true);
+    const token = localStorage.getItem("auth_token");
 
-      const token = localStorage.getItem("auth_token");
-
-      const res = await fetch(`https://life-api.lockated.com/users/profile`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          user: {
-            first_name: firstName,
-            last_name: lastName,
-            mobile_no: phone,
-            birthday,
-            bio,
-          },
-          profile_image_base64: imageBase64,
-        }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null);
-        throw new Error(errData?.message ?? `Failed to save (${res.status})`);
+    // 1. Prepare the payload
+    const payload: any = {
+      user: {
+        first_name: firstName,
+        last_name: lastName,
+        mobile_no: phone,
+        birthday,
+        bio,
       }
+    };
 
-      showToast("Profile saved successfully!", "success");
-      setTimeout(() => setIsProfileModalOpen(false), 1200);
-    } catch (err: unknown) {
-      showToast(err instanceof Error ? err.message : "Something went wrong.");
-    } finally {
-      setIsSaving(false);
+    // 2. Only attach the base64 string if it is an actual newly uploaded base64 image
+    if (imageBase64 && imageBase64.startsWith("data:image")) {
+      payload.profile_image_base64 = imageBase64;
     }
-  };
 
+    // 3. Send the request
+    const res = await fetch(`${API_BASE_URL}/users/profile`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => null);
+      throw new Error(errData?.message ?? `Failed to save (${res.status})`);
+    }
+
+    showToast("Profile saved successfully!", "success");
+    setTimeout(() => setIsProfileModalOpen(false), 1200);
+  } catch (err: unknown) {
+    showToast(err instanceof Error ? err.message : "Something went wrong.");
+  } finally {
+    setIsSaving(false);
+  }
+};
   const getInitials = (name: string) =>
     name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) ?? "?";
 

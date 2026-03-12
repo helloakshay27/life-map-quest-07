@@ -341,7 +341,7 @@ const WeeklyJournal = () => {
           <TabsContent value="new" className="focus:outline-none">
             <div className="flex flex-col w-full gap-6">
               {/* Week Strip */}
-              <div className="bg-blue-50/30 border-2 border-blue-200 rounded-2xl p-6">
+              <div>
                 <WeekStrip
                   selectedDate={currentDate}
                   onDateChange={(newDate) => setCurrentDate(newDate)}

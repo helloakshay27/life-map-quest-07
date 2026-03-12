@@ -172,32 +172,40 @@ function ScoreCard({ data }) {
     Math.min(100, Math.round((score.achieved / score.total) * 100)) || 0;
 
   return (
-    <div className="relative w-full max-w-4xl overflow-hidden bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700 rounded-[20px] p-8 pb-9 shadow-lg">
-      <div className="absolute -top-7 -right-7 w-32 h-32 rounded-full bg-white/10" />
-      <div className="absolute top-2 right-2 w-20 h-20 rounded-full bg-white/10" />
+    <div className="relative w-full overflow-hidden bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700 rounded-2xl p-10 pb-10 shadow-xl">
+      {/* Decorative circles */}
+      <div className="absolute -top-10 -right-10 w-52 h-52 rounded-full bg-white/10" />
+      <div className="absolute top-4 right-4 w-32 h-32 rounded-full bg-white/10" />
+      <div className="absolute -bottom-8 -left-8 w-36 h-36 rounded-full bg-white/10" />
 
-      <div className="absolute top-5 right-5 w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-        <TrendingUp className="text-white w-5 h-5" strokeWidth={2.2} />
+      <div className="absolute top-6 right-6 w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+        <TrendingUp className="text-white w-6 h-6" strokeWidth={2.2} />
       </div>
 
-      <p className="text-orange-100 text-sm font-medium mb-1 tracking-wide">
+      <p className="text-orange-100 text-base font-semibold mb-2 tracking-widest uppercase">
         Your Total Score
       </p>
-      <div className="flex items-baseline gap-1 mb-3">
-        <span className="text-6xl font-black text-white">{score.achieved}</span>
-        <span className="text-3xl font-semibold text-orange-200">
+      <div className="flex items-baseline gap-2 mb-4">
+        <span className="text-8xl font-black text-white leading-none">{score.achieved}</span>
+        <span className="text-4xl font-semibold text-orange-200 leading-none">
           /{score.total}
         </span>
       </div>
 
-      <p className="text-2xl font-bold text-white mb-1">{title}</p>
-      <p className="text-orange-100 text-sm mb-6 italic">{message}</p>
+      <p className="text-3xl font-extrabold text-white mb-1">{title}</p>
+      <p className="text-orange-100 text-base mb-8 italic">{message}</p>
 
-      <div className="bg-white/25 rounded-full h-2.5 overflow-hidden">
+      {/* Progress bar */}
+      <div className="bg-white/25 rounded-full h-3.5 overflow-hidden">
         <div
           className="h-full bg-white rounded-full transition-all duration-700 ease-out"
           style={{ width: `${pct}%` }}
         />
+      </div>
+      <div className="flex justify-between mt-2">
+        <span className="text-orange-100 text-xs font-medium">0</span>
+        <span className="text-orange-100 text-xs font-medium">{pct}%</span>
+        <span className="text-orange-100 text-xs font-medium">{score.total}</span>
       </div>
     </div>
   );

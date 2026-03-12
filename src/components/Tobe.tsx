@@ -1,12 +1,35 @@
 import { useState, useEffect, useCallback } from "react";
 import { Zap, User, Plus, Sparkles, Target, Save, Trash2 } from "lucide-react";
-import { API_CONFIG, getAuthHeaders } from "@/config/api";
+import { API_CONFIG } from "@/config/api";
 
 const API_BASE_URL = API_CONFIG.BASE_URL;
 
-// ─── helper: get token from cookie OR header ───────────────────────────────
-const getToken = () => {
-  // Try localStorage first, then sessionStorage, then cookie
+// ─── Types ─────────────────────────────────────────────────────────────────
+interface Goal {
+  id: string | number;
+  title: string;
+  desc: string;
+  status: string;
+  checked: boolean;
+}
+
+interface Toast {
+  type: "error" | "success";
+  message: string;
+}
+
+interface AnalysisResult {
+  be: string;
+  do: string;
+}
+
+interface ApiError extends Error {
+  status?: number;
+  body?: unknown;
+}
+
+// ─── helper: get token ─────────────────────────────────────────────────────
+const getToken = (): string => {
   return (
     localStorage.getItem("auth_token") ||
     sessionStorage.getItem("auth_token") ||
@@ -18,12 +41,12 @@ const getToken = () => {
   );
 };
 
-// ─── helper: unified fetch wrapper with full logging ──────────────────────
-const apiFetch = async (path, options = {}) => {
+// ─── helper: unified fetch wrapper ────────────────────────────────────────
+const apiFetch = async (path: string, options: RequestInit = {}): Promise<unknown> => {
   const token = getToken();
   const url = `${API_BASE_URL}${path}`;
 
-  const config = {
+  const config: RequestInit = {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -34,12 +57,12 @@ const apiFetch = async (path, options = {}) => {
   };
 
   console.log(`[API] ${config.method || "GET"} ${url}`);
-  if (config.body) console.log("[API] Payload:", JSON.parse(config.body));
+  if (config.body) console.log("[API] Payload:", JSON.parse(config.body as string));
 
   const res = await fetch(url, config);
   const text = await res.text();
 
-  let json = null;
+  let json: unknown = null;
   try {
     json = JSON.parse(text);
   } catch {
@@ -49,9 +72,10 @@ const apiFetch = async (path, options = {}) => {
   console.log(`[API] Status: ${res.status}`, json);
 
   if (!res.ok) {
-    const err = new Error(
-      typeof json === "object" && json !== null
-        ? json?.message || json?.error || `HTTP ${res.status}`
+    const parsed = json as Record<string, unknown> | null;
+    const err: ApiError = new Error(
+      parsed && typeof parsed === "object"
+        ? (parsed?.message as string) || (parsed?.error as string) || `HTTP ${res.status}`
         : `HTTP ${res.status}: ${text}`
     );
     err.status = res.status;
@@ -63,18 +87,17 @@ const apiFetch = async (path, options = {}) => {
 };
 
 function Tobe() {
-  const [bucketList, setBucketList] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [customGoal, setCustomGoal] = useState("");
-  const [toast, setToast] = useState(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
-  const [selectedGoalForDelete, setSelectedGoalForDelete] = useState(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [exerciseData, setExerciseData] = useState(null);
+  const [bucketList, setBucketList] = useState<Goal[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [customGoal, setCustomGoal] = useState<string>("");
+  const [toast, setToast] = useState<Toast | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isAdding, setIsAdding] = useState<boolean>(false);
+  const [deletingId, setDeletingId] = useState<string | number | null>(null);
+  const [selectedGoalForDelete, setSelectedGoalForDelete] = useState<Goal | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
 
   // ── Toast timer ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -83,32 +106,34 @@ function Tobe() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const showError = (msg) => setToast({ type: "error", message: msg });
-  const showSuccess = (msg) => setToast({ type: "success", message: msg });
+  const showError = (msg: string) => setToast({ type: "error", message: msg });
+  const showSuccess = (msg: string) => setToast({ type: "success", message: msg });
 
   // ── FETCH DREAMS ───────────────────────────────────────────────────────
-  const fetchBucketList = async () => {
+  const fetchBucketList = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await apiFetch("/dreams");
+      const data = await apiFetch("/dreams") as Record<string, unknown>;
 
-      let allGoals = [];
+      let allGoals: Record<string, unknown>[] = [];
       if (data && typeof data === "object" && !Array.isArray(data)) {
         ["dreaming", "planning", "in_progress", "achieved"].forEach((cat) => {
-          if (Array.isArray(data[cat])) allGoals = [...allGoals, ...data[cat]];
+          if (Array.isArray(data[cat])) {
+            allGoals = [...allGoals, ...(data[cat] as Record<string, unknown>[])];
+          }
         });
-        if (!allGoals.length && Array.isArray(data.dreams)) allGoals = data.dreams;
-        if (!allGoals.length && Array.isArray(data.data))   allGoals = data.data;
+        if (!allGoals.length && Array.isArray(data.dreams)) allGoals = data.dreams as Record<string, unknown>[];
+        if (!allGoals.length && Array.isArray(data.data))   allGoals = data.data as Record<string, unknown>[];
       } else if (Array.isArray(data)) {
-        allGoals = data;
+        allGoals = data as Record<string, unknown>[];
       }
 
       setBucketList(
         allGoals.map((item, i) => ({
-          id:      item.id    || `dream_${i}`,
-          title:   item.title || item.name || item.goal || "Untitled Goal",
-          desc:    item.desc  || item.description || "",
-          status:  item.status || "",
+          id:      (item.id as string | number) || `dream_${i}`,
+          title:   (item.title || item.name || item.goal || "Untitled Goal") as string,
+          desc:    (item.desc  || item.description || "") as string,
+          status:  (item.status || "") as string,
           checked: false,
         }))
       );
@@ -130,13 +155,6 @@ function Tobe() {
 
     setIsAdding(true);
     try {
-      /*
-       * Adjust the payload key if your backend expects something different.
-       * Common variants:
-       *   { dream: { title, description, status } }   ← Rails default
-       *   { title, description, status }               ← flat
-       * Check the Network tab → Request Payload to confirm.
-       */
       const data = await apiFetch("/dreams", {
         method: "POST",
         body: JSON.stringify({
@@ -146,16 +164,15 @@ function Tobe() {
             status:      "dreaming",
           },
         }),
-      });
+      }) as Record<string, unknown>;
 
-      // Server should return the created dream — handle both shapes
-      const created = data?.dream || data?.data || data;
+      const created = (data?.dream || data?.data || data) as Record<string, unknown>;
 
-      const newGoal = {
-        id:      created?.id    || Date.now(),
-        title:   created?.title || customGoal.trim(),
-        desc:    created?.description || created?.desc || "",
-        status:  created?.status || "dreaming",
+      const newGoal: Goal = {
+        id:      (created?.id as string | number) || Date.now(),
+        title:   (created?.title as string)       || customGoal.trim(),
+        desc:    (created?.description || created?.desc || "") as string,
+        status:  (created?.status as string)      || "dreaming",
         checked: true,
       };
 
@@ -164,29 +181,23 @@ function Tobe() {
       showSuccess("Goal added successfully!");
     } catch (err) {
       console.error("[handleAddCustomGoal] failed:", err);
-      // Show the real server error message if available
-      showError(err.message || "Failed to add goal. Check console for details.");
+      showError((err as ApiError).message || "Failed to add goal. Check console for details.");
     } finally {
       setIsAdding(false);
     }
   };
 
   // ── DELETE GOAL  →  DELETE /dreams/:id ────────────────────────────────
-  const deleteGoalFromBackend = async (goal) => {
+  const deleteGoalFromBackend = async (goal: Goal): Promise<boolean> => {
     setDeletingId(goal.id);
     try {
-      /*
-       * Standard RESTful delete: DELETE /dreams/:id  (no request body)
-       * If your API needs a body instead, swap the apiFetch call below.
-       */
       await apiFetch(`/dreams/${goal.id}`, { method: "DELETE" });
-
       setBucketList((prev) => prev.filter((g) => g.id !== goal.id));
       showSuccess("Goal deleted successfully!");
       return true;
     } catch (err) {
       console.error("[deleteGoalFromBackend] failed:", err);
-      showError(err.message || "Could not delete goal. Check console for details.");
+      showError((err as ApiError).message || "Could not delete goal. Check console for details.");
       return false;
     } finally {
       setDeletingId(null);
@@ -213,7 +224,7 @@ function Tobe() {
       showSuccess("Goals saved successfully!");
     } catch (err) {
       console.error("[saveExerciseToBackend] failed:", err);
-      showError(err.message || "Failed to save goals. Check console for details.");
+      showError((err as ApiError).message || "Failed to save goals. Check console for details.");
     } finally {
       setIsSaving(false);
     }
@@ -232,25 +243,24 @@ function Tobe() {
 
       let be = "", doA = "";
       if (goals.some((g) => g.includes("beach") || g.includes("house") || g.includes("property"))) {
-        be = "Real Estate Investor & Property Owner";
+        be  = "Real Estate Investor & Property Owner";
         doA = "Research property markets, save for down payment, learn about property management";
       } else if (goals.some((g) => g.includes("marathon") || g.includes("run") || g.includes("fitness"))) {
-        be = "Dedicated Athlete & Health Enthusiast";
+        be  = "Dedicated Athlete & Health Enthusiast";
         doA = "Follow structured training plan, maintain proper nutrition, track progress regularly";
       } else if (goals.some((g) => g.includes("business") || g.includes("company") || g.includes("startup"))) {
-        be = "Entrepreneur & Business Leader";
+        be  = "Entrepreneur & Business Leader";
         doA = "Develop business plan, build network, acquire necessary skills, secure funding";
       } else if (goals.some((g) => g.includes("learn") || g.includes("skill") || g.includes("education"))) {
-        be = "Continuous Learner & Knowledge Seeker";
+        be  = "Continuous Learner & Knowledge Seeker";
         doA = "Enroll in courses, practice daily, join study groups, teach others";
       } else {
-        be = "Goal-Oriented Achiever";
+        be  = "Goal-Oriented Achiever";
         doA = "Break down goals into actionable steps, track progress, stay consistent";
       }
 
       setAnalysisResult({ be, do: doA });
 
-      // Save analysis silently
       try {
         await apiFetch("/be_do_have_exercise", {
           method: "POST",
@@ -271,12 +281,12 @@ function Tobe() {
   };
 
   // ── Handlers ──────────────────────────────────────────────────────────
-  const handleToggleCheck = (id) =>
+  const handleToggleCheck = (id: string | number) =>
     setBucketList((prev) =>
       prev.map((g) => (g.id === id ? { ...g, checked: !g.checked } : g))
     );
 
-  const handleDeleteClick = (goal, e) => {
+  const handleDeleteClick = (goal: Goal, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedGoalForDelete(goal);
     setShowDeleteConfirm(true);
@@ -325,8 +335,8 @@ function Tobe() {
         {/* INFO CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { letter: "H", label: "HAVE", sub: "Your goals",        bg: "bg-green-100",  text: "text-green-600",  icon: null },
-            { letter: "D", label: "DO",   sub: "Actions & habits",  bg: "bg-blue-100",   text: "text-blue-500",   icon: <Zap size={24} strokeWidth={2.5} /> },
+            { letter: "H", label: "HAVE", sub: "Your goals",         bg: "bg-green-100",  text: "text-green-600",  icon: null },
+            { letter: "D", label: "DO",   sub: "Actions & habits",   bg: "bg-blue-100",   text: "text-blue-500",   icon: <Zap size={24} strokeWidth={2.5} /> },
             { letter: "B", label: "BE",   sub: "Identity & mindset", bg: "bg-purple-100", text: "text-purple-600", icon: <User size={24} strokeWidth={2.5} /> },
           ].map(({ letter, label, sub, bg, text, icon }) => (
             <div key={label} className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm flex flex-col items-center text-center">
@@ -415,8 +425,8 @@ function Tobe() {
               </h4>
               <div className="space-y-4">
                 {[
-                  { key: "be", label: "Who you need to BE:", badge: "BE", color: "purple" },
-                  { key: "do", label: "What you need to DO:", badge: "DO", color: "blue" },
+                  { key: "be" as const, label: "Who you need to BE:", badge: "BE", color: "purple" },
+                  { key: "do" as const, label: "What you need to DO:", badge: "DO", color: "blue" },
                 ].map(({ key, label, badge, color }) => (
                   <div key={key}>
                     <div className="flex items-center gap-2 mb-2">
@@ -490,7 +500,7 @@ function Tobe() {
           <div className="bg-white rounded-xl p-6 max-w-md mx-4 shadow-xl">
             <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Goal</h3>
             <p className="text-gray-600 mb-4">
-              Are you sure you want to delete "{selectedGoalForDelete.title}"? This cannot be undone.
+              Are you sure you want to delete &quot;{selectedGoalForDelete.title}&quot;? This cannot be undone.
             </p>
             <div className="flex gap-3 justify-end">
               <button onClick={cancelDelete} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">

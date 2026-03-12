@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Plus, Eye, EyeOff, ArrowLeft, GripVertical } from "lucide-react";
+import { Plus, Eye, EyeOff, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -53,48 +53,37 @@ const Todos = () => {
   const [selectedStatus, setSelectedStatus] = useState("all-statuses");
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
 
-  // ─── Drag State ─────────────────────────────────────────────────────────────
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [hoveredStatus, setHoveredStatus] = useState<string | null>(null);
   const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-// Load todos: Initially GET from API, fallback to local storage if API fails
- // Load todos
   useEffect(() => {
     const loadTodos = async () => {
       try {
         const response = await fetchWithAuth("/todos", { method: "GET" });
-        
         if (response.ok) {
           const rawData = await response.json();
-          
-          // ─── FORMAT THE API DATA TO MATCH FRONTEND ───
           const formattedData = rawData.map((item: any) => {
-            // Map backend status to frontend status
             const statusMap: Record<string, string> = {
               "not_started": "Not Started",
               "in_progress": "In Progress",
               "completed": "Completed",
               "someday": "Someday"
             };
-
-            // Map backend priority to frontend priority
             const priorityMap: Record<string, string> = {
               "low": "Low",
               "medium": "Medium",
               "high": "High",
               "urgent": "Urgent"
             };
-
             return {
               ...item,
-              id: String(item.id), // Ensure ID is a string for your drag-and-drop
-              lifeArea: item.life_area || "General", // Map snake_case to camelCase
-              status: statusMap[item.status] || "Not Started", 
+              id: String(item.id),
+              lifeArea: item.life_area || "General",
+              status: statusMap[item.status] || "Not Started",
               priority: priorityMap[item.priority] || "Medium",
             };
           });
-
           setTodos(formattedData);
           localStorage.setItem("user_todos", JSON.stringify(formattedData));
           return;
@@ -110,9 +99,9 @@ const Todos = () => {
         }
       }
     };
-    
     loadTodos();
   }, []);
+
   const statuses = [
     { key: "Not Started", label: "Not Started", color: "bg-indigo-50 border-indigo-200", hoverColor: "bg-indigo-100 border-indigo-500 shadow-lg shadow-indigo-100" },
     { key: "In Progress", label: "In Progress", color: "bg-blue-50 border-blue-200",     hoverColor: "bg-blue-100 border-blue-500 shadow-lg shadow-blue-100"    },
@@ -130,7 +119,6 @@ const Todos = () => {
   const getTodosByStatus = (status: string) =>
     filteredTodos.filter((todo) => todo.status === status);
 
-  // ─── API Handlers (unchanged) ────────────────────────────────────────────────
   const handleCreateTodo = async (newTodo: TodoItem) => {
     try {
       try {
@@ -152,7 +140,6 @@ const Todos = () => {
     try {
       const updatedTodo = todos.find((t) => t.id === id);
       if (!updatedTodo) return;
-      // Optimistic UI update first
       setTodos((prev) => {
         const newTodos = prev.map((t) => t.id === id ? { ...t, status: newStatus } : t);
         localStorage.setItem("user_todos", JSON.stringify(newTodos));
@@ -164,7 +151,6 @@ const Todos = () => {
     } catch (error) { console.error("Failed to update todo:", error); }
   };
 
-  // ─── Pointer-Based Drag & Drop (works in iframes) ───────────────────────────
   const getHoveredColumn = useCallback((x: number, y: number): string | null => {
     for (const [statusKey, el] of Object.entries(columnRefs.current)) {
       if (!el) continue;
@@ -258,14 +244,9 @@ const Todos = () => {
     <div className="relative w-full animate-fade-in space-y-8">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <button onClick={() => window.history.back()} className="flex items-center justify-center text-red-500 hover:text-red-700 transition-colors">
-            <ArrowLeft className="h-5 w-5" strokeWidth={2.5} />
-          </button>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">To Do's</h1>
-            <p className="text-sm text-muted-foreground">Manage your tasks and action items</p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">To Do's</h1>
+          <p className="text-sm text-muted-foreground">Manage your tasks and action items</p>
         </div>
         <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto px-4 py-2.5" onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />New To Do
@@ -325,7 +306,6 @@ const Todos = () => {
                       </span>
                     </div>
 
-                    {/* Drop Column */}
                     <div
                       ref={(el) => { columnRefs.current[status.key] = el; }}
                       className={`
@@ -335,7 +315,6 @@ const Todos = () => {
                         ${dragState?.isDragging && !isHovered ? "opacity-70" : ""}
                       `}
                     >
-                      {/* Animated drop indicator */}
                       {isHovered && (
                         <div className="mb-3 rounded-lg border-2 border-dashed border-gray-400 bg-white/70 h-14 flex items-center justify-center gap-2">
                           <div className="w-1.5 h-5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0ms" }} />
