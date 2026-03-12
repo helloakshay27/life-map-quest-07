@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [verifying, setVerifying] = useState(false);
+  const [resendingOtp, setResendingOtp] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const { login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -24,8 +26,25 @@ const Login = () => {
   const isVerificationMode = searchParams.get("mode") === "verify";
   const verificationEmail = searchParams.get("email") || emailOrMobile;
 
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+
+    const timer = window.setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          window.clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [resendCooldown]);
+
   const openSignIn = () => {
     setVerificationCode("");
+    setResendCooldown(0);
     setSearchParams({});
   };
 
@@ -51,12 +70,57 @@ const Login = () => {
     }
   };
 
-  const handleResendCode = () => {
-    toast({
-      title: "Resend requested",
-      description:
-        "Connect your resend-code endpoint here to send a new verification code.",
-    });
+  const handleResendCode = async () => {
+    if (!verificationEmail) {
+      toast({
+        title: "Email missing",
+        description: "Please enter your email again from Sign up.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (resendCooldown > 0 || resendingOtp) {
+      return;
+    }
+
+    setResendingOtp(true);
+    try {
+      const response = await fetch("https://life-api.lockated.com/confirmation", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user: {
+            email: verificationEmail,
+          },
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || data.error || "Failed to resend OTP",
+        );
+      }
+
+      setResendCooldown(30);
+      toast({
+        title: "OTP sent",
+        description: "A new verification code has been sent to your email.",
+      });
+    } catch (error) {
+      toast({
+        title: "Resend failed",
+        description:
+          error instanceof Error ? error.message : "Something went wrong",
+        variant: "destructive",
+      });
+    } finally {
+      setResendingOtp(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -195,6 +259,8 @@ const Login = () => {
             onVerify={handleVerifyEmail}
             onResend={handleResendCode}
             isSubmitting={verifying}
+            isResending={resendingOtp}
+            resendCooldown={resendCooldown}
           />
         ) : (
         <div className="rounded-2xl border bg-card p-8 shadow-lg">

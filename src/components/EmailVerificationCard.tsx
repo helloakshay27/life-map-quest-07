@@ -15,6 +15,8 @@ interface EmailVerificationCardProps {
   onVerify: () => void;
   onResend: () => void;
   isSubmitting?: boolean;
+  isResending?: boolean;
+  resendCooldown?: number;
 }
 
 const EmailVerificationCard = ({
@@ -25,6 +27,8 @@ const EmailVerificationCard = ({
   onVerify,
   onResend,
   isSubmitting = false,
+  isResending = false,
+  resendCooldown = 0,
 }: EmailVerificationCardProps) => {
   return (
     <div className="rounded-[28px] border border-white/70 bg-white/95 p-8 shadow-2xl backdrop-blur sm:p-10">
@@ -87,9 +91,14 @@ const EmailVerificationCard = ({
           <button
             type="button"
             onClick={onResend}
+            disabled={isResending || resendCooldown > 0}
             className="font-semibold text-slate-700 transition-colors hover:text-slate-950"
           >
-            Resend
+            {isResending
+              ? "Sending..."
+              : resendCooldown > 0
+                ? `Resend in ${resendCooldown}s`
+                : "Resend"}
           </button>
         </p>
       </div>
