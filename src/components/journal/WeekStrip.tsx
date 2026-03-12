@@ -49,7 +49,7 @@ const WeekStrip = ({ selectedDate, onDateChange, filledDates = [] }: WeekStripPr
     <div className="w-full rounded-3xl border-2 border-green-300 bg-orange-50/40 p-3.5 sm:p-4">
       {/* Header */}
       <div className="mb-4 flex items-center gap-2.5">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500 text-white shadow-sm">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-100 text-green-700 shadow-sm">
           <CalendarDays className="h-4.5 w-4.5" />
         </div>
         <div>
@@ -126,7 +126,7 @@ const WeekStrip = ({ selectedDate, onDateChange, filledDates = [] }: WeekStripPr
       </div>
 
       {/* Legend */}
-      <div className="mt-3.5 flex flex-wrap items-center justify-center gap-3 border-t border-green-200 pt-2.5 text-xs">
+      <div className="mt-3.5 flex flex-wrap items-center justify-center gap-3 border-t border-slate-200 pt-2.5 text-xs">
         <div className="flex items-center gap-2">
           <div className="h-3 w-3 rounded-full bg-green-500"></div>
           <span className="text-slate-500">Filled</span>
