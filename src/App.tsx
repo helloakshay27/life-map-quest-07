@@ -47,7 +47,7 @@ const App = () => (
             <Route path="/updatePassword" element={<UpdatePassword />} />
 
             <Route element={<AppLayout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard" element={<Dashboard/>} />
               <Route path="/daily-journal" element={<DailyJournal />} />
               <Route path="/weekly-journal" element={<WeeklyJournal />} />
               <Route path="/calendar" element={<CalendarPage />} />
