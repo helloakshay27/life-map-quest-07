@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Zap, User, Plus, Sparkles, Target, Save, Trash2 } from "lucide-react";
+import { API_CONFIG, getAuthHeaders } from "@/config/api";
 
-const API_BASE_URL = "https://life-api.lockated.com";
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 function Tobe() {
   // --- STATE ---
@@ -14,6 +15,7 @@ function Tobe() {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedGoalForDelete, setSelectedGoalForDelete] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [exerciseData, setExerciseData] = useState(null);
 
   // =========================================
   // TOAST TIMER FIX
@@ -37,21 +39,11 @@ function Tobe() {
   // =========================================
   // API INTEGRATION: FETCH BUCKET LIST (DREAMS)
   // =========================================
-  useEffect(() => {
-    fetchBucketList();
-  }, []);
-
-  const fetchBucketList = async () => {
+  const fetchBucketList = useCallback(async () => {
     try {
-      const token = localStorage.getItem("auth_token");
-
       const response = await fetch(`${API_BASE_URL}/dreams`, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -102,7 +94,11 @@ function Tobe() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchBucketList();
+  }, [fetchBucketList]);
 
   // =========================================
   // API INTEGRATION: SAVE EXERCISE (POST Method)
@@ -118,39 +114,52 @@ function Tobe() {
     setIsSaving(true);
 
     try {
-      const token = localStorage.getItem("auth_token");
       const goalIds = selectedGoals.map((g) => g.id);
+      
+      const filteredGoalIds = goalIds.filter(id => {
+        if (typeof id === 'string' && id.startsWith('dream_')) return false;
+        // If it's a number from Date.now(), it's likely a local unsaved goal
+        if (typeof id === 'number' && id > 1700000000000) return false; 
+        return true;
+      });
 
       const payload = {
         be_do_have_exercise: {
           be_identity: analysisResult?.be || "",
           do_actions: analysisResult?.do || "",
         },
-        goal_ids: goalIds,
+        goal_ids: filteredGoalIds,
       };
 
       const response = await fetch(`${API_BASE_URL}/be_do_have_exercise`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
 
+      const result = await response.json();
+      console.log("POST Response:", response.status, result);
+
       if (!response.ok) {
-        throw new Error("Failed to save exercise");
+        throw new Error(result.message || "Failed to save exercise");
       }
 
-      const result = await response.json();
-      console.log("Action completed successfully:", result);
-      showSuccess("Goals saved successfully!");
+      // Store the exercise data from API response
+      setExerciseData({
+        id: result.id,
+        be_identity: result.be_identity,
+        do_actions: result.do_actions,
+        have_goals: result.have_goals,
+        updated_at: result.updated_at,
+      });
+
+      console.log("Exercise saved successfully:", result);
+      showSuccess(`✓ Exercise saved (ID: ${result.id})`);
 
       return true;
     } catch (error) {
       console.error("Error with exercise action:", error);
-      showError("Failed to save goals. Please try again.");
+      showError(error.message || "Failed to save goals. Please try again.");
       return false;
     } finally {
       setIsSaving(false);
@@ -160,29 +169,33 @@ function Tobe() {
   // =========================================
   // API INTEGRATION: DELETE GOAL (DELETE Method)
   // =========================================
-  const deleteGoalFromBackend = async (goalId) => {
-    try {
-      const token = localStorage.getItem("auth_token");
+  const deleteGoalFromBackend = async (goal) => {
+    // If it's a custom goal added locally, just remove it from state
+    if (goal.status === "custom") {
+      setBucketList(bucketList.filter((g) => g.id !== goal.id));
+      showSuccess("Goal removed from list");
+      return true;
+    }
 
-      const response = await fetch(`${API_BASE_URL}/be_do_have_exercise`, {
+    try {
+      // For goals fetched from /dreams, use the dreams delete endpoint
+      const response = await fetch(`${API_BASE_URL}/dreams/${goal.id}`, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ goal_id: goalId }),
+        headers: getAuthHeaders(),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to delete goal from server");
+      const data = await response.json();
+      console.log("DELETE Response:", response.status, data);
+
+      // Check if response contains success message
+      if (response.ok || data.message?.includes("deleted")) {
+        console.log("Goal deleted successfully from backend");
+        setBucketList(bucketList.filter((g) => g.id !== goal.id));
+        showSuccess(data.message || "Goal deleted successfully!");
+        return true;
+      } else {
+        throw new Error(data.message || "Failed to delete goal from server");
       }
-
-      console.log("Goal deleted successfully");
-      setBucketList(bucketList.filter((goal) => goal.id !== goalId));
-      showSuccess("Goal deleted successfully!");
-
-      return true;
     } catch (error) {
       console.error("Error deleting goal:", error);
       showError("Could not delete goal. Please try again.");
@@ -195,36 +208,49 @@ function Tobe() {
   // =========================================
   const saveAnalysisToBackend = async (beData, doData, goalIds) => {
     try {
-      const token = localStorage.getItem("auth_token");
+      const filteredGoalIds = goalIds.filter(id => {
+        if (typeof id === 'string' && id.startsWith('dream_')) return false;
+        if (typeof id === 'number' && id > 1700000000000) return false;
+        return true;
+      });
 
       const payload = {
         be_do_have_exercise: {
           be_identity: beData,
           do_actions: doData,
         },
-        goal_ids: goalIds,
+        goal_ids: filteredGoalIds,
       };
 
       const response = await fetch(`${API_BASE_URL}/be_do_have_exercise`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
 
+      const result = await response.json();
+      console.log("Analysis POST Response:", response.status, result);
+
       if (!response.ok) {
-        throw new Error("Failed to save analysis to server");
+        throw new Error(result.message || "Failed to save analysis to server");
       }
 
-      const result = await response.json();
+      // Store the exercise data from API response
+      setExerciseData({
+        id: result.id,
+        be_identity: result.be_identity,
+        do_actions: result.do_actions,
+        have_goals: result.have_goals,
+        updated_at: result.updated_at,
+      });
+
       console.log("Analysis saved successfully:", result);
+      showSuccess(`✓ Analysis saved (ID: ${result.id})`);
 
       return result;
     } catch (error) {
       console.error("Error saving analysis:", error);
+      showError(error.message || "Failed to save analysis. Please try again.");
       return null;
     }
   };
@@ -248,7 +274,7 @@ function Tobe() {
   const confirmDelete = async () => {
     if (selectedGoalForDelete) {
       setShowDeleteConfirm(false);
-      await deleteGoalFromBackend(selectedGoalForDelete.id);
+      await deleteGoalFromBackend(selectedGoalForDelete);
       setSelectedGoalForDelete(null);
     }
   };
@@ -258,22 +284,58 @@ function Tobe() {
     setSelectedGoalForDelete(null);
   };
 
-  const handleAddCustomGoal = () => {
+  const handleAddCustomGoal = async () => {
     if (!customGoal.trim()) {
       showError("Please enter a goal");
       return;
     }
 
-    const newGoal = {
-      id: Date.now(),
-      title: customGoal,
-      desc: "Custom goal",
-      status: "custom",
-      checked: true,
-    };
+    setIsSaving(true);
+    try {
+      const payload = {
+        title: customGoal,
+        description: "Custom goal from Be-Do-Have",
+        category: "Personal",
+        status: "dreaming",
+      };
 
-    setBucketList([...bucketList, newGoal]);
-    setCustomGoal("");
+      const response = await fetch(`${API_BASE_URL}/dreams`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) throw new Error("Failed to save custom goal");
+
+      const savedGoal = await response.json();
+      
+      const newGoal = {
+        id: savedGoal.id,
+        title: savedGoal.title || customGoal,
+        desc: savedGoal.description || "Custom goal",
+        status: savedGoal.status || "dreaming",
+        checked: true,
+      };
+
+      setBucketList([...bucketList, newGoal]);
+      setCustomGoal("");
+      showSuccess("Goal added and saved to bucket list!");
+    } catch (error) {
+      console.error("Error adding custom goal:", error);
+      // Fallback to local only if API fails, but warn user
+      const localGoal = {
+        id: Date.now(),
+        title: customGoal,
+        desc: "Custom goal (Local only)",
+        status: "custom",
+        checked: true,
+      };
+      setBucketList([...bucketList, localGoal]);
+      setCustomGoal("");
+      showError("Could not save to server, added locally.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // =========================================
@@ -545,6 +607,40 @@ function Tobe() {
                 <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-purple-100 text-xs text-purple-600 font-medium">
                   <Sparkles size={12} />
                   <span>Analysis fetched based on your selected goals</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* =========================================
+              SAVED EXERCISE DATA
+          ========================================= */}
+          {exerciseData && (
+            <div className="mb-6 p-5 bg-green-50 border border-green-200 rounded-xl shadow-sm animate-fade-in">
+              <h4 className="font-bold text-green-900 mb-4 flex items-center gap-2 text-lg">
+                <Save size={20} className="text-green-600" />
+                Exercise Saved Successfully
+              </h4>
+
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between items-start p-3 bg-white rounded-lg border border-green-100">
+                  <span className="text-gray-600 font-medium">Exercise ID:</span>
+                  <span className="text-green-700 font-bold text-lg">#{exerciseData.id}</span>
+                </div>
+
+                <div className="p-3 bg-white rounded-lg border border-green-100">
+                  <span className="text-gray-600 font-medium block mb-1">Your Identity:</span>
+                  <p className="text-gray-800 text-sm">{exerciseData.be_identity}</p>
+                </div>
+
+                <div className="p-3 bg-white rounded-lg border border-green-100">
+                  <span className="text-gray-600 font-medium block mb-1">Your Actions:</span>
+                  <p className="text-gray-800 text-sm">{exerciseData.do_actions}</p>
+                </div>
+
+                <div className="flex justify-between items-center text-xs text-gray-500 p-2 bg-white rounded-lg border border-green-100">
+                  <span>Saved on:</span>
+                  <span className="font-mono text-gray-700">{new Date(exerciseData.updated_at).toLocaleString()}</span>
                 </div>
               </div>
             </div>
