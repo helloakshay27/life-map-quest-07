@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,15 +7,121 @@ import { Label } from "@/components/ui/label";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { GophygitalLogo } from "@/components/AppHeader";
+import EmailVerificationCard from "@/components/EmailVerificationCard";
 
 const Login = () => {
   const [emailOrMobile, setEmailOrMobile] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [resendingOtp, setResendingOtp] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const { login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const isVerificationMode = searchParams.get("mode") === "verify";
+  const verificationEmail = searchParams.get("email") || emailOrMobile;
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+
+    const timer = window.setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          window.clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [resendCooldown]);
+
+  const openSignIn = () => {
+    setVerificationCode("");
+    setResendCooldown(0);
+    setSearchParams({});
+  };
+
+  const handleVerifyEmail = async () => {
+    if (verificationCode.length !== 6) {
+      toast({
+        title: "Enter the full code",
+        description: "Please enter the 6-digit verification code.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setVerifying(true);
+    try {
+      toast({
+        title: "Verification UI ready",
+        description:
+          "Connect your email verification endpoint here to complete the flow.",
+      });
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (!verificationEmail) {
+      toast({
+        title: "Email missing",
+        description: "Please enter your email again from Sign up.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (resendCooldown > 0 || resendingOtp) {
+      return;
+    }
+
+    setResendingOtp(true);
+    try {
+      const response = await fetch("https://life-api.lockated.com/confirmation", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user: {
+            email: verificationEmail,
+          },
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || data.error || "Failed to resend OTP",
+        );
+      }
+
+      setResendCooldown(30);
+      toast({
+        title: "OTP sent",
+        description: "A new verification code has been sent to your email.",
+      });
+    } catch (error) {
+      toast({
+        title: "Resend failed",
+        description:
+          error instanceof Error ? error.message : "Something went wrong",
+        variant: "destructive",
+      });
+    } finally {
+      setResendingOtp(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,16 +152,94 @@ const Login = () => {
         throw new Error(data.message || data.error || "Invalid credentials");
       }
 
+      // Extract user data from the API response
+      const userData = data.user || data;
+
+      console.log("Login - Full API Response:", data);
+      console.log("Login - userData:", userData);
+      console.log("Login - All keys in userData:", Object.keys(userData));
+
+      // Construct a proper user object with all required fields
+      const bestName =
+        [
+          userData.name,
+          userData.full_name,
+          [userData.first_name, userData.last_name].filter(Boolean).join(" "),
+          userData.username,
+          userData.given_name,
+        ].find((n) => n && typeof n === "string" && n.trim() !== "") || "User";
+
+      const userObject = {
+        id: userData.id || userData.user_id || "",
+        name: bestName,
+        email: userData.email || emailOrMobile || "",
+        avatar: userData.avatar || userData.profile_photo || undefined,
+      };
+
+      console.log("Login - Final userObject before login:", userObject);
+
       // Success! Pass the token and user data to your AuthContext
-      // Note: Adjust 'data.token' or 'data.user' based on what your API actually returns
-      login(data.token || data.auth_token, data.user || data);
+      const token = data.token || data.auth_token;
+      login(token, userObject);
+
+      console.log(
+        "Login - After login, checking localStorage:",
+        localStorage.getItem("user"),
+      );
+
+      // Also try to fetch complete user profile from API
+      try {
+        const profileRes = await fetch(
+          "https://life-api.lockated.com/profile",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          console.log("Login - Profile API Response:", profileData);
+
+          // Update user with complete profile data
+          const bestProfileName =
+            [
+              profileData.name,
+              profileData.full_name,
+              [profileData.first_name, profileData.last_name]
+                .filter(Boolean)
+                .join(" "),
+              profileData.username,
+              profileData.given_name,
+            ].find((n) => n && typeof n === "string" && n.trim() !== "") ||
+            userObject.name;
+
+          const completeUser = {
+            id: profileData.id || userObject.id,
+            name: bestProfileName,
+            email: profileData.email || userObject.email,
+            avatar:
+              profileData.avatar ||
+              profileData.profile_photo ||
+              userObject.avatar,
+          };
+
+          console.log("Login - Complete user from profile:", completeUser);
+          if (completeUser.name !== "User") {
+            login(token, completeUser);
+          }
+        }
+      } catch (profileError) {
+        console.log("Profile fetch not available:", profileError);
+      }
 
       toast({ title: "Login successful" });
       navigate("/");
     } catch (error) {
       toast({
         title: "Login failed",
-        description: error.message,
+        description:
+          error instanceof Error ? error.message : "Something went wrong",
         variant: "destructive",
       });
     } finally {
@@ -64,8 +248,21 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen items-center justify-center px-4" style={{ backgroundImage: 'url(/loginBG.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
       <div className="w-full max-w-md animate-fade-in">
+        {isVerificationMode ? (
+          <EmailVerificationCard
+            email={verificationEmail || "your email"}
+            otp={verificationCode}
+            onOtpChange={setVerificationCode}
+            onBackToSignIn={openSignIn}
+            onVerify={handleVerifyEmail}
+            onResend={handleResendCode}
+            isSubmitting={verifying}
+            isResending={resendingOtp}
+            resendCooldown={resendCooldown}
+          />
+        ) : (
         <div className="rounded-2xl border bg-card p-8 shadow-lg">
           {/* Logo */}
           <div className="mb-6 flex flex-col items-center">
@@ -155,6 +352,7 @@ const Login = () => {
             </div>
           </form>
         </div>
+        )}
       </div>
     </div>
   );

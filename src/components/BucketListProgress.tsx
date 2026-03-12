@@ -331,6 +331,11 @@ const BucketListProgress = () => {
     return matchProgress && matchCategory;
   });
 
+  const activeCount = bucketList.filter(
+    (i) => i.progress !== "Achieved",
+  ).length;
+  const doneCount = bucketList.filter((i) => i.progress === "Achieved").length;
+
   return (
     <>
       {/* Add Dream Modal */}

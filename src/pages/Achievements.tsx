@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { RefreshCw, AlertCircle, WifiOff } from "lucide-react";
+import { RefreshCw, AlertCircle, WifiOff, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -494,12 +494,15 @@ const Achievements = () => {
   ];
 
   return (
-    <div className="animate-fade-in space-y-4 p-4 sm:p-6 max-w-6xl mx-auto">
+    <div className="relative w-full animate-fade-in space-y-8">
 
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Achievements</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2">
+            <Trophy className="h-7 w-7 text-amber-500" />
+            Achievements
+          </h1>
           <p className="text-sm text-muted-foreground mt-0.5">Your Hall of Fame</p>
         </div>
         <Button className="gap-2 w-full sm:w-auto" onClick={handleRefresh} disabled={isRefreshing || isLoading}>

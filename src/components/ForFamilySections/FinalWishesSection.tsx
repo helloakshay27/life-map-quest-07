@@ -196,7 +196,7 @@ export default function FinalWishesSection({
           <Button
             variant="outline"
             onClick={onAddFinalWish}
-            className="w-full border-2 border-dashed border-pink-300 text-pink-600 hover:bg-pink-50"
+            className="w-full border-2 border-dashed border-gray-300 text-gray-700 hover:bg-gray-50"
           >
             <span className="mr-2">+</span> Add Final Wishes Entry
           </Button>

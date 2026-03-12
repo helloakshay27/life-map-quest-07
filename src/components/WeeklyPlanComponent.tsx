@@ -108,7 +108,7 @@ function CalendarSection() {
 
   if (loading) {
     return (
-      <div className="border border-dashed border-gray-200 bg-[#fefdfc] rounded-xl p-8 flex flex-col items-center justify-center mb-10 max-w-4xl mx-auto gap-3">
+      <div className="border border-dashed border-gray-200 bg-[#fefdfc] rounded-xl p-8 flex flex-col items-center justify-center mb-10 gap-3">
         <Loader2 className="w-8 h-8 text-gray-300 animate-spin" strokeWidth={1.5} />
         <p className="text-[13px] text-gray-400 font-medium">Loading your calendar...</p>
       </div>
@@ -117,7 +117,7 @@ function CalendarSection() {
 
   if (calendars.length === 0) {
     return (
-      <div className="border border-dashed border-gray-200 bg-[#fefdfc] rounded-xl p-8 flex flex-col items-center justify-center mb-10 max-w-4xl mx-auto gap-2">
+      <div className="border border-dashed border-gray-200 bg-[#fefdfc] rounded-xl p-8 flex flex-col items-center justify-center mb-10 gap-2">
         <Calendar className="text-gray-200 w-10 h-10 mb-2" strokeWidth={1.5} />
         <p className="text-[14px] font-semibold text-gray-600">No calendars configured</p>
         <p className="text-[13px] text-gray-500">Add calendars in the Calendar page</p>
@@ -126,7 +126,7 @@ function CalendarSection() {
   }
 
   return (
-    <div className="mb-10 max-w-4xl mx-auto">
+    <div className="mb-10">
       {calendars.length > 1 && (
         <div className="flex items-center gap-2 mb-3 flex-wrap">
           {calendars.map((cal) => (
@@ -247,21 +247,30 @@ export default function WeeklyPlanComponent({ initialData }: WeeklyPlanComponent
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto p-6 md:p-8 font-sans bg-[#fcfaf9] min-h-screen border border-red-50 rounded-xl shadow-sm">
-      {/* HEADER SECTION */}
-      <div className="flex items-center gap-3 mb-8">
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-500 shadow-sm">
-          <Target className="text-white w-5 h-5" strokeWidth={2.5} />
+    <div className="w-full font-sans">
+      {/* Red Header */}
+      <div className="px-6 pt-5 pb-4 border-b border-red-100 bg-white">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-red-500 shadow-sm shrink-0">
+            <Target className="text-white w-5 h-5" strokeWidth={2.5} />
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-[17px] font-bold text-gray-900">{data.title}</h2>
+              <Info className="w-4 h-4 text-gray-400 cursor-help" />
+            </div>
+            <p className="text-[13px] text-gray-500 mt-0.5">Plan your daily priorities and themes</p>
+          </div>
         </div>
-        <h2 className="text-[22px] font-bold text-gray-900">{data.title}</h2>
-        <Info className="w-4 h-4 text-gray-400 cursor-help" />
       </div>
+
+      <div className="p-6 md:p-8">
 
       {/* CALENDAR SECTION */}
       <CalendarSection />
 
       {/* DAILY PLAN LIST */}
-      <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="space-y-6">
         {data.days.map((dayObj: any) => {
           const themeColor = dayTheme[dayObj.day];
           const hasPriorities = dayObj.priorities.length > 0;
@@ -324,6 +333,7 @@ export default function WeeklyPlanComponent({ initialData }: WeeklyPlanComponent
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );

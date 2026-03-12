@@ -35,6 +35,20 @@ function Values() {
     orange: { bg: "bg-orange-500", pillBg: "bg-orange-50", text: "text-orange-600" },
   };
 
+  const getPriorityColor = (priority: number) => {
+    if (priority <= 3) return "text-green-500";
+    if (priority <= 6) return "text-yellow-500";
+    if (priority <= 8) return "text-orange-500";
+    return "text-red-500";
+  };
+
+  const getPriorityAccent = (priority: number) => {
+    if (priority <= 3) return "#22c55e";
+    if (priority <= 6) return "#eab308";
+    if (priority <= 8) return "#f97316";
+    return "#ef4444";
+  };
+
   // 👇 NAYA CODE: Toast Dikhane ka Function
   const showToast = (message, type = "error") => {
     setToast({ message, type });
@@ -153,7 +167,7 @@ function Values() {
         core_value: {
           name: formData.name,
           description: formData.meaning, 
-          priority: parseInt(formData.priority),
+          priority: Number(formData.priority),
           color: formData.color
         }
       };
@@ -261,7 +275,7 @@ function Values() {
           
           <button
             onClick={openAddModal}
-            className="bg-[#f97316] hover:bg-[#ea580c] text-white px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors shadow-sm self-start sm:self-auto"
+            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors shadow-sm self-start sm:self-auto"
           >
             <Plus size={18} />
             Add Value
@@ -344,6 +358,7 @@ function Values() {
                   value={formData.name}
                   onChange={handleInputChange}
                   disabled={isFetchingDetails}
+                  placeholder="e.g., Integrity, Growth, Family..."
                   className="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-50"
                 />
               </div>
@@ -357,8 +372,10 @@ function Values() {
                   value={formData.meaning}
                   onChange={handleInputChange}
                   disabled={isFetchingDetails}
-                  className="w-full h-24 border border-gray-300 rounded-md p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none disabled:bg-gray-50"
+                  placeholder="e.g., Integrity means always being honest, even when it's difficult, and doing what I say I will do."
+                  className="w-full h-24 border border-gray-300 rounded-md p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-y min-h-[96px] disabled:bg-gray-50"
                 />
+                <p className="text-xs text-gray-400 mt-1">Optional: Add a personal definition to make this value more meaningful</p>
               </div>
 
               <div>
@@ -366,7 +383,7 @@ function Values() {
                   <label className="block text-sm font-semibold text-gray-700">
                     Priority (1-10)
                   </label>
-                  <span className="text-orange-500 font-bold text-lg">{formData.priority}</span>
+                  <span className={`font-bold text-lg ${getPriorityColor(Number(formData.priority))}`}>{formData.priority}</span>
                 </div>
                 <input
                   type="range"
@@ -376,7 +393,8 @@ function Values() {
                   value={formData.priority}
                   onChange={handleInputChange}
                   disabled={isFetchingDetails}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#f97316] disabled:opacity-50"
+                  style={{ accentColor: getPriorityAccent(Number(formData.priority)) }}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer disabled:opacity-50"
                 />
               </div>
 
@@ -422,14 +440,14 @@ function Values() {
                 <button
                   onClick={closeModal}
                   disabled={isSaving}
-                  className="text-gray-500 hover:text-gray-700 text-sm font-medium px-4 py-2 disabled:opacity-50"
+                  className="text-red-500 hover:text-red-700 text-sm font-medium px-4 py-2 disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveValue}
                   disabled={isSaving || isFetchingDetails}
-                  className="bg-[#f97316] hover:bg-[#ea580c] text-white px-5 py-2 rounded-md font-medium text-sm transition-colors shadow-sm disabled:opacity-70 flex items-center gap-2"
+                  className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-md font-medium text-sm transition-colors shadow-sm disabled:opacity-70 flex items-center gap-2"
                 >
                   {isSaving ? "Saving..." : (modalMode === "add" ? "Create" : "Update")}
                 </button>

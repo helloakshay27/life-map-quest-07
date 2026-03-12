@@ -118,29 +118,35 @@ function ReviewToDos() {
   };
 
   return (
-    <div className="relative w-full max-w-4xl p-6 md:p-8 rounded-2xl border border-[#a2a9f5] bg-[#f2f4ff] shadow-sm font-sans overflow-hidden">
-      <div className="absolute -top-12 -right-12 w-64 h-64 bg-white/50 rounded-full blur-3xl pointer-events-none" />
+    <div className="relative w-full font-sans overflow-hidden">
+      <div className="absolute -top-12 -right-12 w-64 h-64 bg-indigo-50/50 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Header */}
-      <div className="relative z-10 flex items-center gap-3 mb-8">
-        <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-[#6770f4] shadow-sm">
-          <Target className="text-white w-5 h-5" strokeWidth={2.5} />
+      {/* Indigo Header */}
+      <div className="relative z-10 px-6 pt-5 pb-4 border-b border-indigo-100 bg-white">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#6770f4] shadow-sm shrink-0">
+              <Target className="text-white w-5 h-5" strokeWidth={2.5} />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h2 className="text-[17px] font-bold text-gray-900">Review To Do's & Goals</h2>
+                <Info className="w-4 h-4 text-indigo-400 cursor-help" />
+              </div>
+              <p className="text-[13px] text-gray-500 mt-0.5">Manage your tasks and track goal progress</p>
+            </div>
+          </div>
+          <button
+            className="flex items-center gap-1.5 bg-[#5b64f0] hover:bg-[#4a53d3] text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm shrink-0"
+            onClick={() => setIsCreateDialogOpen(true)}
+          >
+            <Plus className="w-4 h-4" strokeWidth={2.5} /> Add To Do
+          </button>
         </div>
-        <h2 className="text-[18px] font-bold text-gray-900">Review To Do's & Goals</h2>
-        <Info className="w-4 h-4 text-indigo-400 cursor-help" />
       </div>
 
       {/* Todos Section */}
-      <div className="relative z-10">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-[15px] font-bold text-gray-800">To Do's</h3>
-          <button
-            className="flex items-center gap-1.5 bg-[#5b64f0] hover:bg-[#4a53d3] text-white px-5 py-2 rounded-lg text-[14px] font-semibold transition-colors shadow-sm"
-            onClick={() => setIsCreateDialogOpen(true)}
-          >
-            <Plus className="w-4 h-4" strokeWidth={2.5} /> Add
-          </button>
-        </div>
+      <div className="relative z-10 p-6">
 
         {todos.length === 0 ? (
           <div className="w-full bg-white rounded-xl py-5 flex items-center justify-center shadow-sm">

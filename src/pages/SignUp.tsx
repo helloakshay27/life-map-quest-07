@@ -24,12 +24,12 @@ const SignUp = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     // Basic Validation
@@ -62,12 +62,15 @@ const SignUp = () => {
         );
       }
 
-      toast({ title: "Account created successfully! Please log in." });
-      navigate("/login"); // Redirect to login page after successful signup
+      toast({ title: "Account created successfully! Please verify your email." });
+      navigate(
+        `/login?mode=verify&email=${encodeURIComponent(formData.email)}`,
+      );
     } catch (error) {
       toast({
         title: "Sign up failed",
-        description: error.message,
+        description:
+          error instanceof Error ? error.message : "Something went wrong",
         variant: "destructive",
       });
     } finally {
@@ -76,7 +79,7 @@ const SignUp = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
+    <div className="flex min-h-screen items-center justify-center px-4 py-8" style={{ backgroundImage: 'url(/loginBG.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
       <div className="w-full max-w-md animate-fade-in">
         <div className="rounded-2xl border bg-card p-8 shadow-lg">
           {/* Logo & Header */}

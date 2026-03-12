@@ -37,7 +37,7 @@ export default function OtherInfoSection({
             {/* Expandable Accordion Button */}
             <button
               onClick={() => onToggleSection("otherInfoDetails")}
-              className="w-full flex items-center justify-between p-4 hover:bg-orange-50 transition-colors"
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex flex-col items-start text-left">
                 <h3 className="text-[16px] font-semibold text-orange-900">Notes & Details</h3>
