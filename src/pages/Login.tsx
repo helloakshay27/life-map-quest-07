@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,15 +7,57 @@ import { Label } from "@/components/ui/label";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { GophygitalLogo } from "@/components/AppHeader";
+import EmailVerificationCard from "@/components/EmailVerificationCard";
 
 const Login = () => {
   const [emailOrMobile, setEmailOrMobile] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const isVerificationMode = searchParams.get("mode") === "verify";
+  const verificationEmail = searchParams.get("email") || emailOrMobile;
+
+  const openSignIn = () => {
+    setVerificationCode("");
+    setSearchParams({});
+  };
+
+  const handleVerifyEmail = async () => {
+    if (verificationCode.length !== 6) {
+      toast({
+        title: "Enter the full code",
+        description: "Please enter the 6-digit verification code.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setVerifying(true);
+    try {
+      toast({
+        title: "Verification UI ready",
+        description:
+          "Connect your email verification endpoint here to complete the flow.",
+      });
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleResendCode = () => {
+    toast({
+      title: "Resend requested",
+      description:
+        "Connect your resend-code endpoint here to send a new verification code.",
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,7 +174,8 @@ const Login = () => {
     } catch (error) {
       toast({
         title: "Login failed",
-        description: error.message,
+        description:
+          error instanceof Error ? error.message : "Something went wrong",
         variant: "destructive",
       });
     } finally {
@@ -143,6 +186,17 @@ const Login = () => {
   return (
     <div className="flex min-h-screen items-center justify-center px-4" style={{ backgroundImage: 'url(/loginBG.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
       <div className="w-full max-w-md animate-fade-in">
+        {isVerificationMode ? (
+          <EmailVerificationCard
+            email={verificationEmail || "your email"}
+            otp={verificationCode}
+            onOtpChange={setVerificationCode}
+            onBackToSignIn={openSignIn}
+            onVerify={handleVerifyEmail}
+            onResend={handleResendCode}
+            isSubmitting={verifying}
+          />
+        ) : (
         <div className="rounded-2xl border bg-card p-8 shadow-lg">
           {/* Logo */}
           <div className="mb-6 flex flex-col items-center">
@@ -232,6 +286,7 @@ const Login = () => {
             </div>
           </form>
         </div>
+        )}
       </div>
     </div>
   );
