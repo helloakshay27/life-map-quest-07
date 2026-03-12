@@ -53,7 +53,7 @@ const WeekStrip = ({ selectedDate, onDateChange, filledDates = [] }: WeekStripPr
           <CalendarDays className="h-4.5 w-4.5" />
         </div>
         <div>
-          <h3 className="text-xl font-bold tracking-tight text-slate-800 sm:text-2xl">
+          <h3 className="text-lg font-bold tracking-tight text-slate-800 sm:text-xl">
             {format(selectedDate, "EEEE, MMMM d, yyyy")}
           </h3>
         </div>
@@ -93,11 +93,11 @@ const WeekStrip = ({ selectedDate, onDateChange, filledDates = [] }: WeekStripPr
                 isSelected ? "ring-2 ring-orange-400 ring-offset-1" : ""
               }`}
             >
-              <div className="text-xs font-semibold uppercase leading-none opacity-80 sm:text-sm">
+              <div className="text-[11px] font-semibold uppercase leading-none opacity-80 sm:text-xs">
                 {format(day.date, "EEE")}
               </div>
 
-              <div className="mt-1.5 text-2xl font-bold leading-none sm:text-3xl">
+              <div className="mt-1.5 text-xl font-bold leading-none sm:text-2xl">
                 {format(day.date, "d")}
               </div>
 
