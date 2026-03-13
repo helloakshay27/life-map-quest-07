@@ -22,6 +22,7 @@ import {
   Lightbulb,
   Plus,
   ListOrdered,
+  Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -198,6 +199,8 @@ const Dashboard = () => {
     vision_images: [],
     vision_statement: null,
   });
+
+  const [peopleCount, setPeopleCount] = useState<number>(0);
 
   // Calendar Logic
   const [calendarDate, setCalendarDate] = useState(new Date());
@@ -524,6 +527,65 @@ const Dashboard = () => {
     fetchTodos();
   }, [token]);
 
+  // Fetch people and their birthdays for Upcoming Dates
+  useEffect(() => {
+    const fetchPeopleData = async () => {
+      try {
+        const response = await fetch("https://life-api.lockated.com/people", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const list = Array.isArray(data)
+            ? data
+            : (data.people ?? data.data ?? []);
+          
+          setPeopleCount(Array.isArray(list) ? list.length : 0);
+
+          // Map birthdays to Upcoming Dates
+          const today = new Date();
+          const birthdays = list
+            .filter((p: { birthday?: string; name: string; id: number }) => p.birthday)
+            .map((p: { birthday: string; name: string; id: number }) => {
+              const bDay = new Date(p.birthday);
+              // Set the year to current or next to find the next occurrence
+              const nextBDay = new Date(today.getFullYear(), bDay.getMonth(), bDay.getDate());
+              if (nextBDay < today) {
+                nextBDay.setFullYear(today.getFullYear() + 1);
+              }
+              return {
+                id: p.id,
+                title: `${p.name}'s Birthday`,
+                date: nextBDay.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                }),
+                sortDate: nextBDay,
+              };
+            })
+            .sort((a: { sortDate: Date }, b: { sortDate: Date }) => a.sortDate.getTime() - b.sortDate.getTime())
+            .slice(0, 3);
+
+          if (birthdays.length > 0) {
+            setPreviewData((prev) => ({
+              ...prev,
+              upcoming_dates: birthdays,
+            }));
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching people data:", error);
+      }
+    };
+    fetchPeopleData();
+  }, [token]);
+
   const timePeriods = [
     { label: "Daily", active: true },
     { label: "Weekly", active: false },
@@ -622,145 +684,156 @@ const Dashboard = () => {
               Score: {summaryData?.total_score || 10}
             </Button>
           </Link>
-        </div>
+      </div>
       </div>
 
       {/* Daily Focus & Inspiration */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="w-5 h-5 text-red-500" />
-          <h2 className="text-lg font-semibold text-foreground">
+          <Sparkles className="w-5 h-5 text-[#E11D48]" />
+          <h2 className="text-lg font-semibold text-[#1E293B]">
             Daily Focus & Inspiration
           </h2>
         </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Daily Motivator */}
-          <Card className="bg-red-50/50 border-red-200 overflow-hidden flex flex-col shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
+          {/* Card 1: Daily Motivator */}
+          <Card className="bg-[#FFF1F2] border-[#FECDD3] rounded-2xl overflow-hidden flex flex-col shadow-sm border-2">
             <div className="p-4 flex-1 flex flex-col">
               <div className="flex items-center gap-2 mb-3">
-                <div className="bg-red-500 p-1.5 rounded-lg text-white">
+                <div className="bg-[#E11D48] p-1.5 rounded-lg text-white shadow-sm">
                   <Sparkles className="w-4 h-4" />
                 </div>
-                <h3 className="font-bold text-xs text-red-900 tracking-wide">
+                <h3 className="font-bold text-[10px] text-[#881337] tracking-wider uppercase flex items-center gap-1.5">
                   DAILY MOTIVATOR
+                  <Sparkles className="w-3 h-3 text-amber-400" />
                 </h3>
-                <Sparkles className="w-3 h-3 text-amber-400 ml-auto" />
               </div>
-              <div className="flex-1 relative pl-6 mt-2">
-                <span className="text-4xl text-red-200 absolute -top-4 left-0 font-serif leading-none">
+              
+              <div className="flex-1 relative pl-6 mb-4 mt-2">
+                <span className="text-4xl text-[#FECDD3] absolute -top-4 left-0 font-serif opacity-80">
                   "
                 </span>
-                <p className="text-sm font-medium text-red-900 leading-relaxed mb-2 z-10 relative">
+                <p className="text-sm font-bold text-[#881337] leading-relaxed z-10 relative">
                   {previewData.daily_motivator
                     ? previewData.daily_motivator
-                    : "Other people's opinion of you does not have to become your reality."}
+                    : "The end of education is character."}
                 </p>
-                <p className="text-xs text-red-700 font-medium">— Les Brown</p>
+                <p className="text-[10px] text-[#E11D48] font-bold mt-2">— Sathya Sai Baba</p>
               </div>
-            </div>
-            <div className="px-4 pb-4">
-              <div className="bg-red-100/80 rounded-lg p-3 border border-red-200">
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <Target className="w-3.5 h-3.5 text-red-600" />
-                  <h4 className="font-bold text-[10px] uppercase text-red-900">
-                    Action
+
+              <div className="bg-[#FFE4E6] rounded-xl p-3 border border-[#FECDD3]">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Target className="w-3 h-3 text-[#E11D48]" />
+                  <h4 className="font-black text-[9px] uppercase text-[#881337] tracking-widest">
+                    ACTION
                   </h4>
                 </div>
-                <p className="text-[11px] text-red-800 leading-tight">
-                  You define your worth. Don't accept other's limited views of
-                  you.
+                <p className="text-[11px] text-[#9F1239] font-medium leading-snug">
+                  True education is about building strong values and character, not just academics.
                 </p>
               </div>
             </div>
           </Card>
 
-          {/* Priorities */}
-          <Card className="bg-blue-50/50 border-blue-200 p-4 flex flex-col shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
+          {/* Card 2: Priorities */}
+          <Card className="bg-[#EFF6FF] border-[#DBEAFE] rounded-2xl p-4 flex flex-col shadow-sm border-2">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-bold text-sm text-slate-800 flex items-center gap-2">
-                <ListTodo className="w-4 h-4 text-blue-600" /> Priorities
+              <h3 className="font-bold text-sm text-[#1E3A8A] flex items-center gap-2">
+                <ListOrdered className="w-4 h-4 text-[#3B82F6]" /> Priorities
               </h3>
               <Badge
                 variant="secondary"
-                className="bg-blue-100 text-blue-700 hover:bg-blue-200 shadow-sm font-medium text-[10px] px-2 py-0.5 pointer-events-none"
+                className="bg-[#DBEAFE] text-[#1D4ED8] hover:bg-[#BFDBFE] border-none font-bold text-[10px] px-2 py-0.5 rounded-full"
               >
-                For:{" "}
-                {new Date().toLocaleDateString("en-US", {
+                For: {new Date().toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                 })}
               </Badge>
             </div>
 
-            {previewData.priorities.length > 0 ? (
-              <div className="flex-1 flex flex-col gap-2 mt-4">
-                {previewData.priorities.map(
-                  (
-                    todo: {
-                      id?: string | number;
-                      title?: string;
-                      priority?: string;
-                    },
-                    idx,
-                  ) => (
-                    <div
-                      key={todo.id || idx}
-                      className="bg-white rounded-lg p-2.5 border border-blue-100 flex items-start gap-2.5 shadow-sm transition-all hover:border-blue-300"
-                    >
-                      <div className="w-4 h-4 rounded-md mt-0.5 border-[1.5px] border-blue-300 flex-shrink-0 bg-blue-50/50" />
-                      <div>
-                        <p className="text-xs font-bold text-slate-700 leading-tight">
-                          {todo.title}
-                        </p>
-                        {todo.priority && (
-                          <div className="mt-1">
-                            <span
-                              className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-sm ${
-                                todo.priority === "urgent"
-                                  ? "bg-red-100 text-red-700"
-                                  : todo.priority === "high"
-                                    ? "bg-orange-100 text-orange-700"
-                                    : "bg-blue-100 text-blue-700"
-                              }`}
-                            >
-                              {todo.priority}
-                            </span>
-                          </div>
-                        )}
-                      </div>
+            <div className="flex items-center justify-between mb-2 px-0.5">
+              <span className="text-[11px] font-bold text-[#475569] flex items-center gap-1.5">
+                <ListTodo className="w-3.5 h-3.5 text-[#64748B]" />
+                Top To-Dos
+              </span>
+              <Link to="/todos" className="text-[10px] font-bold text-[#3B82F6] hover:underline flex items-center gap-1">
+                See All <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+
+            <div className="flex-1 space-y-2">
+              {previewData.priorities.length > 0 ? (
+                previewData.priorities.map((todo: { id?: number | string; title?: string; priority?: string }, idx) => (
+                  <div
+                    key={todo.id || idx}
+                    className="bg-white rounded-xl p-3 border-2 border-[#EFF6FF] shadow-sm flex items-start gap-3 transition-all hover:shadow-md hover:border-[#DBEAFE]"
+                  >
+                    <div className="w-4 h-4 rounded-full mt-0.5 border-2 border-[#3B82F6] flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-[#1E293B] leading-tight">
+                        {todo.title}
+                      </p>
+                      <p className="text-[9px] font-black uppercase text-amber-600 mt-0.5 tracking-wider">
+                        {todo.priority || "Medium"}
+                      </p>
                     </div>
-                  ),
-                )}
-              </div>
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-center mt-6">
-                <p className="text-sm text-slate-500 mb-1.5 font-medium">
-                  No priorities underway.
-                </p>
-                <Link
-                  to="/todos"
-                  className="text-xs text-blue-600 font-bold hover:underline flex items-center gap-1 mt-1"
-                >
-                  Manage Todos <ArrowRight className="w-3 h-3" />
-                </Link>
-              </div>
-            )}
+                  </div>
+                ))
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-center py-4">
+                  <p className="text-[11px] text-[#64748B] font-medium">No priorities for today</p>
+                </div>
+              )}
+            </div>
           </Card>
 
-          {/* People Empty State */}
-          <Card className="bg-pink-50/30 border-pink-200 p-4 flex flex-col items-center justify-center min-h-[180px] shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
-            <CalendarIcon
-              className="w-10 h-10 text-pink-300 mb-3"
-              strokeWidth={1.5}
-            />
-            <p className="text-sm text-slate-500 text-center">
-              No people added yet
-            </p>
+          {/* Card 3: Upcoming Dates */}
+          <Card className="bg-[#FDF2F8] border-[#FCE7F3] rounded-2xl p-4 flex flex-col shadow-sm border-2">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="bg-[#EC4899] p-1.5 rounded-lg text-white shadow-sm">
+                  <CalendarIcon className="w-4 h-4" />
+                </div>
+                <h3 className="font-bold text-sm text-[#831843]">Upcoming Dates</h3>
+              </div>
+              <Link to="/people">
+                <Button
+                  variant="ghost" 
+                  size="sm"
+                  className="text-[#9D174D] hover:bg-[#FCE7F3] h-7 px-2 font-bold text-[10px] rounded-full border border-[#FBCFE8]"
+                >
+                  View All
+                </Button>
+              </Link>
+            </div>
+
+            <div className="flex-1 flex flex-col items-center justify-center text-center px-2">
+              {previewData.upcoming_dates.length > 0 ? (
+                 <div className="w-full space-y-2">
+                    {previewData.upcoming_dates.slice(0, 3).map((date: { id?: number; title?: string; date?: string }, idx) => (
+                      <div key={date.id || idx} className="bg-white rounded-xl p-3 border border-pink-50 shadow-sm flex items-center justify-between">
+                        <div className="text-left">
+                          <p className="text-xs font-bold text-[#1E293B]">{date.title}</p>
+                          <p className="text-[10px] text-pink-600 font-medium">{date.date}</p>
+                        </div>
+                        <Calendar className="w-3.5 h-3.5 text-pink-300" />
+                      </div>
+                    ))}
+                 </div>
+              ) : (
+                <div className="py-8">
+                  <p className="text-[11px] text-[#BE185D] font-medium opacity-60">
+                    No upcoming dates in the next 30 days
+                  </p>
+                </div>
+              )}
+            </div>
           </Card>
         </div>
       </div>
 
-      {/* Story of the Day (Video Box) */}
       <Card className="bg-orange-50 border-orange-200 overflow-hidden flex flex-col mb-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
         <div className="p-4 flex items-center justify-between border-b border-orange-100/50">
           <div className="flex gap-3 items-center">
