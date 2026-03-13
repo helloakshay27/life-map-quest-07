@@ -1904,12 +1904,7 @@ const DailyJournal = () => {
         {/* Header */}
         <div className="mb-8 flex items-start justify-between">
           <div className="flex items-center gap-5">
-            <button
-              onClick={() => navigate(-1)}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-all"
-            >
-              <ArrowLeft className="h-5 w-5 text-gray-700" />
-            </button>
+            
             <div>
               <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">Daily Journal</h1>
               <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">5-minute reflection on your day</p>

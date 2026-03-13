@@ -2,10 +2,6 @@ import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   TrendingUp,
-  ArrowLeft,
-  HelpCircle,
-  Save,
-  Loader2,
 } from "lucide-react";
 import { apiRequest } from "../config/api";
 import { useToast } from "../hooks/use-toast";
@@ -186,7 +182,9 @@ function ScoreCard({ data }) {
         Your Total Score
       </p>
       <div className="flex items-baseline gap-2 mb-4">
-        <span className="text-8xl font-black text-white leading-none">{score.achieved}</span>
+        <span className="text-8xl font-black text-white leading-none">
+          {score.achieved}
+        </span>
         <span className="text-4xl font-semibold text-orange-200 leading-none">
           /{score.total}
         </span>
@@ -205,7 +203,9 @@ function ScoreCard({ data }) {
       <div className="flex justify-between mt-2">
         <span className="text-orange-100 text-xs font-medium">0</span>
         <span className="text-orange-100 text-xs font-medium">{pct}%</span>
-        <span className="text-orange-100 text-xs font-medium">{score.total}</span>
+        <span className="text-orange-100 text-xs font-medium">
+          {score.total}
+        </span>
       </div>
     </div>
   );
@@ -223,8 +223,12 @@ function KraItem({
 }) {
   const [open, setOpen] = useState(false);
 
+  // Slider thumb fill percentage: score goes 1–5, map to 0–100%
+  const sliderPct = ((item.score - 1) / 4) * 100;
+
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+      {/* ── Row header ── */}
       <div className="w-full flex items-center gap-4 py-5 px-5">
         <span className="text-3xl shrink-0">{item.icon || "📝"}</span>
 
@@ -240,42 +244,27 @@ function KraItem({
           </p>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            flexShrink: 0,
-            marginRight: 6,
-          }}
-        >
-          <input
-            type="number"
-            min={0}
-            max={5}
-            value={item.score}
-            onChange={(e) => onScoreChange(index, Number(e.target.value))}
+        {/* Score badge */}
+        <div className="flex items-baseline gap-0.5 shrink-0 mr-2">
+          <span
             style={{
-              width: 40,
               fontSize: 28,
               fontWeight: 700,
               color: "#0d9488",
-              textAlign: "center",
-              border: "none",
-              background: "transparent",
+              lineHeight: 1,
             }}
-          />
-          <span style={{ fontSize: 14, color: "#9ca3af", fontWeight: 500 }}>
-            / 5
+          >
+            {item.score}
           </span>
-          <span style={{ fontSize: 14, color: "#9ca3af", fontWeight: 500 }}>
-            / 5
+          <span style={{ fontSize: 13, color: "#9ca3af", fontWeight: 500 }}>
+            &nbsp;/ 5
           </span>
         </div>
 
+        {/* Chevron */}
         <button
           onClick={() => setOpen(!open)}
-          className="bg-transparent border-none cursor-pointer p-1 text-red-400 hover:text-red-600 transition-colors"
+          className="bg-transparent border-none cursor-pointer p-1 text-gray-400 hover:text-gray-600 transition-colors"
         >
           <svg
             width="16"
@@ -284,18 +273,88 @@ function KraItem({
             stroke="currentColor"
             strokeWidth="2"
             viewBox="0 0 24 24"
-            className={`text-gray-400 transition-transform duration-250 ${open ? "rotate-180" : ""}`}
+            className={`transition-transform duration-250 ${open ? "rotate-180" : ""}`}
           >
             <polyline points="6 9 12 15 18 9" />
           </svg>
         </button>
       </div>
 
+      {/* ── Expanded panel with slider ── */}
       {open && (
-        <div className="px-5 pb-4 pl-[68px] border-t border-gray-100 bg-gray-50/50">
-          <p className="text-xs text-gray-500 mt-3 leading-relaxed">
-            <strong className="text-gray-700">KPI:</strong> {item.kpi || "N/A"}
+        <div className="px-5 pb-5 pl-[72px] border-t border-gray-100 bg-gray-50/50">
+          {/* KPI label */}
+          <p className="text-xs text-gray-500 mt-3 mb-4 leading-relaxed">
+            <strong className="text-gray-700">Key KPI:</strong>{" "}
+            {item.kpi || "N/A"}
           </p>
+
+          {/* ── Custom slider ── */}
+          <div className="pr-4">
+            <style>{`
+              .kra-slider {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 100%;
+                height: 6px;
+                border-radius: 9999px;
+                outline: none;
+                cursor: pointer;
+                background: linear-gradient(
+                  to right,
+                  #111827 0%,
+                  #111827 ${sliderPct}%,
+                  #e5e7eb ${sliderPct}%,
+                  #e5e7eb 100%
+                );
+              }
+              .kra-slider::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 22px;
+                height: 22px;
+                border-radius: 50%;
+                background: #ffffff;
+                border: 2px solid #d1d5db;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+                cursor: pointer;
+                transition: box-shadow 0.15s;
+              }
+              .kra-slider::-webkit-slider-thumb:hover {
+                box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+              }
+              .kra-slider::-moz-range-thumb {
+                width: 22px;
+                height: 22px;
+                border-radius: 50%;
+                background: #ffffff;
+                border: 2px solid #d1d5db;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+                cursor: pointer;
+              }
+            `}</style>
+
+            <input
+              type="range"
+              className="kra-slider"
+              min={1}
+              max={5}
+              step={1}
+              value={item.score}
+              onChange={(e) => onScoreChange(index, Number(e.target.value))}
+            />
+
+            {/* Tick labels */}
+            <div className="flex justify-between mt-1.5 px-0.5">
+              <span className="text-xs text-gray-400 font-medium">1 - Poor</span>
+              <span className="text-xs text-gray-400 font-medium">
+                3 - Average
+              </span>
+              <span className="text-xs text-gray-400 font-medium">
+                5 - Excellent
+              </span>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -361,7 +420,7 @@ function QuestionsAndAnswers({
           fontWeight: 700,
           fontSize: 15,
           border: "none",
-          cursor: "pointer",
+          cursor: isSubmitting ? "not-allowed" : "pointer",
           letterSpacing: "0.02em",
           boxShadow: "0 4px 14px rgba(220,38,38,0.35)",
           transition: "opacity 0.2s",
@@ -369,13 +428,18 @@ function QuestionsAndAnswers({
           alignItems: "center",
           justifyContent: "center",
           gap: "8px",
+          opacity: isSubmitting ? 0.7 : 1,
         }}
         onClick={onSubmit}
         disabled={isSubmitting}
-        onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.88")}
-        onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+        onMouseEnter={(e) =>
+          !isSubmitting && (e.currentTarget.style.opacity = "0.88")
+        }
+        onMouseLeave={(e) =>
+          !isSubmitting && (e.currentTarget.style.opacity = "1")
+        }
       >
-        Submit Evaluation
+        {isSubmitting ? "Submitting…" : "Submit Evaluation"}
       </button>
     </div>
   );
@@ -417,7 +481,6 @@ export default function KraSelfEvaluation() {
 
           setEvaluations(evaluationsList);
 
-          // Get latest evaluation for score card
           if (evaluationsList.length > 0) {
             const latest = evaluationsList[evaluationsList.length - 1];
             const totalScore = Object.values(latest.scores || {}).reduce(
@@ -425,11 +488,10 @@ export default function KraSelfEvaluation() {
               0,
             );
             const maxTotal = questions.length * 5;
+            const pct = maxTotal > 0 ? (totalScore / maxTotal) * 100 : 0;
 
             let title = "Needs Improvement";
             let message = "Focus on low-scoring areas to improve performance.";
-            const pct = maxTotal > 0 ? (totalScore / maxTotal) * 100 : 0;
-
             if (pct >= 80) {
               title = "Exceptional";
               message = "You are on the right track, keep it up!";
@@ -440,8 +502,8 @@ export default function KraSelfEvaluation() {
 
             setScoreData({
               score: { achieved: totalScore, total: maxTotal || 35 },
-              title: title,
-              message: message,
+              title,
+              message,
             });
           } else {
             setScoreData({
@@ -468,7 +530,6 @@ export default function KraSelfEvaluation() {
   };
 
   const handleSubmit = async () => {
-    // Check if any scores are filled
     const hasScores = questions.some((q) => q.score > 0);
     if (!hasScores) {
       toast({
@@ -524,7 +585,9 @@ export default function KraSelfEvaluation() {
       {/* HEADER */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">KRA Self-Evaluation</h1>
+          <h1 className="text-3xl font-bold text-foreground">
+            KRA Self-Evaluation
+          </h1>
           <p className="text-sm text-muted-foreground">
             Assess your performance across key result areas
           </p>
@@ -562,7 +625,6 @@ export default function KraSelfEvaluation() {
       >
         <ScoreCard data={scoreData} />
 
-        {/* Questions Form */}
         <QuestionsAndAnswers
           header={
             activeTab === "MD"
