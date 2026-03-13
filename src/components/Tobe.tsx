@@ -143,11 +143,11 @@ function Tobe() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [showError]);
 
   useEffect(() => {
     fetchBucketList();
-  }, [fetchBucketList]);
+  }, []);
 
   // ── ADD CUSTOM GOAL  →  POST /dreams ──────────────────────────────────
   const handleAddCustomGoal = async () => {

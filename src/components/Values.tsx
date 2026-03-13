@@ -1,22 +1,18 @@
-import React, { useState, useEffect } from "react";
-import { Heart, Plus, X, Trash2 } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Heart, Plus, X, Trash2, Check, ChevronDown } from "lucide-react";
 
-// 👇 Yahan par ab localhost ki jagah .env se aayega
-// 👇 .env ko hata kar humne seedha live URL fix kar diya hai
 const API_BASE_URL = "https://life-api.lockated.com";
 
 function Values() {
-  // --- STATE ---
   const [values, setValues] = useState([]);
-  const [isLoading, setIsLoading] = useState(true); 
-
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState("add"); 
-  const [isSaving, setIsSaving] = useState(false); 
-  const [isFetchingDetails, setIsFetchingDetails] = useState(false); // To handle specific GET fetch state
-  
-  // 👇 NAYA CODE: Toast Notification ke liye State
-  const [toast, setToast] = useState(null); 
+  const [modalMode, setModalMode] = useState("add");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isFetchingDetails, setIsFetchingDetails] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [colorDropdownOpen, setColorDropdownOpen] = useState(false);
+  const colorDropdownRef = useRef(null);
 
   const [formData, setFormData] = useState({
     id: null,
@@ -26,38 +22,48 @@ function Values() {
     color: "teal",
   });
 
+  // ✅ UPDATED: Added pink and yellow to match your screenshot
   const colorMap = {
-    blue: { bg: "bg-blue-500", pillBg: "bg-blue-50", text: "text-blue-600" },
-    green: { bg: "bg-green-500", pillBg: "bg-green-50", text: "text-green-600" },
-    red: { bg: "bg-red-500", pillBg: "bg-red-50", text: "text-red-600" },
-    teal: { bg: "bg-teal-500", pillBg: "bg-teal-50", text: "text-teal-600" },
-    purple: { bg: "bg-purple-500", pillBg: "bg-purple-50", text: "text-purple-600" },
-    orange: { bg: "bg-orange-500", pillBg: "bg-orange-50", text: "text-orange-600" },
+    teal:   { hex: "#14b8a6", bg: "bg-teal-500",   pillBg: "bg-teal-50",   text: "text-teal-600"   },
+    orange: { hex: "#f97316", bg: "bg-orange-500", pillBg: "bg-orange-50", text: "text-orange-600" },
+    purple: { hex: "#a855f7", bg: "bg-purple-500", pillBg: "bg-purple-50", text: "text-purple-600" },
+    blue:   { hex: "#3b82f6", bg: "bg-blue-500",   pillBg: "bg-blue-50",   text: "text-blue-600"   },
+    green:  { hex: "#22c55e", bg: "bg-green-500",  pillBg: "bg-green-50",  text: "text-green-600"  },
+    pink:   { hex: "#ec4899", bg: "bg-pink-500",   pillBg: "bg-pink-50",   text: "text-pink-600"   },
+    yellow: { hex: "#eab308", bg: "bg-yellow-500", pillBg: "bg-yellow-50", text: "text-yellow-600" },
+    red:    { hex: "#ef4444", bg: "bg-red-500",    pillBg: "bg-red-50",    text: "text-red-600"    },
   };
 
-  const getPriorityColor = (priority: number) => {
+  const getPriorityColor = (priority) => {
     if (priority <= 3) return "text-green-500";
     if (priority <= 6) return "text-yellow-500";
     if (priority <= 8) return "text-orange-500";
     return "text-red-500";
   };
 
-  const getPriorityAccent = (priority: number) => {
+  const getPriorityAccent = (priority) => {
     if (priority <= 3) return "#22c55e";
     if (priority <= 6) return "#eab308";
     if (priority <= 8) return "#f97316";
     return "#ef4444";
   };
 
-  // 👇 NAYA CODE: Toast Dikhane ka Function
   const showToast = (message, type = "error") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  // =========================================
-  // API INTEGRATION: FETCH ALL VALUES (List)
-  // =========================================
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (colorDropdownRef.current && !colorDropdownRef.current.contains(e.target)) {
+        setColorDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
   useEffect(() => {
     fetchCoreValues();
   }, []);
@@ -65,22 +71,21 @@ function Values() {
   const fetchCoreValues = async () => {
     try {
       const token = localStorage.getItem("auth_token");
-      console.log("🕵️‍♂️ Bheja gaya Token (GET ALL):", token); 
-      
       const response = await fetch(`${API_BASE_URL}/core_values`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        }
+          "Authorization": `Bearer ${token}`,
+        },
       });
-
       if (response.ok) {
         const data = await response.json();
-        const mappedData = Array.isArray(data) ? data.map(item => ({
-          ...item,
-          meaning: item.description || item.meaning || ""
-        })) : []; 
+        const mappedData = Array.isArray(data)
+          ? data.map((item) => ({
+              ...item,
+              meaning: item.description || item.meaning || "",
+            }))
+          : [];
         setValues(mappedData);
       }
     } catch (error) {
@@ -91,51 +96,40 @@ function Values() {
     }
   };
 
-  // --- HANDLERS ---
   const openAddModal = () => {
     setFormData({ id: null, name: "", meaning: "", priority: 5, color: "teal" });
     setModalMode("add");
     setIsModalOpen(true);
+    setColorDropdownOpen(false);
   };
 
-  // =========================================
-  // API INTEGRATION: FETCH SPECIFIC VALUE BY ID
-  // =========================================
   const openEditModal = async (valueItem) => {
-    // Optimistically open modal with current data for good UX
-    setFormData({ ...valueItem }); 
+    setFormData({ ...valueItem });
     setModalMode("edit");
     setIsModalOpen(true);
     setIsFetchingDetails(true);
+    setColorDropdownOpen(false);
 
     try {
-      const token = localStorage.getItem("auth_token"); // ✅ Fixed "token" to "auth_token"
-      
-      // Hit specific API: e.g., /core_values/1
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(`${API_BASE_URL}/core_values/${valueItem.id}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        }
+          "Authorization": `Bearer ${token}`,
+        },
       });
-
       if (!response.ok) throw new Error("Failed to fetch specific details");
-
       const data = await response.json();
-      
-      // Update modal with fresh data directly from backend
       setFormData({
         id: data.id,
         name: data.name || "",
-        meaning: data.description || data.meaning || "", 
+        meaning: data.description || data.meaning || "",
         priority: data.priority || 5,
-        color: data.color || "teal"
+        color: data.color || "teal",
       });
-
     } catch (error) {
       console.error("Error fetching specific value details:", error);
-      // If error occurs, the user still sees the local data we set at the top
     } finally {
       setIsFetchingDetails(false);
     }
@@ -143,6 +137,7 @@ function Values() {
 
   const closeModal = () => {
     setIsModalOpen(false);
+    setColorDropdownOpen(false);
   };
 
   const handleInputChange = (e) => {
@@ -150,93 +145,78 @@ function Values() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // =========================================
-  // API INTEGRATION: POST (Add) & PUT (Update)
-  // =========================================
+  const handleColorSelect = (colorName) => {
+    setFormData((prev) => ({ ...prev, color: colorName }));
+    setColorDropdownOpen(false);
+  };
+
   const handleSaveValue = async () => {
     if (!formData.name.trim()) return;
-
     setIsSaving(true);
-
     try {
       const token = localStorage.getItem("auth_token");
-      console.log("🕵️‍♂️ Bheja gaya Token (SAVE):", token); 
-
-      // Expected payload format { core_value: { ... } }
       const payload = {
         core_value: {
           name: formData.name,
-          description: formData.meaning, 
+          description: formData.meaning,
           priority: Number(formData.priority),
-          color: formData.color
-        }
+          color: formData.color,
+        },
       };
 
       if (modalMode === "add") {
-      
         const response = await fetch(`${API_BASE_URL}/core_values`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-          body: JSON.stringify(payload)
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
         });
-
-        // 👇 NAYA CODE: Backend ka actual error read karne ke liye
         if (!response.ok) {
           const errorData = await response.json().catch(() => null);
-          if (errorData && errorData.errors && errorData.errors.length > 0) {
-            throw new Error(errorData.errors[0]); // E.g., "Priority has already been taken"
-          }
+          if (errorData?.errors?.length > 0) throw new Error(errorData.errors[0]);
           throw new Error("Failed to save.");
         }
-
         const newSavedValue = await response.json();
         newSavedValue.meaning = newSavedValue.description || newSavedValue.meaning || "";
         setValues([...values, newSavedValue]);
         showToast("Core value added successfully!", "success");
-        
       } else {
         const response = await fetch(`${API_BASE_URL}/core_values/${formData.id}`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-          body: JSON.stringify(payload)
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
         });
-
-        // 👇 NAYA CODE: Edit ke time bhi actual error read karne ke liye
         if (!response.ok) {
           const errorData = await response.json().catch(() => null);
-          if (errorData && errorData.errors && errorData.errors.length > 0) {
-            throw new Error(errorData.errors[0]); 
-          }
+          if (errorData?.errors?.length > 0) throw new Error(errorData.errors[0]);
           throw new Error("Failed to update.");
         }
-
         const updatedValue = await response.json();
         updatedValue.meaning = updatedValue.description || updatedValue.meaning || "";
         setValues(values.map((v) => (v.id === formData.id ? updatedValue : v)));
         showToast("Core value updated successfully!", "success");
       }
-      
       closeModal();
     } catch (error) {
       console.error("API Error:", error);
-      // 👇 NAYA CODE: alert() ki jagah Toast
       showToast(error.message || "Something went wrong while saving. Please try again.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  // =========================================
-  // API INTEGRATION: DELETE
-  // =========================================
   const handleDeleteValue = async () => {
     try {
-      const token = localStorage.getItem("auth_token"); // ✅ Fixed "token" to "auth_token"
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(`${API_BASE_URL}/core_values/${formData.id}`, {
         method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` }
+        headers: { "Authorization": `Bearer ${token}` },
       });
-      
       if (response.ok) {
         setValues(values.filter((v) => v.id !== formData.id));
         closeModal();
@@ -261,7 +241,8 @@ function Values() {
   return (
     <div className="min-h-screen bg-[#faf9fc] p-4 md:p-8 font-sans animate-fade-in relative">
       <div className="max-w-5xl mx-auto space-y-6">
-        
+
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold flex items-center gap-2 text-gray-900">
@@ -272,7 +253,6 @@ function Values() {
               Maximum 10 values that guide your decisions
             </p>
           </div>
-          
           <button
             onClick={openAddModal}
             className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors shadow-sm self-start sm:self-auto"
@@ -282,6 +262,7 @@ function Values() {
           </button>
         </div>
 
+        {/* Info Banner */}
         <div className="bg-orange-50 border-l-4 border-orange-400 p-4 rounded-r-md shadow-sm">
           <p className="text-sm text-orange-900 leading-relaxed">
             <span className="mr-1">💡</span>
@@ -289,55 +270,56 @@ function Values() {
           </p>
         </div>
 
+        {/* Values Grid */}
         {values.length === 0 ? (
-           <div className="flex items-center justify-center p-12 border-2 border-dashed border-gray-200 rounded-xl bg-white text-gray-400 font-medium">
-             No core values added yet. Click "Add Value" to create your first one.
-           </div>
+          <div className="flex items-center justify-center p-12 border-2 border-dashed border-gray-200 rounded-xl bg-white text-gray-400 font-medium">
+            No core values added yet. Click "Add Value" to create your first one.
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {values.sort((a, b) => a.priority - b.priority).map((val) => {
-              const colors = colorMap[val.color] || colorMap.blue;
-
-              return (
-                <div
-                  key={val.id}
-                  onClick={() => openEditModal(val)} 
-                  className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow cursor-pointer flex flex-col gap-2"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 font-bold flex items-center justify-center text-lg">
-                        {val.priority}
+            {values
+              .sort((a, b) => a.priority - b.priority)
+              .map((val) => {
+                const colors = colorMap[val.color] || colorMap.blue;
+                return (
+                  <div
+                    key={val.id}
+                    onClick={() => openEditModal(val)}
+                    className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow cursor-pointer flex flex-col gap-2"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 font-bold flex items-center justify-center text-lg">
+                          {val.priority}
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-800">{val.name}</h3>
                       </div>
-                      <h3 className="text-lg font-bold text-gray-800">{val.name}</h3>
+                      <span className={`px-3 py-1 rounded-md text-xs font-semibold tracking-wide ${colors.pillBg} ${colors.text}`}>
+                        {val.color}
+                      </span>
                     </div>
-                    <span className={`px-3 py-1 rounded-md text-xs font-semibold tracking-wide ${colors.pillBg} ${colors.text}`}>
-                      {val.color}
-                    </span>
+                    {val.meaning && (
+                      <p className="text-gray-600 text-sm mt-1 ml-11">{val.meaning}</p>
+                    )}
                   </div>
-                  {val.meaning && (
-                    <p className="text-gray-600 text-sm mt-1 ml-11">
-                      {val.meaning}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         )}
       </div>
 
+      {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col relative">
-            
-            {/* Loading Indicator inside the modal while specific item fetches */}
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-visible flex flex-col relative">
+
             {isFetchingDetails && (
-              <div className="absolute top-0 left-0 w-full h-1 bg-orange-100 overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-orange-100 overflow-hidden rounded-t-xl">
                 <div className="h-full bg-orange-500 animate-pulse w-full"></div>
               </div>
             )}
 
+            {/* Modal Header */}
             <div className="flex justify-between items-center p-5 border-b border-gray-100">
               <h3 className="text-xl font-bold text-gray-900">
                 {modalMode === "add" ? "Add Core Value" : "Edit Value"}
@@ -347,7 +329,10 @@ function Values() {
               </button>
             </div>
 
-            <div className="p-5 space-y-5">
+            {/* Modal Body */}
+            <div className="p-5 space-y-5 overflow-visible">
+
+              {/* Name */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Value Name <span className="text-red-500">*</span>
@@ -363,6 +348,7 @@ function Values() {
                 />
               </div>
 
+              {/* Meaning */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   What does this value mean to you?
@@ -372,18 +358,19 @@ function Values() {
                   value={formData.meaning}
                   onChange={handleInputChange}
                   disabled={isFetchingDetails}
-                  placeholder="e.g., Integrity means always being honest, even when it's difficult, and doing what I say I will do."
+                  placeholder="e.g., Integrity means always being honest, even when it's difficult..."
                   className="w-full h-24 border border-gray-300 rounded-md p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-y min-h-[96px] disabled:bg-gray-50"
                 />
                 <p className="text-xs text-gray-400 mt-1">Optional: Add a personal definition to make this value more meaningful</p>
               </div>
 
+              {/* Priority Slider */}
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Priority (1-10)
-                  </label>
-                  <span className={`font-bold text-lg ${getPriorityColor(Number(formData.priority))}`}>{formData.priority}</span>
+                  <label className="block text-sm font-semibold text-gray-700">Priority (1-10)</label>
+                  <span className={`font-bold text-lg ${getPriorityColor(Number(formData.priority))}`}>
+                    {formData.priority}
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -398,31 +385,63 @@ function Values() {
                 />
               </div>
 
+              {/* ✅ CUSTOM COLOR PICKER DROPDOWN - Matches your screenshot */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Color Tag
                 </label>
-                <div className="relative">
-                  <div className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-sm ${colorMap[formData.color]?.bg || "bg-gray-500"}`}></div>
-                  <select
-                    name="color"
-                    value={formData.color}
-                    onChange={handleInputChange}
+                <div className="relative" ref={colorDropdownRef}>
+
+                  {/* Trigger Button */}
+                  <button
+                    type="button"
                     disabled={isFetchingDetails}
-                    className="w-full border border-gray-300 rounded-md p-2.5 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 appearance-none bg-white disabled:bg-gray-50"
+                    onClick={() => setColorDropdownOpen((prev) => !prev)}
+                    className="w-full flex items-center justify-between border border-gray-300 rounded-md p-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-50 disabled:cursor-not-allowed hover:border-gray-400 transition-colors"
                   >
-                    <option value="blue">blue</option>
-                    <option value="green">green</option>
-                    <option value="red">red</option>
-                    <option value="teal">teal</option>
-                    <option value="purple">purple</option>
-                    <option value="orange">orange</option>
-                  </select>
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className="w-5 h-5 rounded-md flex-shrink-0"
+                        style={{ backgroundColor: colorMap[formData.color]?.hex || "#999" }}
+                      />
+                      <span className="text-gray-700 capitalize">{formData.color}</span>
+                    </div>
+                    <ChevronDown
+                      size={16}
+                      className={`text-gray-400 transition-transform duration-200 ${colorDropdownOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+
+                  {/* Dropdown List */}
+                  {colorDropdownOpen && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-[9999] overflow-hidden">
+                      {Object.entries(colorMap).map(([colorName, colorValues]) => (
+                        <button
+                          key={colorName}
+                          type="button"
+                          onClick={() => handleColorSelect(colorName)}
+                          className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span
+                              className="w-5 h-5 rounded-md flex-shrink-0"
+                              style={{ backgroundColor: colorValues.hex }}
+                            />
+                            <span className="text-gray-700 text-sm capitalize">{colorName}</span>
+                          </div>
+                          {formData.color === colorName && (
+                            <Check size={16} className="text-gray-600" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
             </div>
 
+            {/* Modal Footer */}
             <div className="p-5 border-t border-gray-100 flex justify-between items-center bg-gray-50 rounded-b-xl">
               <div>
                 {modalMode === "edit" && (
@@ -435,7 +454,6 @@ function Values() {
                   </button>
                 )}
               </div>
-              
               <div className="flex items-center gap-3">
                 <button
                   onClick={closeModal}
@@ -449,7 +467,7 @@ function Values() {
                   disabled={isSaving || isFetchingDetails}
                   className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-md font-medium text-sm transition-colors shadow-sm disabled:opacity-70 flex items-center gap-2"
                 >
-                  {isSaving ? "Saving..." : (modalMode === "add" ? "Create" : "Update")}
+                  {isSaving ? "Saving..." : modalMode === "add" ? "Create" : "Update"}
                 </button>
               </div>
             </div>
@@ -458,10 +476,14 @@ function Values() {
         </div>
       )}
 
-      {/* 👇 NAYA CODE: TOAST NOTIFICATION UI */}
+      {/* Toast Notification */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'} text-white px-4 py-3 rounded shadow-lg flex flex-col min-w-[250px] animate-fade-in z-50`}>
-          <span className="font-bold text-sm">{toast.type === 'error' ? 'Error' : 'Success'}</span>
+        <div
+          className={`fixed bottom-6 right-6 ${
+            toast.type === "error" ? "bg-red-500" : "bg-green-500"
+          } text-white px-4 py-3 rounded shadow-lg flex flex-col min-w-[250px] animate-fade-in z-50`}
+        >
+          <span className="font-bold text-sm">{toast.type === "error" ? "Error" : "Success"}</span>
           <span className="text-sm">{toast.message}</span>
         </div>
       )}

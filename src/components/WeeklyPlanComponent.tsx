@@ -22,7 +22,7 @@ const dayTheme: Record<string, any> = {
 };
 
 // --- DYNAMIC WEEK GENERATOR (REPLACED MOCK DATA) ---
-const generateEmptyWeekData = (baseDate = new Date()) => {
+export const generateEmptyWeekData = (baseDate = new Date()) => {
   const start = startOfWeek(baseDate, { weekStartsOn: 0 }); // Week starts on Sunday
   const end = addDays(start, 6);
   
@@ -187,16 +187,11 @@ function CalendarSection() {
 
 // ─── Main WeeklyPlanComponent ────────────────────────────────────────────────
 interface WeeklyPlanComponentProps {
-  initialData?: any;
+  data: any;
+  setData: React.Dispatch<React.SetStateAction<any>>;
 }
 
-export default function WeeklyPlanComponent({ initialData }: WeeklyPlanComponentProps) {
-  // If no existing data is passed down from the parent, generate fresh data for this week!
-  const [data, setData] = useState(initialData || generateEmptyWeekData());
-
-  useEffect(() => {
-    if (initialData) setData(initialData);
-  }, [initialData]);
+export default function WeeklyPlanComponent({ data, setData }: WeeklyPlanComponentProps) {
 
   const handleThemeChange = (dayId: string, newTheme: string) => {
     setData((prev: any) => ({

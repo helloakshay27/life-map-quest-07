@@ -820,53 +820,53 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
               Score: {summaryData?.total_score || 10}
             </Button>
           </Link>
-        </div>
+      </div>
       </div>
 
       {/* Daily Focus & Inspiration */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="w-5 h-5 text-red-500" />
-          <h2 className="text-lg font-semibold text-foreground">
+          <Sparkles className="w-5 h-5 text-[#E11D48]" />
+          <h2 className="text-lg font-semibold text-[#1E293B]">
             Daily Focus & Inspiration
           </h2>
         </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Daily Motivator */}
-          <Card className="bg-red-50/50 border-red-200 overflow-hidden flex flex-col shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
+          {/* Card 1: Daily Motivator */}
+          <Card className="bg-[#FFF1F2] border-[#FECDD3] rounded-2xl overflow-hidden flex flex-col shadow-sm border-2">
             <div className="p-4 flex-1 flex flex-col">
               <div className="flex items-center gap-2 mb-3">
-                <div className="bg-red-500 p-1.5 rounded-lg text-white">
+                <div className="bg-[#E11D48] p-1.5 rounded-lg text-white shadow-sm">
                   <Sparkles className="w-4 h-4" />
                 </div>
-                <h3 className="font-bold text-xs text-red-900 tracking-wide">
+                <h3 className="font-bold text-[10px] text-[#881337] tracking-wider uppercase flex items-center gap-1.5">
                   DAILY MOTIVATOR
+                  <Sparkles className="w-3 h-3 text-amber-400" />
                 </h3>
-                <Sparkles className="w-3 h-3 text-amber-400 ml-auto" />
               </div>
-              <div className="flex-1 relative pl-6 mt-2">
-                <span className="text-4xl text-red-200 absolute -top-4 left-0 font-serif leading-none">
+              
+              <div className="flex-1 relative pl-6 mb-4 mt-2">
+                <span className="text-4xl text-[#FECDD3] absolute -top-4 left-0 font-serif opacity-80">
                   "
                 </span>
-                <p className="text-sm font-medium text-red-900 leading-relaxed mb-2 z-10 relative">
+                <p className="text-sm font-bold text-[#881337] leading-relaxed z-10 relative">
                   {previewData.daily_motivator
                     ? previewData.daily_motivator
-                    : "Other people's opinion of you does not have to become your reality."}
+                    : "The end of education is character."}
                 </p>
-                <p className="text-xs text-red-700 font-medium">— Les Brown</p>
+                <p className="text-[10px] text-[#E11D48] font-bold mt-2">— Sathya Sai Baba</p>
               </div>
-            </div>
-            <div className="px-4 pb-4">
-              <div className="bg-red-100/80 rounded-lg p-3 border border-red-200">
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <Target className="w-3.5 h-3.5 text-red-600" />
-                  <h4 className="font-bold text-[10px] uppercase text-red-900">
-                    Action
+
+              <div className="bg-[#FFE4E6] rounded-xl p-3 border border-[#FECDD3]">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Target className="w-3 h-3 text-[#E11D48]" />
+                  <h4 className="font-black text-[9px] uppercase text-[#881337] tracking-widest">
+                    ACTION
                   </h4>
                 </div>
-                <p className="text-[11px] text-red-800 leading-tight">
-                  You define your worth. Don't accept other's limited views of
-                  you.
+                <p className="text-[11px] text-[#9F1239] font-medium leading-snug">
+                  True education is about building strong values and character, not just academics.
                 </p>
               </div>
             </div>
@@ -886,8 +886,7 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
                 variant="secondary"
                 className="bg-[#E0E7FF] text-[#4338CA] hover:bg-[#E0E7FF] shadow-none font-semibold text-[12px] px-3 py-1 rounded-full pointer-events-none border-0"
               >
-                For:{" "}
-                {new Date().toLocaleDateString("en-US", {
+                For: {new Date().toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                 })}
@@ -994,7 +993,6 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
         </div>
       </div>
 
-      {/* Story of the Day (Video Box) */}
       <Card className="bg-orange-50 border-orange-200 overflow-hidden flex flex-col mb-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
         <div className="p-4 flex items-center justify-between border-b border-orange-100/50">
           <div className="flex gap-3 items-center">

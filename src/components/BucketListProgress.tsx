@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Loader2, ChevronDown, Plus, X } from "lucide-react";
+import { Loader2, ChevronDown, Plus, X, Check } from "lucide-react";
 import { toast } from "sonner";
 import { getAuthHeaders } from "@/config/api";
 
@@ -411,10 +411,17 @@ const BucketListProgress = () => {
                 key={item.id}
                 className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 pt-3 pb-3 flex flex-col gap-2"
               >
-                {/* Title Row */}
-                <div className="flex items-center gap-2">
-                  <span className="text-amber-400 text-base leading-none">✦</span>
-                  <span className="font-semibold text-gray-900 text-sm">{item.title || "Untitled Dream"}</span>
+                <div className="flex items-center gap-3">
+                  {item.progress === "Achieved" ? (
+                    <div className="w-5 h-5 rounded-md bg-pink-500 flex items-center justify-center text-white flex-shrink-0">
+                      <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                    </div>
+                  ) : (
+                    <span className="text-amber-400 text-base leading-none">✦</span>
+                  )}
+                  <span className={`font-semibold text-sm transition-all duration-300 ${item.progress === "Achieved" ? "line-through text-gray-400 decoration-gray-400" : "text-gray-900"}`}>
+                    {item.title || "Untitled Dream"}
+                  </span>
                 </div>
 
                 {/* Textarea */}

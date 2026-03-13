@@ -28,25 +28,6 @@ function VisionAndValues() {
       <div className="w-full  mx-auto bg-white p-4 sm:p-8 rounded-2xl shadow-sm border border-gray-100">
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-3 sm:gap-4">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-2 rounded-full border border-gray-200 hover:bg-gray-100 hover:text-gray-900 text-gray-500 transition-colors flex-shrink-0"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-            </button>
-
             {/* Title & Subtitle */}
             <div className="flex flex-col">
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight">
@@ -80,7 +61,6 @@ function VisionAndValues() {
         {/* ==============================
             SECTION 2: TABS
         ============================== */}
-        {/* 4. Made the tabs slightly thicker and gave the active tab a purple accent */}
         <div className="flex bg-gray-100 p-1.5 rounded-xl mb-6">
           {TABS.map((tab) => (
             <button
@@ -100,7 +80,6 @@ function VisionAndValues() {
         {/* ==============================
             SECTION 3: CONTENT AREA
         ============================== */}
-        {/* 5. Removed the nested purple background & extra paddings because child components usually have their own backgrounds/padding */}
         <div className="w-full min-h-[400px]">
           {activeTab === "Vision" && <Vision />}
           {activeTab === "Values" && <Values />}

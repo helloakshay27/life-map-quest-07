@@ -70,10 +70,11 @@ export function AddDreamDialog({
       setNotes([]);
       setLocalDraftNotes([]); // Clear draft notes
 
-      if (initialData?.id && !initialData.id.startsWith("s")) {
-        const fetchDetails = async () => {
-          setIsLoadingDetails(true);
-          try {
+      const fetchDetails = async () => {
+        setIsLoadingDetails(true);
+        try {
+          // For existing dreams, fetch linked details
+          if (initialData?.id && !initialData.id.startsWith("s")) {
             const response = await fetch(
               `https://life-api.lockated.com/dreams/${initialData.id}`,
               { headers: getAuthHeaders() },
@@ -88,14 +89,44 @@ export function AddDreamDialog({
               setGoals(data.goals || []);
               setNotes(data.notes || []);
             }
-          } catch (error) {
-            console.error("Failed to fetch dream details", error);
-          } finally {
-            setIsLoadingDetails(false);
+          } else {
+            // For new dreams, fetch all user's core values and goals
+            try {
+              const valuesResponse = await fetch(
+                `https://life-api.lockated.com/core_values`,
+                { headers: getAuthHeaders() },
+              );
+              if (valuesResponse.ok) {
+                const valuesData = await valuesResponse.json();
+                const values = Array.isArray(valuesData) ? valuesData : valuesData.core_values || [];
+                setCoreValues(values);
+              }
+            } catch (error) {
+              console.error("Failed to fetch core values", error);
+            }
+
+            try {
+              const goalsResponse = await fetch(
+                `https://life-api.lockated.com/goals`,
+                { headers: getAuthHeaders() },
+              );
+              if (goalsResponse.ok) {
+                const goalsData = await goalsResponse.json();
+                const goalsList = Array.isArray(goalsData) ? goalsData : goalsData.goals || [];
+                setGoals(goalsList);
+              }
+            } catch (error) {
+              console.error("Failed to fetch goals", error);
+            }
           }
-        };
-        fetchDetails();
-      }
+        } catch (error) {
+          console.error("Failed to fetch details", error);
+        } finally {
+          setIsLoadingDetails(false);
+        }
+      };
+      
+      fetchDetails();
     }
   }, [open, initialData]);
 
@@ -375,20 +406,28 @@ export function AddDreamDialog({
                 <Target className="w-[15px] h-[15px]" />
                 Linked Goals
               </h4>
+              <p className="flex items-center gap-1.5 text-xs text-[#3b82f6] mb-3">
+                <span className="text-yellow-500">💡</span> Connect your dream
+                to your{" "}
+                <span className="font-bold cursor-pointer hover:underline">
+                  Goals
+                </span>
+              </p>
+
               {isLoadingDetails ? (
                 <div className="flex items-center gap-2 text-xs text-[#60a5fa] font-medium">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" /> Fetching
                   goals...
                 </div>
               ) : goals.length > 0 ? (
-                <div className="flex flex-col gap-2 mt-2">
+                <div className="flex flex-wrap gap-2 mt-2">
                   {goals.map((g, idx) => (
-                    <div
+                    <span
                       key={idx}
-                      className="bg-white px-3 py-2 border border-[#93c5fd] rounded-md shadow-sm text-xs font-semibold text-[#2563eb]"
+                      className="px-2.5 py-1 text-xs font-semibold bg-white border border-[#93c5fd] text-[#2563eb] rounded-md shadow-sm"
                     >
                       {String(g.title || "Unnamed Goal")}
-                    </div>
+                    </span>
                   ))}
                 </div>
               ) : (
