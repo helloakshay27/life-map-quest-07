@@ -27,9 +27,9 @@ import KraSelfEvaluation from "./pages/KRA";
 import WeeklyJournal from "./pages/WeeklyJournal";
 import KRA from "./pages/KRA";
 import ForFamily from "./pages/ForFamily";
-import ResetPassword from "./pages/resetPass";
 import UpdatePassword from "./pages/UpdatePass";
 import Setup from "./pages/Setup";
+import ResetPasswordEmail from "./pages/resetPassEmail";
 
 const queryClient = new QueryClient();
 
@@ -44,8 +44,8 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signUp" element={<SignUp />} />
-            <Route path="/resetPassword" element={<ResetPassword />} />
-            <Route path="/updatePassword" element={<UpdatePassword />} />
+            <Route path="/resetPasswordemail" element={<ResetPasswordEmail/>} />
+            <Route path="/reset-password" element={<UpdatePassword />} />
 
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />

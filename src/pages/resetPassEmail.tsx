@@ -7,7 +7,7 @@ import { Mail, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { GophygitalLogo } from "@/components/AppHeader";
 
-const ResetPassword = () => {
+const ResetPasswordEmail = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -52,7 +52,6 @@ const ResetPassword = () => {
       });
 
       // Redirect back to login page after success
-      navigate("/UpdatePassword");
     } catch (error: any) {
       toast({
         title: "Request failed",
@@ -65,7 +64,15 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div
+      className="flex min-h-screen items-center justify-center px-4"
+      style={{
+        backgroundImage: "url(/loginBG.png)",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundAttachment: "fixed",
+      }}
+    >
       <div className="w-full max-w-md animate-fade-in">
         <div className="rounded-2xl border bg-card p-8 shadow-lg">
           {/* Logo & Header */}
@@ -124,4 +131,4 @@ const ResetPassword = () => {
   );
 };
 
-export default ResetPassword;
+export default ResetPasswordEmail;

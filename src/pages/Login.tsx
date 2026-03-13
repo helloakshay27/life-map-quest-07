@@ -300,7 +300,7 @@ const Login = () => {
               </Button>
 
               <div className="flex items-center justify-between text-body-6">
-                <Link to="/resetPassword" className="text-primary hover:underline">
+                <Link to="/resetPasswordemail" className="text-primary hover:underline">
                   Forgot password?
                 </Link>
                 <span className="text-muted-foreground">
