@@ -12,53 +12,42 @@ import {
 import { apiRequest } from "@/config/api";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 
-interface Win {
+export interface Win {
   description: string;
   day: string;
   category: string;
   completed: boolean;
 }
 
-interface JournalEntry {
-  id: number;
-  start_date: string;
-  end_date: string;
-  gratitude_note?: string | null;
-  alignment_score?: number | null;
-  data?: {
-    biggest_challenge?: string;
-    key_insight?: string;
-    wins?: Win[];
-    life_balance_rating?: number;
-    weekly_story?: string;
-    mission_connection?: string;
-    challenge_cause?: string;
-  };
+interface WeeklyReflectionProps {
+  wins: Win[];
+  setWins: React.Dispatch<React.SetStateAction<Win[]>>;
+  challenge: string;
+  setChallenge: React.Dispatch<React.SetStateAction<string>>;
+  challengeCause: string;
+  setChallengeCause: React.Dispatch<React.SetStateAction<string>>;
+  gratitude: string;
+  setGratitude: React.Dispatch<React.SetStateAction<string>>;
+  insight: string;
+  setInsight: React.Dispatch<React.SetStateAction<string>>;
+  balanceRating: number;
+  setBalanceRating: React.Dispatch<React.SetStateAction<number>>;
 }
 
-function WeeklyReflection() {
-  // Views: 'list' | 'form'
-  const [currentView, setCurrentView] = useState<"list" | "form">("list");
-
-  // List State
-  const [journals, setJournals] = useState<JournalEntry[]>([]);
-  const [isLoadingList, setIsLoadingList] = useState(true);
-
-  // Form fields state
-  const [currentJournalId, setCurrentJournalId] = useState<number | null>(null);
-  const [challenge, setChallenge] = useState("");
-  const [gratitude, setGratitude] = useState("");
-  const [insight, setInsight] = useState("");
-  const [balanceRating, setBalanceRating] = useState(3);
-  const [wins, setWins] = useState<Win[]>([]);
-
-  // API Submission state
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<{
-    type: "idle" | "success" | "error";
-    message: string;
-  }>({ type: "idle", message: "" });
-
+function WeeklyReflection({
+  wins,
+  setWins,
+  challenge,
+  setChallenge,
+  challengeCause,
+  setChallengeCause,
+  gratitude,
+  setGratitude,
+  insight,
+  setInsight,
+  balanceRating,
+  setBalanceRating,
+}: WeeklyReflectionProps) {
   // Friend's Auto-Calculated Life Balance placeholder data
   const lifeBalanceStats = [
     { id: 1, emoji: "💼", score: 0 },
@@ -68,235 +57,25 @@ function WeeklyReflection() {
     { id: 5, emoji: "🔥", score: 0 },
   ];
 
-  // =========================================
-  // 1. FETCH LIST (GET)
-  // =========================================
-  const fetchJournals = async () => {
-    setIsLoadingList(true);
-    try {
-      const res = await apiRequest("/user_journals?journal_type=weekly");
-      if (res.ok) {
-        const data = await res.json();
-        setJournals(Array.isArray(data) ? data : data.user_journals || []);
-      }
-    } catch (error) {
-      console.error("Failed to fetch journals", error);
-    } finally {
-      setIsLoadingList(false);
-    }
+  const [isAddingWin, setIsAddingWin] = useState(false);
+  const [newWin, setNewWin] = useState<Partial<Win>>({
+    description: "",
+    day: "Monday",
+    category: "career",
+    completed: true,
+  });
+
+  const handleAddWin = () => {
+    if (!newWin.description?.trim()) return;
+    setWins((prev) => [...prev, newWin as Win]);
+    setNewWin({ description: "", day: "Monday", category: "career", completed: true });
+    setIsAddingWin(false);
   };
 
-  useEffect(() => {
-    if (currentView === "list") {
-      fetchJournals();
-    }
-  }, [currentView]);
-
-  // =========================================
-  // 2. DELETE (DELETE)
-  // =========================================
-  const handleDelete = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this reflection?"))
-      return;
-    try {
-      const res = await apiRequest(`/user_journals/${id}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        setJournals((prev) => prev.filter((j) => j.id !== id));
-      } else {
-        alert("Failed to delete.");
-      }
-    } catch (error) {
-      console.error("Delete error", error);
-    }
+  const removeWin = (index: number) => {
+    setWins((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // =========================================
-  // 3. EDIT POPULATION
-  // =========================================
-  const handleEdit = (journal: JournalEntry) => {
-    setCurrentJournalId(journal.id);
-    setGratitude(journal.gratitude_note || "");
-    setBalanceRating(journal.alignment_score || 3);
-    setChallenge(journal.data?.biggest_challenge || "");
-    setInsight(journal.data?.key_insight || "");
-    setWins(journal.data?.wins || []);
-    setCurrentView("form");
-  };
-
-  // Open empty form for new entry
-  const handleAddNew = () => {
-    setCurrentJournalId(null);
-    setGratitude("");
-    setBalanceRating(3);
-    setChallenge("");
-    setInsight("");
-    setWins([]);
-    setSubmitStatus({ type: "idle", message: "" });
-    setCurrentView("form");
-  };
-
-  // =========================================
-  // 4. SAVE (POST or PUT/PATCH)
-  // =========================================
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    setSubmitStatus({ type: "idle", message: "" });
-
-    const today = new Date();
-    const startDate = format(
-      startOfWeek(today, { weekStartsOn: 0 }),
-      "yyyy-MM-dd",
-    );
-    const endDate = format(endOfWeek(today, { weekStartsOn: 0 }), "yyyy-MM-dd");
-
-    const payload = {
-      user_journal: {
-        journal_type: "weekly",
-        start_date: startDate,
-        end_date: endDate,
-        gratitude_note: gratitude,
-        alignment_score: balanceRating,
-        data: {
-          weekly_story: "",
-          wins: wins,
-          biggest_challenge: challenge,
-          challenge_cause: challenge, // same field for now; extend if UI adds separate cause input
-          key_insight: insight,
-          mission_connection: "",
-          life_balance_rating: balanceRating,
-        },
-      },
-    };
-
-    try {
-      const url = currentJournalId
-        ? `/user_journals/${currentJournalId}`
-        : "/user_journals";
-      const method = currentJournalId ? "PUT" : "POST";
-
-      const response = await apiRequest(url, {
-        method,
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error("Backend error:", errText);
-        throw new Error(`Failed: ${response.status}`);
-      }
-
-      const responseData = await response.json();
-      // Capture newly created journal id for subsequent PUT
-      if (!currentJournalId) {
-        const newId =
-          responseData.journal?.id ??
-          responseData.user_journal?.id ??
-          responseData.id;
-        if (newId) setCurrentJournalId(newId);
-      }
-
-      setSubmitStatus({
-        type: "success",
-        message: currentJournalId
-          ? "Updated successfully!"
-          : "Saved successfully!",
-      });
-      setTimeout(() => setCurrentView("list"), 1500);
-    } catch (error: unknown) {
-      console.error("Submission error:", error);
-      setSubmitStatus({ type: "error", message: "Failed to save reflection." });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // =========================================
-  // RENDER: LIST VIEW
-  // =========================================
-  if (currentView === "list") {
-    return (
-      <div className="font-sans">
-        {/* Orange Header */}
-        <div className="px-6 pt-5 pb-4 border-b border-orange-100 bg-white">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-orange-500 shadow-sm shrink-0">
-                <BookOpen className="w-5 h-5 text-white" strokeWidth={2} />
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <h2 className="text-[17px] font-bold text-gray-900">Review of Your Week</h2>
-                  <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                </div>
-                <p className="text-[13px] text-gray-500 mt-0.5">Reflect on wins, challenges, and insights</p>
-              </div>
-            </div>
-            <button
-              onClick={handleAddNew}
-              className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm shrink-0"
-            >
-              <Plus className="w-4 h-4" /> New Reflection
-            </button>
-          </div>
-        </div>
-
-        <div className="p-6 space-y-4">
-          {isLoadingList ? (
-            <div className="flex justify-center py-16">
-              <Loader2 className="w-8 h-8 animate-spin text-orange-400" />
-            </div>
-          ) : journals.length === 0 ? (
-            <div className="text-center py-16 text-gray-500 border-2 border-dashed border-orange-200 rounded-xl bg-orange-50/30">
-              No reflections found. Start writing your first one!
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {journals.map((journal: JournalEntry) => (
-                <div
-                  key={journal.id}
-                  className="bg-white border-l-4 border-l-orange-400 border border-orange-100 p-5 rounded-xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
-                >
-                  <div>
-                    <p className="text-sm text-gray-500 font-medium">
-                      {journal.start_date} to {journal.end_date}
-                    </p>
-                    <h3 className="text-lg font-bold text-gray-900 mt-1 line-clamp-1">
-                      {journal.gratitude_note || "Weekly Reflection"}
-                    </h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Alignment Score: {journal.alignment_score}/5
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleEdit(journal)}
-                      className="p-2 text-orange-600 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors"
-                      title="Edit"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(journal.id)}
-                      className="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // =========================================
-  // RENDER: FORM VIEW (CREATE/EDIT)
-  // =========================================
   return (
     <div className="font-sans">
       {/* Orange Header */}
@@ -308,17 +87,11 @@ function WeeklyReflection() {
             </div>
             <div>
               <h2 className="text-[17px] font-bold text-gray-900">
-                {currentJournalId ? "Edit Weekly Reflection" : "New Weekly Reflection"}
+                Weekly Reflection
               </h2>
               <p className="text-[13px] text-gray-500 mt-0.5">Wins, challenges, gratitude & life balance</p>
             </div>
           </div>
-          <button
-            onClick={() => setCurrentView("list")}
-            className="flex items-center gap-2 text-sm font-semibold text-orange-600 hover:text-orange-800 bg-orange-50 hover:bg-orange-100 px-3 py-2 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back
-          </button>
         </div>
       </div>
 
@@ -334,32 +107,108 @@ function WeeklyReflection() {
             <Info className="w-4 h-4 text-gray-400 cursor-help" />
           </div>
         </div>
-        <div className="border-y-2 border-dashed border-orange-200/60 bg-[#fefdfb] py-10 flex flex-col items-center justify-center rounded-sm">
-          <p className="text-[15px] font-medium text-gray-800 mb-3">
-            {wins.length > 0
-              ? `${wins.length} wins recorded`
-              : "No wins added yet"}
-          </p>
-          <button className="flex items-center gap-2 bg-white border border-gray-200 shadow-sm px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
-            <Plus className="w-4 h-4" /> Add / Edit Wins
-          </button>
+        <div className="border-y-2 border-dashed border-orange-200/60 bg-[#fefdfb] py-6 flex flex-col px-4 rounded-sm">
+          {wins.length > 0 ? (
+            <div className="w-full mb-6 space-y-3">
+              {wins.map((win, idx) => (
+                <div key={idx} className="flex items-center justify-between bg-white p-3 border border-gray-100 rounded-lg shadow-sm">
+                  <div>
+                    <p className="font-semibold text-gray-800 text-sm">{win.description}</p>
+                    <p className="text-xs text-gray-500">{win.day} • {win.category}</p>
+                  </div>
+                  <button onClick={() => removeWin(idx)} className="text-gray-400 hover:text-red-500">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center mb-6">
+              <p className="text-[15px] font-medium text-gray-800 mb-3">No wins added yet</p>
+            </div>
+          )}
+
+          {!isAddingWin ? (
+            <div className="flex justify-center">
+              <button onClick={() => setIsAddingWin(true)} className="flex items-center gap-2 bg-white border border-gray-200 shadow-sm px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+                <Plus className="w-4 h-4" /> Add Win
+              </button>
+            </div>
+          ) : (
+            <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-sm w-full space-y-4">
+              <input
+                type="text"
+                placeholder="What did you accomplish?"
+                className="w-full p-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-200 text-sm"
+                value={newWin.description}
+                onChange={(e) => setNewWin({ ...newWin, description: e.target.value })}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <select
+                  className="p-2 border border-gray-200 rounded-md bg-white text-sm outline-none"
+                  value={newWin.day}
+                  onChange={(e) => setNewWin({ ...newWin, day: e.target.value })}
+                >
+                  {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+                <select
+                  className="p-2 border border-gray-200 rounded-md bg-white text-sm outline-none"
+                  value={newWin.category}
+                  onChange={(e) => setNewWin({ ...newWin, category: e.target.value })}
+                >
+                  {["career", "health", "relationships", "personal_growth", "finance", "other"].map(c => (
+                    <option key={c} value={c}>{c.replace("_", " ")}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-2 justify-end mt-2">
+                <button
+                  onClick={() => setIsAddingWin(false)}
+                  className="px-3 py-1.5 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddWin}
+                  className="px-3 py-1.5 rounded-md text-sm font-medium bg-orange-500 text-white hover:bg-orange-600"
+                >
+                  Save Win
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
       {/* 2. BIGGEST CHALLENGE & CAUSE */}
       <section>
         <h2 className="text-lg font-bold text-gray-900 mb-1">
-          Biggest Challenge & Cause
+          Biggest Challenge
         </h2>
         <p className="text-[15px] text-gray-600 mb-3">
           What was your biggest challenge this week, perhaps a recurring
-          behavior, and what caused it?
+          behavior?
         </p>
         <textarea
           value={challenge}
           onChange={(e) => setChallenge(e.target.value)}
-          className="w-full min-h-[100px] p-4 rounded-xl border border-gray-200 bg-white shadow-sm focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none resize-y"
-          placeholder="Type your answer here..."
+          className="w-full min-h-[80px] mb-4 p-4 rounded-xl border border-gray-200 bg-white shadow-sm focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none resize-y"
+          placeholder="Describe your biggest challenge..."
+        />
+
+        <h2 className="text-lg font-bold text-gray-900 mb-1 mt-4">
+          Challenge Cause
+        </h2>
+        <p className="text-[15px] text-gray-600 mb-3">
+          What caused it?
+        </p>
+        <textarea
+          value={challengeCause}
+          onChange={(e) => setChallengeCause(e.target.value)}
+          className="w-full min-h-[80px] p-4 rounded-xl border border-gray-200 bg-white shadow-sm focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none resize-y"
+          placeholder="Describe what caused this challenge..."
         />
       </section>
 
@@ -436,32 +285,6 @@ function WeeklyReflection() {
         </div>
       </section>
 
-      {/* 5. SUBMIT ACTIONS */}
-      <section className="pt-6 border-t border-gray-200 flex flex-col items-end gap-3">
-        {submitStatus.type === "error" && (
-          <p className="text-sm text-red-600 font-medium">
-            {submitStatus.message}
-          </p>
-        )}
-        {submitStatus.type === "success" && (
-          <p className="text-sm text-emerald-600 font-medium flex items-center gap-1">
-            <CheckCircle2 className="w-4 h-4" /> {submitStatus.message}
-          </p>
-        )}
-
-        <button
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-xl font-semibold transition-colors disabled:opacity-70 flex items-center gap-2"
-        >
-          {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-          {isSubmitting
-            ? "Saving..."
-            : currentJournalId
-              ? "Update Reflection"
-              : "Save Reflection"}
-        </button>
-      </section>
       </div>
     </div>
   );

@@ -25,14 +25,14 @@ interface GoalItem {
   completed: boolean;
 }
 
-interface FocusData {
+export interface FocusData {
   matrix: Record<string, MatrixItem>;
   balance: BalanceItem[];
   goals: GoalItem[];
   sayNoText: string;
 }
 
-const defaultData: FocusData = {
+export const defaultFocusData: FocusData = {
   matrix: {
     q1: { value: 0, label: "Imp & Urgent", emoji: "🔥", color: "red" },
     q2: { value: 1, label: "Imp not Urgent", emoji: "🎯", color: "green" },
@@ -55,9 +55,13 @@ const defaultData: FocusData = {
   sayNoText: "",
 };
 
-function FocusAndBoundaries({ initialData = defaultData }: { initialData?: FocusData }) {
+interface FocusAndBoundariesProps {
+  data: FocusData;
+  setData: React.Dispatch<React.SetStateAction<FocusData>>;
+}
+
+function FocusAndBoundaries({ data, setData }: FocusAndBoundariesProps) {
   const navigate = useNavigate();
-  const [data, setData] = useState<FocusData>(initialData);
 
   const toggleGoal = (goalId: number) => {
     setData((prev) => ({

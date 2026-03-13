@@ -19,10 +19,10 @@ import WeekStrip from "@/components/journal/WeekStrip";
 import { subDays, startOfWeek, endOfWeek, format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import WeeklyReflection from "@/components/WeeklyReflection";
+import WeeklyReflection, { Win } from "@/components/WeeklyReflection";
 import MissionHabitsConnection from "@/components/MissionHabitsConnection";
-import WeeklyPlanComponent from "@/components/WeeklyPlanComponent";
-import FocusAndBoundaries from "@/components/FocusAndBoundaries";
+import WeeklyPlanComponent, { generateEmptyWeekData } from "@/components/WeeklyPlanComponent";
+import FocusAndBoundaries, { FocusData, defaultFocusData } from "@/components/FocusAndBoundaries";
 import ReviewToDos from "@/components/ReviewToDos";
 import BucketListProgress from "@/components/BucketListProgress";
 
@@ -37,14 +37,22 @@ const WeeklyJournal = () => {
 
   // States lifted from WeeklyReflection
   const [challenge, setChallenge] = useState("");
+  const [challengeCause, setChallengeCause] = useState("");
   const [gratitude, setGratitude] = useState("");
   const [insight, setInsight] = useState("");
   const [balanceRating, setBalanceRating] = useState(3);
+  const [wins, setWins] = useState<Win[]>([]);
 
   // States lifted from MissionHabitsConnection
   const [coreValue, setCoreValue] = useState("");
   const [missionText, setMissionText] = useState("");
   const [habitsText, setHabitsText] = useState("");
+  
+  // States lifted from WeeklyPlanComponent
+  const [weeklyPlanData, setWeeklyPlanData] = useState(generateEmptyWeekData());
+
+  // States lifted from FocusAndBoundaries
+  const [focusData, setFocusData] = useState<FocusData>(defaultFocusData);
 
   const [insightsData, setInsightsData] = useState<{
     total_weeks?: number;
@@ -52,6 +60,7 @@ const WeeklyJournal = () => {
     alignment_average?: number;
     most_productive_day?: [string, number];
     common_challenges?: [string, number][];
+    category_distribution?: Record<string, number>;
     gratitude_highlights?: string[];
     message?: string;
     hint?: string;
@@ -75,6 +84,8 @@ const WeeklyJournal = () => {
       biggest_challenge?: string;
       challenge_cause?: string;
       life_balance_rating?: number;
+      weekly_plan?: Record<string, unknown>;
+      focus_and_boundaries?: Record<string, unknown>;
       wins?: {
         day: string;
         category: string;
@@ -126,12 +137,14 @@ const WeeklyJournal = () => {
           alignment_score: balanceRating,
           data: {
             weekly_story: habitsText,
-            wins: [],
+            wins: wins,
             biggest_challenge: challenge,
-            challenge_cause: "", // separate field — extend UI when needed
+            challenge_cause: challengeCause,
             key_insight: insight,
             mission_connection: missionText,
             life_balance_rating: balanceRating,
+            weekly_plan: weeklyPlanData,
+            focus_and_boundaries: focusData
           },
         },
       };
@@ -175,6 +188,56 @@ const WeeklyJournal = () => {
       setIsSaving(false);
     }
   };
+
+  // Fetch journal dynamically based on the active currentDate
+  useEffect(() => {
+    if (activeTab === "new") {
+      const fetchJournalForDate = async () => {
+        try {
+          const formattedDate = format(currentDate, "yyyy-MM-dd");
+          const res = await apiRequest(`/user_journals/0?date=${formattedDate}&journal_type=weekly`);
+          
+          if (res.ok) {
+            const data = await res.json();
+            
+            // If data exists, populate the form
+            if (data.id) {
+              setJournalId(data.id);
+              setGratitude(data.gratitude_note || "");
+              setBalanceRating(data.data?.life_balance_rating ?? data.alignment_score ?? 3);
+              setChallenge(data.data?.biggest_challenge || "");
+              setChallengeCause(data.data?.challenge_cause || "");
+              setInsight(data.data?.key_insight || "");
+              setWins(data.data?.wins || []);
+              setMissionText(data.data?.mission_connection || "");
+              setHabitsText(data.data?.weekly_story || "");
+              setWeeklyPlanData(data.data?.weekly_plan || generateEmptyWeekData(currentDate));
+              setFocusData(data.data?.focus_and_boundaries || defaultFocusData);
+              return;
+            }
+          }
+          
+          // If no journal is returned (e.g. 404 or empty response), reset the form for a fresh entry
+          setJournalId(null);
+          setGratitude("");
+          setBalanceRating(3);
+          setChallenge("");
+          setChallengeCause("");
+          setInsight("");
+          setWins([]);
+          setMissionText("");
+          setHabitsText("");
+          setWeeklyPlanData(generateEmptyWeekData(currentDate));
+          setFocusData(defaultFocusData);
+          
+        } catch (error) {
+          console.error("Failed to fetch journal for date:", error);
+        }
+      };
+
+      fetchJournalForDate();
+    }
+  }, [currentDate, activeTab, token]);
 
   useEffect(() => {
     if (activeTab === "insights") {
@@ -257,6 +320,43 @@ const WeeklyJournal = () => {
     }
   };
 
+  const handleEditPastJournal = () => {
+    if (!selectedPastJournal) return;
+    
+    // Set active tab to 'new' (which is the form)
+    setActiveTab("new");
+    setIsJournalModalOpen(false);
+    
+    // Populate form data
+    setJournalId(selectedPastJournal.id);
+    setCurrentDate(new Date(selectedPastJournal.start_date));
+    
+    // Reflection
+    setGratitude(selectedPastJournal.gratitude_note || "");
+    setBalanceRating(selectedPastJournal.data?.life_balance_rating ?? selectedPastJournal.alignment_score ?? 3);
+    setChallenge(selectedPastJournal.data?.biggest_challenge || "");
+    setChallengeCause(selectedPastJournal.data?.challenge_cause || "");
+    setInsight(selectedPastJournal.data?.key_insight || "");
+    
+    if (selectedPastJournal.data?.wins) {
+      setWins(selectedPastJournal.data.wins);
+    } else {
+      setWins([]);
+    }
+
+    // Mission & Habits
+    setMissionText(selectedPastJournal.data?.mission_connection || "");
+    setHabitsText(selectedPastJournal.data?.weekly_story || "");
+    
+    // Weekly Plan and Focus & Boundaries
+    if (selectedPastJournal.data?.weekly_plan) {
+      setWeeklyPlanData(selectedPastJournal.data.weekly_plan);
+    }
+    if (selectedPastJournal.data?.focus_and_boundaries) {
+      setFocusData(selectedPastJournal.data.focus_and_boundaries);
+    }
+  };
+
   const handleDeletePastJournal = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (
@@ -293,6 +393,18 @@ const WeeklyJournal = () => {
     }
   };
 
+  // Reset form when clicking "New" tab explicitly
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    if (value === "new" && journalId !== null) {
+      // Optional: reset to a fresh blank slate when they manually click the 'New' tab
+      // uncomment the lines below if you want "New" to always be explicitly new
+      // setJournalId(null);
+      // setChallenge("");
+      // ... reset others
+    }
+  };
+
   return (
     <div className="relative w-full animate-fade-in space-y-6">
         {/* HEADER */}
@@ -315,7 +427,7 @@ const WeeklyJournal = () => {
       <div className="w-full">
 
         {/* Tabs Area */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="mb-6 w-full p-1 bg-gray-100 border border-gray-200 rounded-xl h-auto shadow-inner flex">
             <TabsTrigger
               value="new"
@@ -351,7 +463,20 @@ const WeeklyJournal = () => {
 
               {/* Weekly Reflection */}
               <div className="border-2 border-orange-300 bg-orange-50/20 rounded-2xl overflow-hidden">
-                <WeeklyReflection />
+                <WeeklyReflection 
+                  wins={wins}
+                  setWins={setWins}
+                  challenge={challenge}
+                  setChallenge={setChallenge}
+                  challengeCause={challengeCause}
+                  setChallengeCause={setChallengeCause}
+                  gratitude={gratitude}
+                  setGratitude={setGratitude}
+                  insight={insight}
+                  setInsight={setInsight}
+                  balanceRating={balanceRating}
+                  setBalanceRating={setBalanceRating}
+                />
               </div>
 
               {/* Mission & Habits Connection */}
@@ -368,12 +493,12 @@ const WeeklyJournal = () => {
 
               {/* Weekly Plan */}
               <div className="border-2 border-red-300 bg-red-50/20 rounded-2xl overflow-hidden">
-                <WeeklyPlanComponent />
+                <WeeklyPlanComponent data={weeklyPlanData} setData={setWeeklyPlanData} />
               </div>
 
               {/* Focus & Boundaries */}
               <div className="border-2 border-violet-300 bg-violet-50/20 rounded-2xl overflow-hidden">
-                <FocusAndBoundaries />
+                <FocusAndBoundaries data={focusData} setData={setFocusData} />
               </div>
 
               {/* Review ToDos */}
@@ -450,6 +575,11 @@ const WeeklyJournal = () => {
                         <p className="text-sm text-gray-600">
                           {journal.data.biggest_challenge}
                         </p>
+                        {journal.data?.challenge_cause && (
+                          <p className="text-sm text-gray-500 mt-1">
+                            <span className="font-medium text-gray-700">Cause:</span> {journal.data.challenge_cause}
+                          </p>
+                        )}
                       </div>
                     )}
                     {journal.data?.wins && journal.data.wins.length > 0 && (
@@ -569,6 +699,30 @@ const WeeklyJournal = () => {
                       </div>
                     )}
 
+                  {insightsData.category_distribution &&
+                    Object.keys(insightsData.category_distribution).length > 0 && (
+                      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                        <h3 className="text-lg font-bold text-gray-900 mb-4">
+                          Win Categories
+                        </h3>
+                        <ul className="space-y-3">
+                          {Object.entries(insightsData.category_distribution).map(
+                            ([category, count], idx: number) => (
+                              <li
+                                key={idx}
+                                className="flex justify-between items-center text-gray-700"
+                              >
+                                <span className="capitalize">{category.replace("_", " ")}</span>
+                                <span className="bg-orange-100 text-orange-800 px-2.5 py-0.5 rounded-full text-sm font-medium border border-orange-200">
+                                  {count}
+                                </span>
+                              </li>
+                            ),
+                          )}
+                        </ul>
+                      </div>
+                    )}
+
                   {insightsData.gratitude_highlights &&
                     insightsData.gratitude_highlights.length > 0 && (
                       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
@@ -618,7 +772,17 @@ const WeeklyJournal = () => {
       <Dialog open={isJournalModalOpen} onOpenChange={setIsJournalModalOpen}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Weekly Journal Entry</DialogTitle>
+            <div className="flex justify-between items-center pr-6">
+              <DialogTitle>Weekly Journal Entry</DialogTitle>
+              {selectedPastJournal && (
+                <button
+                  onClick={handleEditPastJournal}
+                  className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors"
+                >
+                  Edit Entry
+                </button>
+              )}
+            </div>
             <DialogDescription>
               {selectedPastJournal?.formatted_date ||
                 (selectedPastJournal?.start_date &&
