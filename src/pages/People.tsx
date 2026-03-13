@@ -17,8 +17,6 @@ import AddPersonModal from "@/components/AddPersonModal";
 
 const API_BASE_URL = "https://life-api.lockated.com";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 interface Person {
   id: number;
   name: string;
@@ -32,8 +30,6 @@ interface Person {
   [key: string]: any;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 const People = () => {
   const [people, setPeople] = useState<Person[]>([]);
   const [isPeopleLoading, setIsPeopleLoading] = useState(true);
@@ -44,25 +40,19 @@ const People = () => {
   const [isPriorityOpen, setIsPriorityOpen] = useState(false);
   const [activeSort, setActiveSort] = useState("Priority");
 
-  // Modal states
   const [isAddPersonModalOpen, setIsAddPersonModalOpen] = useState(false);
   const [personToEdit, setPersonToEdit] = useState<Person | null>(null);
-
-  // Deleting state
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const [relationshipFilter, setRelationshipFilter] =
     useState("All Relationships");
   const [priorityFilter, setPriorityFilter] = useState("All Priorities");
 
-  // ── 1. Fetch people list (GET) ────────────────────────────────────────────
   const fetchPeople = async () => {
     try {
       setIsPeopleLoading(true);
       setPeopleError(null);
-
       const token = localStorage.getItem("auth_token");
-
       const res = await fetch(`${API_BASE_URL}/people`, {
         method: "GET",
         headers: {
@@ -70,23 +60,19 @@ const People = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-
       if (!res.ok) {
         const errData = await res.json().catch(() => null);
         throw new Error(errData?.message ?? `Failed to fetch (${res.status})`);
       }
-
       const responseData = await res.json();
       const list: Person[] = Array.isArray(responseData)
         ? responseData
         : (responseData.people ?? responseData.data ?? []);
-
       setPeople(list);
     } catch (err: unknown) {
       setPeopleError(
         err instanceof Error ? err.message : "Failed to load people.",
       );
-      console.error("Fetch people error:", err);
     } finally {
       setIsPeopleLoading(false);
     }
@@ -96,41 +82,30 @@ const People = () => {
     fetchPeople();
   }, []);
 
-  // ── 2. Delete Person (DELETE) ────────────────────────────────────────────
   const handleDeletePerson = async (
     id: number,
     name: string,
     e: React.MouseEvent,
   ) => {
-    e.preventDefault(); // Stop navigation if wrapped in <a>
+    e.preventDefault();
     e.stopPropagation();
-
     if (
       !window.confirm(
         `Are you sure you want to delete ${name}? This action cannot be undone.`,
       )
-    ) {
+    )
       return;
-    }
 
     try {
       setDeletingId(id);
       const token = localStorage.getItem("auth_token");
-
       const res = await fetch(`${API_BASE_URL}/people/${id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (!res.ok) {
-        throw new Error(`Failed to delete (${res.status})`);
-      }
-
-      // Success
+      if (!res.ok) throw new Error(`Failed to delete (${res.status})`);
       alert(`${name} deleted successfully.`);
-      fetchPeople(); // Refresh the list
+      fetchPeople();
     } catch (err: unknown) {
       alert("Failed to delete person. Check console.");
       console.error("Delete people error:", err);
@@ -139,7 +114,6 @@ const People = () => {
     }
   };
 
-  // ── Filter + Sort ─────────────────────────────────────────────────────────
   const filteredPeople = people
     .filter((p) => {
       if (
@@ -162,7 +136,6 @@ const People = () => {
         : b.importance_level - a.importance_level,
     );
 
-  // Safe getInitials to prevent crashes if name is empty
   const getInitials = (name: string) => {
     if (!name) return "?";
     return name
@@ -183,7 +156,6 @@ const People = () => {
     Acquaintance: "bg-gray-100 text-gray-600",
   };
 
-  // ── Dynamic Top Cards Logic ────────────────────────────────
   const peopleWithBirthdays = people.filter((p) => p.birthday);
   const peopleNeedingReachOut = people.filter(
     (p) => p.relationship_health < 3 || p.importance_level >= 4,
@@ -202,15 +174,14 @@ const People = () => {
         <MyProfileModal setIsProfileModalOpen={setIsProfileModalOpen} />
       )}
 
-      {/* 🟢 Modal connected with Edit State */}
       <AddPersonModal
         isOpen={isAddPersonModalOpen}
         onClose={() => {
           setIsAddPersonModalOpen(false);
-          setPersonToEdit(null); // Clear state when closing
+          setPersonToEdit(null);
         }}
         onSuccess={fetchPeople}
-        initialData={personToEdit as any} // Pass data for edit mode
+        initialData={personToEdit as any}
       />
 
       <div className="relative w-full animate-fade-in space-y-8">
@@ -243,7 +214,7 @@ const People = () => {
           </div>
         </div>
 
-        {/* 100% DYNAMIC SUMMARY CARDS */}
+        {/* SUMMARY CARDS */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm border border-gray-100 min-h-[140px] justify-between">
             <div className="flex items-center gap-2 mb-2">
@@ -319,7 +290,6 @@ const People = () => {
         <div className="w-full min-h-[400px] flex flex-col bg-[#fafafa] rounded-2xl border border-gray-100 overflow-hidden">
           {/* FILTER BAR */}
           <div className="flex flex-wrap items-center gap-4 p-4 border-b border-gray-100 bg-white">
-            {/* Relationship Filter */}
             <div className="flex items-center gap-3">
               <svg
                 className="w-5 h-5 text-gray-500 shrink-0"
@@ -389,7 +359,6 @@ const People = () => {
               </div>
             </div>
 
-            {/* Priority Filter */}
             <div className="flex items-center gap-3">
               <svg
                 className="w-5 h-5 text-gray-500 shrink-0"
@@ -450,7 +419,6 @@ const People = () => {
               </div>
             </div>
 
-            {/* Sort Toggles */}
             <div className="flex items-center gap-2 ml-auto">
               <span className="text-xs text-gray-400 font-medium mr-1">
                 Sort:
@@ -470,8 +438,6 @@ const People = () => {
               ))}
             </div>
           </div>
-
-          {/* STATES */}
 
           {/* Loading */}
           {isPeopleLoading && (
@@ -520,7 +486,10 @@ const People = () => {
               </h3>
               {people.length === 0 && (
                 <button
-                  onClick={() => setIsAddPersonModalOpen(true)}
+                  onClick={() => {
+                    setPersonToEdit(null);
+                    setIsAddPersonModalOpen(true);
+                  }}
                   className="flex items-center gap-2 px-5 py-2.5 bg-red-500 text-white text-sm font-medium rounded-md hover:bg-red-600 transition-colors shadow-sm"
                 >
                   <Plus className="w-5 h-5" />
@@ -534,45 +503,47 @@ const People = () => {
           {!isPeopleLoading && !peopleError && filteredPeople.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
               {filteredPeople.map((person) => (
-                <a
+                <div
                   key={person.id}
-                  href={`/people/${person.id}`}
-                  className="group relative bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-pink-100 transition-all flex flex-col gap-3"
+                  onClick={() => {
+                    setPersonToEdit(person);
+                    setIsAddPersonModalOpen(true);
+                  }}
+                  className="group relative bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-pink-100 transition-all flex flex-col gap-3 cursor-pointer"
                 >
-                  {/* 🟢 ACTION BUTTONS CONTAINER */}
-                  <div className="absolute top-4 right-4 flex items-center gap-1.5 z-10">
-                    {/* EDIT BUTTON */}
+                  {/* ACTION BUTTONS — visible only on hover */}
+                  <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+                    {/* EDIT */}
                     <button
                       onClick={(e) => {
-                        e.preventDefault();
+                        e.stopPropagation();
                         setPersonToEdit(person);
                         setIsAddPersonModalOpen(true);
                       }}
-                      className="p-1.5 text-red-400 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
-                      title="Edit Person"
+                      title="Edit"
+                      className="flex items-center justify-center w-8 h-8 rounded-lg bg-white border border-gray-200 text-gray-400 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 shadow-sm transition-all duration-150"
                     >
-                      <Edit2 className="w-4 h-4" />
+                      <Edit2 className="w-3.5 h-3.5" />
                     </button>
 
-                    {/* DELETE BUTTON */}
+                    {/* DELETE */}
                     <button
                       onClick={(e) =>
                         handleDeletePerson(person.id, person.name, e)
                       }
                       disabled={deletingId === person.id}
-                      className="p-1.5 text-red-400 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
-                      title="Delete Person"
+                      title="Delete"
+                      className="flex items-center justify-center w-8 h-8 rounded-lg bg-white border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-300 hover:bg-red-50 shadow-sm transition-all duration-150 disabled:opacity-50"
                     >
                       {deletingId === person.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       ) : (
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       )}
                     </button>
                   </div>
 
                   <div className="flex items-center gap-3 pr-16">
-                    {/* pr-16 ensures text doesn't overlap with buttons */}
                     {person.person_image_base64 ? (
                       <img
                         src={person.person_image_base64}
@@ -646,7 +617,7 @@ const People = () => {
                       })}
                     </p>
                   )}
-                </a>
+                </div>
               ))}
             </div>
           )}

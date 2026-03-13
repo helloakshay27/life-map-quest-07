@@ -123,7 +123,7 @@ const Setup = () => {
         const hasGoals = Array.isArray(goalsData) && goalsData.length > 0;
 
         // Check Daily Journal
-        const journalRes = await fetch(`${API_BASE_URL}/daily_journals`, {
+        const journalRes = await fetch(`${API_BASE_URL}/user_journals`, {
           headers,
         });
         const journalData = await journalRes.json();

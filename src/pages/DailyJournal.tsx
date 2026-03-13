@@ -1037,7 +1037,7 @@ const AddDreamModal = ({ onClose, onAdd }: any) => {
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors disabled:opacity-60"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-50 hover:bg-amber-600 text-white text-sm font-semibold transition-colors disabled:opacity-60"
           >
             {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
             {isSubmitting ? "Adding..." : "Add Dream"}
@@ -1541,6 +1541,75 @@ const PastLetterRow = ({
   );
 };
 
+// ── PeopleUpcomingDates ───────────────────────────────────────────────────────
+const PeopleUpcomingDates = ({ token }: { token?: string }) => {
+  const [people, setPeople] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPeople = async () => {
+      try {
+        const res = await fetch(`${LIFE_API}/people`, {
+          headers: { Authorization: `Bearer ${getToken(token)}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPeople(Array.isArray(data) ? data : data.data ?? []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch people:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPeople();
+  }, [token]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-pink-200 bg-pink-50/30 py-8 shadow-sm animate-pulse">
+        <div className="w-12 h-12 bg-white rounded-full shadow-sm border border-pink-100 flex items-center justify-center mb-3">
+          <Calendar className="h-5 w-5 text-pink-300" strokeWidth={2} />
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback if API has no data
+  if (people.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-pink-200 bg-pink-50/30 py-8 shadow-sm">
+        <div className="w-12 h-12 bg-white rounded-full shadow-sm border border-pink-100 flex items-center justify-center mb-3">
+          <Calendar className="h-5 w-5 text-pink-400" strokeWidth={2} />
+        </div>
+        <p className="text-[15px] font-semibold text-gray-600">No people added yet</p>
+        <p className="text-sm text-gray-400 mt-0.5">Connect with friends to share progress</p>
+      </div>
+    );
+  }
+
+  // UI if API has data (matching your screenshot)
+  return (
+    <div className="rounded-[16px] border border-[#F48FB1] bg-[#FFF0F5]/50 px-5 pt-4 pb-8 font-sans w-full">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-2.5">
+          <div className="w-[30px] h-[30px] rounded-[8px] bg-[#F06292] flex items-center justify-center shadow-sm">
+            <CalendarIcon className="w-[18px] h-[18px] text-white" strokeWidth={2} />
+          </div>
+          <span className="font-bold text-[#0F172A] text-[15px]">Upcoming Dates</span>
+        </div>
+        <button className="text-[13px] font-medium text-[#1E293B] hover:text-[#0F172A] transition-colors">
+          View All
+        </button>
+      </div>
+      <div className="text-center">
+        <p className="text-[14px] text-[#64748B]">No upcoming dates in the next 30 days</p>
+      </div>
+    </div>
+  );
+};
+
 
 // ==============================================================================
 // ── MAIN COMPONENT ────────────────────────────────────────────────────────────
@@ -1987,13 +2056,7 @@ const DailyJournal = () => {
                 <ReviewGoals />
                 <BucketListProgress />
 
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-pink-200 bg-pink-50/30 py-8 shadow-sm">
-                  <div className="w-12 h-12 bg-white rounded-full shadow-sm border border-pink-100 flex items-center justify-center mb-3">
-                    <Calendar className="h-5 w-5 text-pink-400" strokeWidth={2} />
-                  </div>
-                  <p className="text-[15px] font-semibold text-gray-600">No people added yet</p>
-                  <p className="text-sm text-gray-400 mt-0.5">Connect with friends to share progress</p>
-                </div>
+                <PeopleUpcomingDates token={token} />
               </div>
             )}
 

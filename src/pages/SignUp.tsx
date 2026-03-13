@@ -32,9 +32,35 @@ const SignUp = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // Basic Validation
-    if (Object.values(formData).some((field) => !field)) {
-      toast({ title: "Please fill all fields", variant: "destructive" });
+    // --- REGEX PATTERNS ---
+    const nameRegex = /^[a-zA-Z\s]{2,50}$/; // Only letters & spaces, 2 to 50 chars
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Standard email format
+    const mobileRegex = /^[0-9]{10}$/; // Exactly 10 digits
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d\W_]{8,}$/; // Min 8 chars, 1 letter, 1 number
+
+    // --- VALIDATION CHECKS ---
+    if (!nameRegex.test(formData.first_name.trim())) {
+      toast({ title: "Invalid First Name", description: "Must be 2-50 characters and contain only letters.", variant: "destructive" });
+      return;
+    }
+
+    if (!nameRegex.test(formData.last_name.trim())) {
+      toast({ title: "Invalid Last Name", description: "Must be 2-50 characters and contain only letters.", variant: "destructive" });
+      return;
+    }
+
+    if (!emailRegex.test(formData.email.trim())) {
+      toast({ title: "Invalid Email", description: "Please enter a valid email address.", variant: "destructive" });
+      return;
+    }
+
+    if (!mobileRegex.test(formData.mobile_no.trim())) {
+      toast({ title: "Invalid Mobile Number", description: "Mobile number must be exactly 10 digits.", variant: "destructive" });
+      return;
+    }
+
+    if (!passwordRegex.test(formData.password)) {
+      toast({ title: "Weak Password", description: "Password must be at least 8 characters long and contain at least one letter and one number.", variant: "destructive" });
       return;
     }
 
@@ -45,7 +71,6 @@ const SignUp = () => {
 
     setLoading(true);
     try {
-      // Replace with your actual signup API endpoint
       const response = await fetch("https://life-api.lockated.com/signup", {
         method: "POST",
         headers: {
@@ -57,20 +82,50 @@ const SignUp = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.message || data.error || "Failed to create account",
-        );
+        let errorMessage = "Failed to create account. Please try again.";
+
+        // Deep extract error messages from common API response structures
+        if (data.errors) {
+          if (Array.isArray(data.errors)) {
+            errorMessage = data.errors[0];
+          } else if (typeof data.errors === "object") {
+            const messages = Object.entries(data.errors).map(([field, msgs]) => {
+              const fieldName = field.charAt(0).toUpperCase() + field.slice(1).replace("_", " ");
+              const msg = Array.isArray(msgs) ? msgs[0] : msgs;
+              return `${fieldName} ${msg}`;
+            });
+            errorMessage = messages.join(". ");
+          }
+        } else if (data.status && data.status.errors) {
+          const errs = data.status.errors;
+          errorMessage = Array.isArray(errs) ? errs[0] : errs;
+        } else if (data.status && data.status.message) {
+          errorMessage = data.status.message;
+        } else if (data.message) {
+          errorMessage = data.message;
+        } else if (data.error) {
+          errorMessage = data.error;
+        }
+
+        // Format common errors nicely into proper sentences
+        const lowerError = errorMessage.toLowerCase();
+        if (lowerError.includes("email has already been taken") || lowerError.includes("email already exists")) {
+          errorMessage = "This email is already registered. Please sign in or use another email.";
+        } else if (lowerError.includes("mobile_no has already been taken") || lowerError.includes("mobile has already been taken")) {
+          errorMessage = "This mobile number is already linked to another account.";
+        }
+
+        throw new Error(errorMessage);
       }
 
-      toast({ title: "Account created successfully! Please verify your email." });
+      toast({ title: "Account created successfully!", description: "Please log in to continue." });
       navigate(
         `/login?mode=verify&email=${encodeURIComponent(formData.email)}`,
       );
     } catch (error) {
       toast({
         title: "Sign up failed",
-        description:
-          error instanceof Error ? error.message : "Something went wrong",
+        description: error instanceof Error ? error.message : "Something went wrong. Please check your details and try again.",
         variant: "destructive",
       });
     } finally {
@@ -163,6 +218,7 @@ const SignUp = () => {
                   value={formData.mobile_no}
                   onChange={handleInputChange}
                   className="pl-10"
+                  maxLength={10}
                 />
               </div>
             </div>

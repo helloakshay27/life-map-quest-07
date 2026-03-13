@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -16,8 +16,6 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [verifying, setVerifying] = useState(false);
-  const [resendingOtp, setResendingOtp] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
   const { login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -26,100 +24,48 @@ const Login = () => {
   const isVerificationMode = searchParams.get("mode") === "verify";
   const verificationEmail = searchParams.get("email") || emailOrMobile;
 
-  useEffect(() => {
-    if (resendCooldown <= 0) return;
-
-    const timer = window.setInterval(() => {
-      setResendCooldown((prev) => {
-        if (prev <= 1) {
-          window.clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => window.clearInterval(timer);
-  }, [resendCooldown]);
-
   const openSignIn = () => {
     setVerificationCode("");
-    setResendCooldown(0);
     setSearchParams({});
   };
 
-  const handleVerifyEmail = async () => {
-    if (verificationCode.length !== 6) {
-      toast({
-        title: "Enter the full code",
-        description: "Please enter the 6-digit verification code.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleVerifyEmail = async (): Promise<boolean> => {
+    if (verificationCode.length !== 6) return false;
     setVerifying(true);
     try {
-      toast({
-        title: "Verification UI ready",
-        description:
-          "Connect your email verification endpoint here to complete the flow.",
-      });
-    } finally {
-      setVerifying(false);
-    }
-  };
-
-  const handleResendCode = async () => {
-    if (!verificationEmail) {
-      toast({
-        title: "Email missing",
-        description: "Please enter your email again from Sign up.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (resendCooldown > 0 || resendingOtp) {
-      return;
-    }
-
-    setResendingOtp(true);
-    try {
-      const response = await fetch("https://life-api.lockated.com/confirmation", {
+      const res = await fetch("https://life-api.lockated.com/verify-email", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          user: {
-            email: verificationEmail,
-          },
+          email: verificationEmail,
+          otp: verificationCode,
         }),
       });
 
-      const data = await response.json().catch(() => ({}));
+      const text = await res.text();
+      let data: any = {};
+      try { data = JSON.parse(text); } catch {}
 
-      if (!response.ok) {
-        throw new Error(
-          data.message || data.error || "Failed to resend OTP",
-        );
+      if (res.ok) {
+        toast({
+          title: "Email verified!",
+          description: "Your email has been verified. Please sign in.",
+        });
+        openSignIn();
+        return true;
       }
 
-      setResendCooldown(30);
-      toast({
-        title: "OTP sent",
-        description: "A new verification code has been sent to your email.",
-      });
+      throw new Error(data.message || data.error || "Verification failed");
     } catch (error) {
       toast({
-        title: "Resend failed",
+        title: "Verification failed",
         description:
-          error instanceof Error ? error.message : "Something went wrong",
+          error instanceof Error ? error.message : "Something went wrong.",
         variant: "destructive",
       });
+      return false;
     } finally {
-      setResendingOtp(false);
+      setVerifying(false);
     }
   };
 
@@ -134,32 +80,68 @@ const Login = () => {
     try {
       const response = await fetch("https://life-api.lockated.com/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          user: {
-            email: emailOrMobile,
-            password: password,
-          },
+          user: { email: emailOrMobile, password },
         }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Throw an error to be caught by the catch block below
-        throw new Error(data.message || data.error || "Invalid credentials");
+      const responseText = await response.text();
+      let data: any;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        data = { message: responseText || "Invalid credentials" };
       }
 
-      // Extract user data from the API response
+      if (!response.ok) {
+        let errorMessage = "Failed to sign in. Please try again.";
+
+        if (data.errors) {
+          if (Array.isArray(data.errors)) {
+            errorMessage = data.errors[0];
+          } else if (typeof data.errors === "object") {
+            const messages = Object.entries(data.errors).map(([field, msgs]) => {
+              const fieldName =
+                field.charAt(0).toUpperCase() + field.slice(1).replace("_", " ");
+              const msg = Array.isArray(msgs) ? msgs[0] : msgs;
+              return `${fieldName} ${msg}`;
+            });
+            errorMessage = messages.join(". ");
+          }
+        } else if (data.status?.errors) {
+          const errs = data.status.errors;
+          errorMessage = Array.isArray(errs) ? errs[0] : errs;
+        } else if (data.status?.message) {
+          errorMessage = data.status.message;
+        } else if (data.message) {
+          errorMessage = data.message;
+        } else if (data.error) {
+          errorMessage = data.error;
+        }
+
+        const lowerError = String(errorMessage).toLowerCase();
+        if (
+          response.status === 401 ||
+          response.status === 400 ||
+          response.status === 404 ||
+          lowerError.includes("invalid") ||
+          lowerError.includes("not found") ||
+          lowerError.includes("unauthorized") ||
+          lowerError.includes("incorrect")
+        ) {
+          errorMessage = "Password or email does not match. Please try again.";
+        } else if (
+          lowerError.includes("unconfirmed") ||
+          lowerError.includes("verify")
+        ) {
+          errorMessage = "Please verify your email address before logging in.";
+        }
+
+        throw new Error(errorMessage);
+      }
+
       const userData = data.user || data;
-
-      console.log("Login - Full API Response:", data);
-      console.log("Login - userData:", userData);
-      console.log("Login - All keys in userData:", Object.keys(userData));
-
-      // Construct a proper user object with all required fields
       const bestName =
         [
           userData.name,
@@ -176,32 +158,15 @@ const Login = () => {
         avatar: userData.avatar || userData.profile_photo || undefined,
       };
 
-      console.log("Login - Final userObject before login:", userObject);
-
-      // Success! Pass the token and user data to your AuthContext
       const token = data.token || data.auth_token;
       login(token, userObject);
 
-      console.log(
-        "Login - After login, checking localStorage:",
-        localStorage.getItem("user"),
-      );
-
-      // Also try to fetch complete user profile from API
       try {
-        const profileRes = await fetch(
-          "https://life-api.lockated.com/profile",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        );
+        const profileRes = await fetch("https://life-api.lockated.com/profile", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (profileRes.ok) {
           const profileData = await profileRes.json();
-          console.log("Login - Profile API Response:", profileData);
-
-          // Update user with complete profile data
           const bestProfileName =
             [
               profileData.name,
@@ -224,13 +189,12 @@ const Login = () => {
               userObject.avatar,
           };
 
-          console.log("Login - Complete user from profile:", completeUser);
           if (completeUser.name !== "User") {
             login(token, completeUser);
           }
         }
-      } catch (profileError) {
-        console.log("Profile fetch not available:", profileError);
+      } catch {
+        // profile fetch optional
       }
 
       toast({ title: "Login successful" });
@@ -239,7 +203,7 @@ const Login = () => {
       toast({
         title: "Login failed",
         description:
-          error instanceof Error ? error.message : "Something went wrong",
+          error instanceof Error ? error.message : "Something went wrong.",
         variant: "destructive",
       });
     } finally {
@@ -248,7 +212,15 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4" style={{ backgroundImage: 'url(/loginBG.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
+    <div
+      className="flex min-h-screen items-center justify-center px-4"
+      style={{
+        backgroundImage: "url(/loginBG.png)",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundAttachment: "fixed",
+      }}
+    >
       <div className="w-full max-w-md animate-fade-in">
         {isVerificationMode ? (
           <EmailVerificationCard
@@ -257,101 +229,92 @@ const Login = () => {
             onOtpChange={setVerificationCode}
             onBackToSignIn={openSignIn}
             onVerify={handleVerifyEmail}
-            onResend={handleResendCode}
-            isSubmitting={verifying}
-            isResending={resendingOtp}
-            resendCooldown={resendCooldown}
           />
         ) : (
-        <div className="rounded-2xl border bg-card p-8 shadow-lg">
-          {/* Logo */}
-          <div className="mb-6 flex flex-col items-center">
-            <div className="mb-4 flex items-center justify-center">
-              <GophygitalLogo className="h-12 w-auto text-primary" />
-            </div>
-            <h1 className="text-heading text-foreground">
-              Welcome to CBX Life Compass
-            </h1>
-            <p className="mt-1 text-body-4 text-muted-foreground">
-              Sign in to continue
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-body-5 font-medium">
-                Email or Mobile
-              </Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="text"
-                  placeholder="Enter email or mobile number"
-                  value={emailOrMobile}
-                  onChange={(e) => setEmailOrMobile(e.target.value)}
-                  className="pl-10"
-                />
+          <div className="rounded-2xl border bg-card p-8 shadow-lg">
+            <div className="mb-6 flex flex-col items-center">
+              <div className="mb-4 flex items-center justify-center">
+                <GophygitalLogo className="h-12 w-auto text-primary" />
               </div>
+              <h1 className="text-heading text-foreground">
+                Welcome to CBX Life Compass
+              </h1>
+              <p className="mt-1 text-body-4 text-muted-foreground">
+                Sign in to continue
+              </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-body-5 font-medium">
-                Password
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-body-5 font-medium">
+                  Email or Mobile
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="text"
+                    placeholder="Enter email or mobile number"
+                    value={emailOrMobile}
+                    onChange={(e) => setEmailOrMobile(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
               </div>
-            </div>
 
-            <Button
-              type="submit"
-              className="w-full"
-              size="lg"
-              disabled={loading}
-            >
-              {loading ? "Signing in..." : "Sign in"}
-            </Button>
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-body-5 font-medium">
+                  Password
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
 
-            <div className="flex items-center justify-between text-body-6">
-              <Link
-                to={"/resetPassword"}
-                type="button"
-                className="text-primary hover:underline"
+              <Button
+                type="submit"
+                className="w-full"
+                size="lg"
+                disabled={loading}
               >
-                Forgot password?
-              </Link>
-              <span className="text-muted-foreground">
-                Need an account?{" "}
-                <Link
-                  to={"/signUp"}
-                  className="font-medium text-primary hover:underline"
-                >
-                  Sign up
+                {loading ? "Signing in..." : "Sign in"}
+              </Button>
+
+              <div className="flex items-center justify-between text-body-6">
+                <Link to="/resetPassword" className="text-primary hover:underline">
+                  Forgot password?
                 </Link>
-              </span>
-            </div>
-          </form>
-        </div>
+                <span className="text-muted-foreground">
+                  Need an account?{" "}
+                  <Link
+                    to="/signUp"
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Sign up
+                  </Link>
+                </span>
+              </div>
+            </form>
+          </div>
         )}
       </div>
     </div>

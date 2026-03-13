@@ -1,5 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   TrendingUp,
   Calendar,
@@ -22,6 +22,7 @@ import {
   Lightbulb,
   Plus,
   ListOrdered,
+  AlertCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -30,6 +31,8 @@ import { useState, useEffect, useMemo } from "react";
 
 const Dashboard = () => {
   const { user, token, login } = useAuth();
+
+  const navigate = useNavigate();
 
   // Debug: Check what user data we have
   useEffect(() => {
@@ -80,6 +83,7 @@ const Dashboard = () => {
     total_score?: number;
     highest_badge?: string | null;
     current_streak?: number;
+    longest_streak?: number;
     life_balance?: {
       career?: number;
       health?: number;
@@ -199,6 +203,38 @@ const Dashboard = () => {
     vision_statement: null,
   });
 
+  // Fetch Actual Recent Journals from /user_journals for the UI update
+  const [recentJournals, setRecentJournals] = useState<any[]>([]);
+  const [weeklyJournals, setWeeklyJournals] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchAllJournals = async () => {
+      try {
+        const authHeader = {
+          Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
+        };
+
+        const [dailyRes, weeklyRes] = await Promise.all([
+          fetch("https://life-api.lockated.com/user_journals", { headers: authHeader }),
+          fetch("https://life-api.lockated.com/user_journals?journal_type=weekly", { headers: authHeader })
+        ]);
+
+        if (dailyRes.ok) {
+          const data = await dailyRes.json();
+          setRecentJournals(Array.isArray(data) ? data : data?.user_journals || []);
+        }
+
+        if (weeklyRes.ok) {
+          const data = await weeklyRes.json();
+          setWeeklyJournals(Array.isArray(data) ? data : data?.user_journals || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch journals:", err);
+      }
+    };
+    fetchAllJournals();
+  }, [token]);
+
   // Calendar Logic
   const [calendarDate, setCalendarDate] = useState(new Date());
 
@@ -218,8 +254,7 @@ const Dashboard = () => {
         date: d.getDate().toString(),
         fullDate: d,
         active: isToday,
-        state: isPast ? "missed" : isToday ? "filled" : "upcoming",
-      };
+state: isPast ? "missed" : isToday ? "filled" : "upcoming",      };
     });
   }, [calendarDate]);
 
@@ -317,12 +352,10 @@ const Dashboard = () => {
           setPreviewData((prev) => ({
             ...prev,
             daily_motivator: data.daily_motivator || null,
-            priorities: data.priorities || [],
             upcoming_dates: data.upcoming_dates || [],
             story_of_the_day: data.story_of_the_day || null,
             mission: data.mission || prev.mission,
             bucket_preview: data.bucket_preview || [],
-            leaderboard_preview: data.leaderboard_preview || [],
           }));
         }
       } catch (err) {
@@ -331,11 +364,6 @@ const Dashboard = () => {
     };
     fetchPreview();
   }, [token]);
-
-  // Debugging state for vision
-  useEffect(() => {
-    console.log("Dashboard - Preview Data Updated:", previewData);
-  }, [previewData]);
 
   // Fetch Vision Data specifically for images and statement
   useEffect(() => {
@@ -349,17 +377,10 @@ const Dashboard = () => {
         });
         if (res.ok) {
           const data = await res.json();
-          console.log("Dashboard - Vision API Raw Data:", data);
           const vision = Array.isArray(data) ? data[0] : data?.vision || data;
 
           if (vision) {
-            // Priority: images at root if not in vision object, or vision.images
             const images = vision.images || data.images || [];
-            console.log("Dashboard - Resolved Vision Data:", {
-              vision,
-              images,
-            });
-
             setPreviewData((prev) => ({
               ...prev,
               vision_images: images,
@@ -373,30 +394,19 @@ const Dashboard = () => {
       }
     };
 
-    // Fetch on mount
     fetchVision();
 
-    // Listen for tab visibility changes to refetch when returning from other pages
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        console.log(
-          "Dashboard - Tab became visible, refetching vision data...",
-        );
         fetchVision();
       }
     };
 
-    // Listen for storage changes (in case data is updated from another tab/window)
     const handleStorageChange = () => {
-      console.log("Dashboard - Storage changed, refetching vision data...");
       fetchVision();
     };
 
-    // Listen for custom event when vision data is updated from Vision component
     const handleVisionUpdated = () => {
-      console.log(
-        "Dashboard - Vision data updated event received, refetching...",
-      );
       fetchVision();
     };
 
@@ -463,101 +473,289 @@ const Dashboard = () => {
     fetchDreams();
   }, [token]);
 
-  // Fetch actual todos API to populate Priorities
+  // Fetch Today's Accomplishments (mapped into Priorities UI)
   useEffect(() => {
-    const fetchTodos = async () => {
+    const fetchDailyAccomplishments = async () => {
       try {
-        const response = await fetch("https://life-api.lockated.com/todos", {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
-            "Content-Type": "application/json",
+        const d = new Date();
+        const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+        // 1. Fetch all user journals to find today's entry
+        const listResponse = await fetch(
+          `https://life-api.lockated.com/user_journals`,
+          {
+            headers: {
+              Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
+            },
           },
-        });
-
-        if (response.ok) {
-          const rawData = await response.json();
-          const activeTodos = Array.isArray(rawData)
-            ? rawData
-                .filter((t: { status: string; title: string }) => {
-                  const status = String(t.status).toLowerCase();
-                  return status !== "completed";
-                })
-                .slice(0, 3)
-            : [];
-
-          setPreviewData((prev) => ({
-            ...prev,
-            priorities: activeTodos,
-          }));
-          return;
-        }
-        throw new Error("API not ok");
-      } catch (error) {
-        console.error(
-          "Dashboard priorities API error, falling back to local storage:",
-          error,
         );
-        try {
-          const savedTodosStr = localStorage.getItem("user_todos");
-          if (savedTodosStr) {
-            const savedTodos = JSON.parse(savedTodosStr);
-            const activeTodos = Array.isArray(savedTodos)
-              ? savedTodos
-                  .filter((t: { status: string; title: string }) => {
-                    const status = String(t.status).toLowerCase();
-                    return status !== "completed";
-                  })
-                  .slice(0, 3)
-              : [];
 
-            setPreviewData((prev) => ({
-              ...prev,
-              priorities: activeTodos,
-            }));
+        if (listResponse.ok) {
+          const listData = await listResponse.json();
+          const journals = Array.isArray(listData)
+            ? listData
+            : listData?.user_journals || [];
+
+          // Find the journal that matches today's date
+          const todayJournal = journals.find(
+            (j: any) => j.start_date === todayStr,
+          );
+
+          if (todayJournal && todayJournal.id) {
+            // 2. Fetch the detailed journal for today using its specific ID
+            const detailRes = await fetch(
+              `https://life-api.lockated.com/user_journals/${todayJournal.id}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
+                },
+              },
+            );
+
+            if (detailRes.ok) {
+              const detailData = await detailRes.json();
+              const detailedJournal = detailData?.user_journal || detailData;
+
+              let extractedAccomplishments = [];
+              if (
+                detailedJournal &&
+                Array.isArray(detailedJournal.accomplishments)
+              ) {
+                extractedAccomplishments = detailedJournal.accomplishments;
+              }
+
+              const formatted = extractedAccomplishments.map(
+                (a: any, idx: number) => {
+                  if (typeof a === "string") return { id: idx, title: a };
+                  return {
+                    id: a.id || idx,
+                    title: a.title || a.name || "Unnamed",
+                  };
+                },
+              );
+
+              setPreviewData((prev) => ({
+                ...prev,
+                priorities: formatted,
+              }));
+              return;
+            }
           }
-        } catch (fallbackError) {
-          console.error("Local storage fallback failed", fallbackError);
         }
+
+        // Fallback: Clear if not found
+        setPreviewData((prev) => ({
+          ...prev,
+          priorities: [],
+        }));
+      } catch (error) {
+        console.error("Dashboard accomplishments API error:", error);
       }
     };
-    fetchTodos();
+    fetchDailyAccomplishments();
   }, [token]);
 
-  const timePeriods = [
-    { label: "Daily", active: true },
-    { label: "Weekly", active: false },
-    { label: "Monthly", active: false },
-    { label: "Q1-Q2", active: false },
-    { label: "Skiller", active: false },
-  ];
+  // Add People Fetch Logic
+  const [people, setPeople] = useState<any[]>([]);
+  const [isLoadingPeople, setIsLoadingPeople] = useState(true);
 
-  const motivationItems = [
-    {
-      icon: "🔥",
-      label: "DAILY MOTIVATOR",
-      desc: "Let the seeds you plant today blossom tomorrow. Find those one light...",
-    },
-    {
-      icon: "🎯",
-      label: "ACTION",
-      desc: "Take 10 mins right now to guide you. Discover a new habit card today.",
-    },
-    {
-      icon: "⭐",
-      label: "PURPOSE",
-      desc: "Give your year a purpose. Check priorities in daily journal.",
-    },
-  ];
+  useEffect(() => {
+    const fetchPeople = async () => {
+      try {
+        const res = await fetch("https://life-api.lockated.com/people", {
+          headers: {
+            Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPeople(Array.isArray(data) ? data : data.data ?? []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch people:", err);
+      } finally {
+        setIsLoadingPeople(false);
+      }
+    };
 
-  const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const lifeAreas = [
-    "Career",
-    "Finances",
-    "Health",
-    "Personal Growth",
-    "Relationships",
-  ];
+    fetchPeople();
+  }, [token]);
+
+  const peopleHandler = () => {
+    navigate("/people");
+  };
+
+  // Add Habits Fetch Logic
+  const [habitsData, setHabitsData] = useState<any[]>([]);
+  
+  useEffect(() => {
+    const fetchHabits = async () => {
+      try {
+        const res = await fetch("https://life-api.lockated.com/habits", {
+          headers: { Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setHabitsData(Array.isArray(data) ? data : data.data || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch habits:", err);
+      }
+    };
+    fetchHabits();
+  }, [token]);
+
+  // Add Leaderboard Fetch Logic
+  const [leaderboardData, setLeaderboardData] = useState<{ top: any[], currentUser: any }>({ top: [], currentUser: null });
+
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      try {
+        const res = await fetch("https://life-api.lockated.com/leaderboard/rankings", {
+          headers: { Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          let list = [];
+          let cu = null;
+
+          if (Array.isArray(data)) {
+             list = data;
+          } else if (data.data && Array.isArray(data.data)) {
+             list = data.data;
+             cu = data.current_user || null;
+          } else if (data.rankings && Array.isArray(data.rankings)) {
+             list = data.rankings;
+             cu = data.current_user || null;
+          }
+
+          setLeaderboardData({
+             top: list.slice(0, 5),
+             currentUser: cu
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch leaderboard", err);
+      }
+    };
+    fetchLeaderboard();
+  }, [token]);
+
+  // --- Calculations for Habit Tracking ---
+  const activeHabitsCount = habitsData.length;
+  const avgHabitCompletion = activeHabitsCount > 0
+    ? Math.round(habitsData.reduce((acc, h) => acc + (h.completion_percentage || h.completion_rate || 0), 0) / activeHabitsCount)
+    : 0;
+
+  const dailyHabits = habitsData.filter(h => {
+    const freq = (h.repeat_type || h.frequency || '').toLowerCase();
+    return freq === 'daily' || !freq; 
+  });
+  
+  const weeklyHabits = habitsData.filter(h => {
+    const freq = (h.repeat_type || h.frequency || '').toLowerCase();
+    return freq === 'weekly';
+  });
+
+
+  // --- Journaling Status Calculations ---
+  const statusToday = new Date();
+
+  // 1. Daily Track (Last 7 Days)
+  const last7Days = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date(statusToday);
+    d.setDate(statusToday.getDate() - 6 + i);
+    return d;
+  });
+
+  const formatShortDate = (d: Date) =>
+    `${d.getDate()} ${d.toLocaleDateString("en-US", { month: "short" })}`;
+  const dailyDateRangeStr = `${formatShortDate(last7Days[0])} - ${formatShortDate(last7Days[6])}`;
+
+  const dailyCompletion = last7Days.map((date) => {
+    const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    const hasEntry = recentJournals.some(
+      (j) =>
+        (j.journal_type === "daily" || !j.journal_type) &&
+        (j.start_date === dateString ||
+          (j.created_at && j.created_at.startsWith(dateString)))
+    );
+    return {
+      dayLabel: date.toLocaleDateString("en-US", { weekday: "short" }),
+      completed: hasEntry,
+    };
+  });
+
+  const dailyCompletedCount = dailyCompletion.filter((d) => d.completed).length;
+
+  // 2. Weekly Track (Current Month)
+  const currentMonthStatus = statusToday.getMonth();
+  const currentYearStatus = statusToday.getFullYear();
+  const monthNameStatus = statusToday.toLocaleDateString("en-US", {
+    month: "long",
+  });
+
+  const getWeekNumber = (d: Date) => {
+    const date = new Date(d.getTime());
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7));
+    const week1 = new Date(date.getFullYear(), 0, 4);
+    return (
+      1 +
+      Math.round(
+        ((date.getTime() - week1.getTime()) / 86400000 -
+          3 +
+          ((week1.getDay() + 6) % 7)) /
+          7
+      )
+    );
+  };
+
+  const weeklyBlocks = Array.from({ length: 5 }).map((_, i) => {
+    const startD = new Date(currentYearStatus, currentMonthStatus, 1 + i * 7);
+    const endD = new Date(currentYearStatus, currentMonthStatus, 7 + i * 7);
+
+    const hasEntry = weeklyJournals.some((j) => {
+      const jDate = new Date(j.start_date || j.created_at);
+      return jDate >= startD && jDate <= endD;
+    });
+
+    const datesLabel = `(${startD.toLocaleDateString("en-US", { month: "short" })} ${startD.getDate()}-${endD.getDate()})`;
+    const wkLabel = `WK#${getWeekNumber(startD)}`;
+
+    return {
+      label: wkLabel,
+      datesLabel,
+      completed: hasEntry,
+    };
+  });
+
+  const weeklyCompletedCount = weeklyBlocks.filter((w) => w.completed).length;
+
+  // 3. Overall Completion %
+  const totalComplete = dailyCompletedCount + weeklyCompletedCount;
+  const totalTarget = 7 + 5;
+  const percentComplete = Math.round((totalComplete / totalTarget) * 100);
+
+  // --- Consistency Calculations (Dynamic Last 30 days) ---
+  const last30DaysCount = useMemo(() => {
+    if (insightsData.journaling_status.monthly_entries > 0) {
+      return insightsData.journaling_status.monthly_entries;
+    }
+    // Fallback: calculate from recentJournals
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    return recentJournals.filter((j) => {
+      const d = new Date(j.start_date || j.created_at);
+      return d >= thirtyDaysAgo;
+    }).length;
+  }, [insightsData.journaling_status.monthly_entries, recentJournals]);
+
+  const consistencyScore = Math.min(Math.round((last30DaysCount / 30) * 100), 100);
+  const longestStreak = summaryData?.longest_streak ?? summaryData?.current_streak ?? 0;
+
+  const setupCompleted = parseInt(localStorage.getItem("setupCompletedCount") || "0");
+const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "5");
 
   return (
     <div className="animate-fade-in space-y-6 w-full">
@@ -674,15 +872,19 @@ const Dashboard = () => {
             </div>
           </Card>
 
-          {/* Priorities */}
-          <Card className="bg-blue-50/50 border-blue-200 p-4 flex flex-col shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-bold text-sm text-slate-800 flex items-center gap-2">
-                <ListTodo className="w-4 h-4 text-blue-600" /> Priorities
+          {/* Priorities (now mapped to accomplishments) */}
+          <Card className="bg-[#F4F8FF] border-[#D1DBFF] p-5 flex flex-col shadow-sm rounded-2xl min-h-[180px]">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-[17px] text-[#0F172A] flex items-center gap-2.5 tracking-tight">
+                <ListTodo
+                  className="w-5 h-5 text-[#4F46E5]"
+                  strokeWidth={2.5}
+                />{" "}
+                Priorities
               </h3>
               <Badge
                 variant="secondary"
-                className="bg-blue-100 text-blue-700 hover:bg-blue-200 shadow-sm font-medium text-[10px] px-2 py-0.5 pointer-events-none"
+                className="bg-[#E0E7FF] text-[#4338CA] hover:bg-[#E0E7FF] shadow-none font-semibold text-[12px] px-3 py-1 rounded-full pointer-events-none border-0"
               >
                 For:{" "}
                 {new Date().toLocaleDateString("en-US", {
@@ -693,70 +895,102 @@ const Dashboard = () => {
             </div>
 
             {previewData.priorities.length > 0 ? (
-              <div className="flex-1 flex flex-col gap-2 mt-4">
+              <div className="flex-1 flex flex-col gap-3 mt-2">
                 {previewData.priorities.map(
                   (
                     todo: {
                       id?: string | number;
                       title?: string;
-                      priority?: string;
                     },
                     idx,
                   ) => (
                     <div
                       key={todo.id || idx}
-                      className="bg-white rounded-lg p-2.5 border border-blue-100 flex items-start gap-2.5 shadow-sm transition-all hover:border-blue-300"
+                      className="flex items-start gap-3"
                     >
-                      <div className="w-4 h-4 rounded-md mt-0.5 border-[1.5px] border-blue-300 flex-shrink-0 bg-blue-50/50" />
-                      <div>
-                        <p className="text-xs font-bold text-slate-700 leading-tight">
-                          {todo.title}
-                        </p>
-                        {todo.priority && (
-                          <div className="mt-1">
-                            <span
-                              className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-sm ${
-                                todo.priority === "urgent"
-                                  ? "bg-red-100 text-red-700"
-                                  : todo.priority === "high"
-                                    ? "bg-orange-100 text-orange-700"
-                                    : "bg-blue-100 text-blue-700"
-                              }`}
-                            >
-                              {todo.priority}
-                            </span>
-                          </div>
-                        )}
+                      <div className="mt-0.5 flex-shrink-0 text-[#4F46E5]">
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
                       </div>
+                      <p className="text-[15px] font-medium text-[#475569] leading-snug">
+                        {todo.title}
+                      </p>
                     </div>
                   ),
                 )}
               </div>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-center mt-6">
+              <div className="flex-1 flex flex-col items-center justify-center text-center mt-2">
                 <p className="text-sm text-slate-500 mb-1.5 font-medium">
-                  No priorities underway.
+                  No accomplishments recorded yet today.
                 </p>
                 <Link
-                  to="/todos"
+                  to="/daily-journal"
                   className="text-xs text-blue-600 font-bold hover:underline flex items-center gap-1 mt-1"
                 >
-                  Manage Todos <ArrowRight className="w-3 h-3" />
+                  Go to Daily Journal <ArrowRight className="w-3 h-3" />
                 </Link>
               </div>
             )}
           </Card>
 
-          {/* People Empty State */}
-          <Card className="bg-pink-50/30 border-pink-200 p-4 flex flex-col items-center justify-center min-h-[180px] shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
-            <CalendarIcon
-              className="w-10 h-10 text-pink-300 mb-3"
-              strokeWidth={1.5}
-            />
-            <p className="text-sm text-slate-500 text-center">
-              No people added yet
-            </p>
-          </Card>
+          {/* People / Upcoming Dates Conditional Block */}
+          {isLoadingPeople ? (
+            <Card className="bg-pink-50/30 border-pink-200 p-4 flex flex-col items-center justify-center min-h-[180px] shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)] animate-pulse">
+              <CalendarIcon
+                className="w-10 h-10 text-pink-200 mb-3"
+                strokeWidth={1.5}
+              />
+            </Card>
+          ) : people.length === 0 ? (
+            <Card className="bg-pink-50/30 border-pink-200 p-4 flex flex-col items-center justify-center min-h-[180px] shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
+              <CalendarIcon
+                className="w-10 h-10 text-pink-300 mb-3"
+                strokeWidth={1.5}
+              />
+              <p className="text-sm text-slate-500 text-center">
+                No people added yet
+              </p>
+            </Card>
+          ) : (
+            <Card className="bg-[#FFF0F5]/50 border-[#F48FB1] p-5 flex flex-col min-h-[180px] shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)] rounded-[16px]">
+              <div className="flex items-center justify-between mb-auto">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-[30px] h-[30px] rounded-[8px] bg-[#F06292] flex items-center justify-center shadow-sm">
+                    <CalendarIcon
+                      className="w-[18px] h-[18px] text-white"
+                      strokeWidth={2}
+                    />
+                  </div>
+                  <span className="font-bold text-[#0F172A] text-[15px]">
+                    Upcoming Dates
+                  </span>
+                </div>
+                <button
+                  onClick={peopleHandler}
+                  className="text-[13px] font-medium text-[#1E293B] hover:text-[#0F172A] transition-colors"
+                >
+                  View All
+                </button>
+              </div>
+              <div className="flex-1 flex items-center justify-center text-center mt-4">
+                <p className="text-[14px] text-[#64748B]">
+                  No upcoming dates in the next 30 days
+                </p>
+              </div>
+            </Card>
+          )}
         </div>
       </div>
 
@@ -949,30 +1183,46 @@ const Dashboard = () => {
           </div>
         </Card>
 
-        {/* Journaling Status */}
-        <Card className="bg-[#F0FDF8] p-5 rounded-2xl border border-[#CCFBF1] flex flex-col justify-between shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
+        {/* EXACT Journaling Status UI Match */}
+        <Card className="p-5 bg-[#F2FBF9] border-[1.5px] border-[#5EEAD4] shadow-sm flex flex-col justify-between rounded-[20px] transition-all hover:shadow-md">
           <div className="flex justify-between items-center mb-5">
-            <h3 className="font-bold text-[#0F766E] flex items-center gap-2">
-              <BookOpen className="w-4 h-4" /> Journaling Status
+            <h3 className="font-bold text-[#0F766E] flex items-center gap-2.5 text-[17px]">
+              <BookOpen className="w-5 h-5 text-[#0F766E]" strokeWidth={2.5} />{" "}
+              Journaling Status
             </h3>
           </div>
 
           {/* Daily Track */}
           <div className="mb-5">
             <div className="flex justify-between items-center mb-3">
-              <span className="text-[11px] font-bold text-[#0F766E]">
-                Daily (4 Mar - 10 Mar)
+              <span className="text-[14px] font-bold text-[#0F766E]">
+                Daily ({dailyDateRangeStr})
               </span>
-              <span className="text-[11px] font-bold text-slate-700">0/7</span>
+              <span className="text-[14px] font-bold text-slate-800">
+                {dailyCompletedCount}/7
+              </span>
             </div>
-            <div className="flex justify-between gap-1">
-              {["Wed", "Thu", "Fri", "Sat", "Sun", "Mon", "Tue"].map((day) => (
-                <div key={day} className="flex flex-col items-center gap-1.5">
-                  <div className="w-8 h-8 rounded-lg border border-[#99F6E4] bg-white flex items-center justify-center shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
-                    <div className="w-3 rounded-full border border-[#5EEAD4] aspect-square"></div>
+            <div className="flex justify-between gap-1 sm:gap-1.5 w-full">
+              {dailyCompletion.map((day, idx) => (
+                <div key={idx} className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                  <div
+                    className={`w-full aspect-square max-w-[42px] rounded-[8px] sm:rounded-[10px] flex items-center justify-center transition-all ${
+                      day.completed
+                        ? "bg-[#14B8A6] shadow-sm"
+                        : "bg-white border-[1.5px] border-[#99F6E4]"
+                    }`}
+                  >
+                    {day.completed ? (
+                      <svg width="50%" height="50%" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2" />
+                        <path d="M8 12L11 15L16 9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    ) : (
+                      <div className="w-[50%] h-[50%] rounded-full border-[1.5px] border-[#99F6E4]"></div>
+                    )}
                   </div>
-                  <span className="text-[9px] font-bold text-[#0D9488]">
-                    {day}
+                  <span className="text-[10px] sm:text-[11px] font-semibold text-[#0F766E] truncate w-full text-center">
+                    {day.dayLabel}
                   </span>
                 </div>
               ))}
@@ -980,48 +1230,54 @@ const Dashboard = () => {
           </div>
 
           {/* Weekly Track */}
-          <div className="mb-6">
+          <div className="mb-4">
             <div className="flex justify-between items-center mb-3">
-              <span className="text-[11px] font-bold text-[#0F766E]">
-                Weekly (March 2026)
+              <span className="text-[14px] font-bold text-[#0F766E]">
+                Weekly ({monthNameStatus} {currentYearStatus})
               </span>
-              <span className="text-[11px] font-bold text-slate-700">0/5</span>
+              <span className="text-[14px] font-bold text-slate-800">
+                {weeklyCompletedCount}/5
+              </span>
             </div>
-            <div className="flex justify-between gap-1">
-              {[
-                { label: "WK#10", dates: "(Mar 1-7)" },
-                { label: "WK#11", dates: "(Mar 8-14)" },
-                { label: "WK#12", dates: "(Mar 15-21)" },
-                { label: "WK#13", dates: "(Mar 22-28)" },
-                { label: "WK#14", dates: "(Mar 29-4)" },
-              ].map((wk) => (
-                <div
-                  key={wk.label}
-                  className="flex flex-col items-center gap-1"
-                >
-                  <div className="w-10 h-10 rounded-lg border border-[#99F6E4] bg-white flex items-center justify-center mb-0.5 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
-                    <Calendar className="w-4 h-4 text-[#5EEAD4]" />
+            <div className="flex justify-between gap-1 sm:gap-1.5 w-full">
+              {weeklyBlocks.map((wk, idx) => (
+                <div key={idx} className="flex flex-col items-center gap-1 flex-1 min-w-0">
+                  <div
+                    className={`w-full aspect-square max-w-[48px] rounded-[8px] sm:rounded-[10px] flex items-center justify-center transition-all ${
+                      wk.completed
+                        ? "bg-[#14B8A6] shadow-sm"
+                        : "bg-white border-[1.5px] border-[#99F6E4]"
+                    }`}
+                  >
+                    {wk.completed ? (
+                      <svg width="50%" height="50%" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2" />
+                        <path d="M8 12L11 15L16 9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    ) : (
+                      <Calendar className="w-[45%] h-[45%] text-[#99F6E4]" strokeWidth={2} />
+                    )}
                   </div>
-                  <span className="text-[9px] font-bold text-[#0D9488]">
-                    {wk.label}
-                  </span>
-                  <span className="text-[8px] font-medium text-[#14B8A6] tracking-tighter">
-                    {wk.dates}
-                  </span>
+                  <div className="text-center mt-1 w-full">
+                    <div className="text-[9px] sm:text-[10px] font-bold text-[#0F766E] leading-tight mb-0.5 truncate">
+                      {wk.label}
+                    </div>
+                    <div className="text-[8px] sm:text-[9px] font-medium text-[#0F766E] opacity-90 leading-tight truncate">
+                      {wk.datesLabel}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Footer */}
-          <div className="flex justify-between items-center mt-1 pt-4 border-t border-[#CCFBF1]">
-            <span className="text-[11px] font-bold text-[#0D9488]">
+          <div className="flex justify-between items-center mt-auto pt-4 border-t border-[#A7F3D0]/60">
+            <span className="text-[14px] font-bold text-[#0F766E]">
               Keep up the momentum!
             </span>
-            <span className="text-[11px] font-extrabold text-slate-800">
-              {insightsData.journaling_status.weekly_entries > 0
-                ? `${Math.min((insightsData.journaling_status.weekly_entries / 7) * 100, 100).toFixed(0)}% Complete`
-                : "0% Complete"}
+            <span className="text-[15px] font-extrabold text-slate-800">
+              {percentComplete}% Complete
             </span>
           </div>
         </Card>
@@ -1029,141 +1285,131 @@ const Dashboard = () => {
 
       {/* Purpose & Direction Section */}
       <div className="mt-8 mb-8">
-        <div className="flex items-center gap-2 mb-4">
-          <Heart className="w-4 h-4 text-[#E63946]" strokeWidth={2.5} />
-          <h2 className="text-sm font-bold text-slate-800">
+        <div className="flex items-center gap-2 mb-3">
+          <Heart className="w-[18px] h-[18px] text-[#E63946]" strokeWidth={2} />
+          <h2 className="text-[15px] font-bold text-slate-700">
             Purpose & Direction
           </h2>
         </div>
 
-        <Card
-          className={`bg-[#FFF8F8] border-2 border-[#E63946] rounded-[20px] transition-all duration-500 overflow-hidden relative ${previewData.vision_images && previewData.vision_images.length > 0 ? "p-8 md:p-10" : "p-6"}`}
-        >
-          {/* Mission Section */}
-          <div
-            className={`${previewData.vision_images && previewData.vision_images.length > 0 ? "mb-8" : "mb-0"} relative z-10`}
-          >
-            <div className="flex items-center gap-2.5 mb-2">
-              <Sparkles className="w-5 h-5 text-slate-800" />
-              <h3 className="text-[15px] font-extrabold text-slate-800 tracking-tight">
+        <Card className="bg-[#FFF8F8] border border-[#E63946] rounded-[16px] shadow-sm transition-all hover:shadow-md p-4 sm:p-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <Sparkles className="w-[18px] h-[18px] text-slate-900" strokeWidth={2.5} />
+              <h3 className="font-bold text-[15px] text-slate-900 tracking-tight">
                 My Mission
               </h3>
             </div>
-            {previewData.mission && (
-              <p className="text-xl md:text-2xl font-black text-slate-900 tracking-tight uppercase leading-tight">
-                {previewData.mission}
-              </p>
-            )}
+            
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-[14px] h-[14px] text-slate-900" strokeWidth={2.5} />
+              <span className="text-[12px] font-extrabold text-slate-900">
+                {summaryData?.alignment_average !== null && summaryData?.alignment_average !== undefined 
+                  ? Number(summaryData.alignment_average).toFixed(1) 
+                  : "5.0"}/10
+              </span>
+              <div className="w-5 sm:w-8 h-[2px] bg-slate-900 rounded-full ml-1"></div>
+            </div>
           </div>
 
-          {/* Vision Board Card - Only visible when images exist */}
-          {previewData.vision_images &&
-            previewData.vision_images.length > 0 && (
-              <Card className="bg-white rounded-[24px] p-6 border-0 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative z-10">
-                <div className="flex items-center gap-2.5 mb-5">
-                  <div className="bg-[#FFF5F5] p-2 rounded-xl">
-                    <Heart className="w-4 h-4 text-[#E63946] fill-[#E63946]/10" />
-                  </div>
-                  <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">
-                    Vision Board
-                  </h4>
-                </div>
+          {/* Extra Content (Mission Statement & Vision Board) */}
+          {(previewData.mission || (previewData.vision_images && previewData.vision_images.length > 0)) && (
+            <div className="mt-5 pt-5 border-t border-red-100 flex flex-col gap-4">
+              {previewData.mission && (
+                <p className="text-lg md:text-xl font-black text-slate-900 tracking-tight uppercase leading-tight">
+                  {previewData.mission}
+                </p>
+              )}
 
-                <div className="relative rounded-[20px] overflow-hidden aspect-[16/9] bg-slate-50 border border-slate-100 mb-2 group">
+              {previewData.vision_images && previewData.vision_images.length > 0 && (
+                <div className="relative rounded-[12px] overflow-hidden aspect-[16/9] bg-slate-50 border border-slate-100 group">
                   <img
                     src={previewData.vision_images[0]}
                     alt="My Vision"
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     onError={(e) => {
-                      console.error(
-                        "Dashboard - Failed to load main vision image",
-                      );
+                      console.error("Dashboard - Failed to load main vision image");
                       e.currentTarget.style.display = "none";
                     }}
                   />
                 </div>
-
-                {previewData.vision_statement && (
-                  <div className="pt-4 border-t border-slate-100">
-                    <p className="text-sm font-medium text-slate-600 italic leading-relaxed text-center">
-                      "{previewData.vision_statement}"
-                    </p>
-                  </div>
-                )}
-              </Card>
-            )}
+              )}
+            </div>
+          )}
         </Card>
       </div>
 
       {/* Execution & Tracking */}
       <div>
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-3 mt-8">
           <Zap className="w-4 h-4 text-[#E63946]" strokeWidth={2.5} />
           <h2 className="text-sm font-bold text-slate-800">
             Execution & Tracking
           </h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Journaling Consistency Block */}
-          <Card className="p-6 bg-[#FFF8F3] border border-[#FDBA74] shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F59E0B] to-[#F97316] flex items-center justify-center text-white shadow-sm">
-                <Flame className="w-5 h-5 fill-current" />
+          
+          {/* UPDATED Journaling Consistency Block */}
+          <Card className="p-5 bg-[#FFF9F5] border border-[#FDBA74] shadow-sm rounded-[20px] flex flex-col transition-all hover:shadow-md">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-8 h-8 rounded-[8px] bg-[#F59E0B] flex items-center justify-center text-white shadow-sm">
+                <Flame className="w-4 h-4 fill-current" />
               </div>
-              <h3 className="font-bold text-slate-800 text-sm">
+              <h3 className="font-bold text-slate-800 text-[16px]">
                 Journaling Consistency
               </h3>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 mb-5">
-              <div className="bg-white rounded-xl p-4 flex flex-col items-center justify-center shadow-sm border border-[#FFF7ED]">
-                <div className="flex items-center gap-1.5 mb-1 text-slate-800">
-                  <Flame className="w-4 h-4 text-[#F97316]" />
-                  <span className="text-2xl font-extrabold">
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="bg-white rounded-xl p-4 flex flex-col items-center justify-center shadow-sm border border-slate-100">
+                <div className="flex items-center gap-2 mb-1 text-slate-800">
+                  <Flame className="w-5 h-5 text-[#F97316]" strokeWidth={2.5} />
+                  <span className="text-[22px] font-extrabold leading-none">
                     {summaryData?.current_streak || 0}
                   </span>
                 </div>
-                <span className="text-xs text-slate-500 font-medium tracking-tight">
+                <span className="text-[12px] text-slate-500 font-medium mt-1">
                   Current Streak
                 </span>
               </div>
 
-              <div className="bg-white rounded-xl p-4 flex flex-col items-center justify-center shadow-sm border border-[#FFF7ED]">
-                <div className="flex items-center gap-1.5 mb-1 text-slate-800">
-                  <Calendar className="w-4 h-4 text-[#3B82F6]" />
-                  <span className="text-2xl font-extrabold">0</span>
+              <div className="bg-white rounded-xl p-4 flex flex-col items-center justify-center shadow-sm border border-slate-100">
+                <div className="flex items-center gap-2 mb-1 text-slate-800">
+                  <Calendar className="w-5 h-5 text-[#3B82F6]" strokeWidth={2.5} />
+                  <span className="text-[22px] font-extrabold leading-none">
+                    {last30DaysCount}
+                  </span>
                 </div>
-                <span className="text-xs text-slate-500 font-medium tracking-tight">
+                <span className="text-[12px] text-slate-500 font-medium mt-1">
                   Last 30 Days
                 </span>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-[#FFF7ED] mb-5">
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100 mb-4">
               <div className="flex justify-between items-center mb-3">
-                <span className="text-xs font-bold text-slate-600">
+                <span className="text-[13px] font-bold text-slate-700">
                   Consistency Score
                 </span>
-                <span className="font-extrabold text-slate-800 tracking-tight">
-                  {Math.min(
-                    ((summaryData?.current_streak || 0) / 7) * 100,
-                    100,
-                  ).toFixed(0)}
-                  %
+                <span className="font-extrabold text-slate-900 text-[14px]">
+                  {consistencyScore}%
                 </span>
               </div>
-              <div className="w-full bg-slate-100 rounded-full h-2">
+              <div className="w-full bg-slate-100 rounded-full h-2.5 mb-3">
                 <div
-                  className="bg-slate-200 h-2 rounded-full transition-all duration-500"
+                  className="bg-[#F59E0B] h-2.5 rounded-full transition-all duration-500"
                   style={{
-                    width: `${Math.min(((summaryData?.current_streak || 0) / 7) * 100, 100)}%`,
+                    width: `${consistencyScore}%`,
                   }}
                 ></div>
               </div>
+              <div className="flex justify-center items-center gap-1.5 text-[11px] font-semibold text-[#D97706]">
+                <span>🏆</span> Longest streak: {longestStreak} days
+              </div>
             </div>
 
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-[#FFF7ED]">
-              <h4 className="text-xs font-bold text-slate-600 mb-6">
+            <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
+              <h4 className="text-[13px] font-bold text-slate-700 mb-6 text-center">
                 Life Balance (Last 7 Days)
               </h4>
               <div className="relative w-full aspect-square max-w-[200px] mx-auto">
@@ -1197,8 +1443,8 @@ const Dashboard = () => {
                         ${50 - (summaryData.life_balance.growth || 0) * 2.5},${50 + (summaryData.life_balance.growth || 0) * 4}
                         ${50 - (summaryData.life_balance.finance || 0) * 4},${50 - (summaryData.life_balance.finance || 0) * 1}
                       `}
-                      fill="rgba(230, 57, 70, 0.2)"
-                      stroke="#E63946"
+                      fill="rgba(45, 212, 191, 0.6)"
+                      stroke="#14B8A6"
                       strokeWidth="1.5"
                       className="transition-all duration-1000"
                     />
@@ -1224,14 +1470,127 @@ const Dashboard = () => {
             </div>
           </Card>
 
-          {/* Focus Areas (Empty State) Block */}
-          <Card className="p-8 bg-white border border-slate-100 flex flex-col items-center justify-center text-center shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)] min-h-[400px]">
-            <Lightbulb className="w-12 h-12 text-slate-300 stroke-[1.5] mb-6" />
-            <p className="text-[13px] text-slate-500 font-medium max-w-[250px] leading-relaxed">
-              Complete your weekly reflection to see your focus areas here
-            </p>
+          {/* REBUILT: This Week's Strategic Focus (formerly Focus Areas) */}
+          <Card className="p-6 bg-red-50/50 border border-red-200 shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)] rounded-[20px] flex flex-col min-h-[400px]">
+             <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="w-[42px] h-[42px] rounded-[12px] bg-red-500 flex items-center justify-center text-white shadow-sm">
+                  <Target className="w-[22px] h-[22px]" strokeWidth={2} />
+                </div>
+                <h3 className="font-bold text-slate-800 text-[17px] tracking-tight">
+                  This Week's Strategic Focus
+                </h3>
+              </div>
+              <Link to="/weekly-reflection">
+                  <Button variant="outline" size="sm" className="h-[30px] text-[11px] font-bold text-red-700 bg-white border-red-200 rounded-full px-4" asChild>
+                    <span>View All</span>
+                  </Button>
+              </Link>
+            </div>
+
+            {/* Note: I'm keeping the logic here empty state until the specific API implementation is complete as discussed previously, it acts as a placeholder based on your empty layout request. Let me know if you need to fetch list. */}
+            <div className="flex-1 flex flex-col items-center justify-center text-center">
+                <Target className="w-[100px] h-[100px] text-red-200 stroke-[0.8] mb-6" />
+                <p className="text-[14px] text-slate-500 font-medium max-w-[280px] leading-relaxed">
+                    Complete your weekly reflection to see your focus areas here
+                </p>
+            </div>
           </Card>
         </div>
+      </div>
+
+      {/* NEW: Habit Tracking Section */}
+      <div className="mt-8 mb-8">
+        <Card className="bg-[#F0FDF8] border-[1.5px] border-[#5EEAD4] shadow-sm rounded-[20px] overflow-hidden transition-all hover:shadow-md">
+          {/* Header */}
+          <div className="p-4 md:p-5 flex items-center justify-between border-b border-[#CCFBF1] bg-white/50">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-[8px] bg-[#14B8A6] flex items-center justify-center text-white shadow-sm">
+                <Zap className="w-4 h-4 fill-current" />
+              </div>
+              <h3 className="font-bold text-slate-800 text-[16px]">Habit Tracking</h3>
+            </div>
+            <Button variant="outline" size="sm" className="h-7 text-[11px] font-bold text-slate-700 bg-white border-slate-200 rounded-full px-4" asChild>
+              <Link to="/goals-habits">View All</Link>
+            </Button>
+          </div>
+
+          {/* Content */}
+          <div className="p-5 bg-white">
+            {/* Top Stats */}
+            <div className="grid grid-cols-2 gap-4 mb-6 border-b border-slate-100 pb-6">
+              <div>
+                <p className="text-[11px] font-bold text-slate-500 mb-1 tracking-wide">Active Habits</p>
+                <p className="text-[26px] font-extrabold text-[#0F766E] leading-none">{activeHabitsCount}</p>
+              </div>
+              <div>
+                <p className="text-[11px] font-bold text-slate-500 mb-1 tracking-wide">Avg. Completion</p>
+                <p className="text-[26px] font-extrabold text-[#14B8A6] leading-none">{avgHabitCompletion}%</p>
+              </div>
+            </div>
+
+            {/* Habit Lists */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Daily Habits */}
+              <div>
+                <h4 className="text-[13px] font-bold text-slate-800 mb-4">Daily Habits</h4>
+                {dailyHabits.length > 0 ? (
+                  <div className="space-y-5">
+                    {dailyHabits.map((habit, idx) => (
+                      <div key={idx} className="flex flex-col gap-2.5">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[13px] font-extrabold text-slate-800">{habit.name || habit.title}</span>
+                          <Badge variant="outline" className="text-[10px] px-2.5 py-0 h-[18px] border-slate-200 text-slate-600 bg-white rounded-full">
+                            {habit.category || habit.habit_category || 'Other'}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                            <div className="bg-[#0F172A] h-full rounded-full transition-all duration-500" style={{ width: `${habit.completion_percentage || habit.completion_rate || 0}%` }}></div>
+                          </div>
+                          <span className="text-[11px] font-bold text-[#14B8A6] min-w-[28px] text-right">
+                            {habit.completion_percentage || habit.completion_rate || 0}%
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[12px] text-slate-400 italic">No daily habits</p>
+                )}
+              </div>
+
+              {/* Weekly Habits */}
+              <div>
+                <h4 className="text-[13px] font-bold text-slate-800 mb-4">Weekly Habits</h4>
+                {weeklyHabits.length > 0 ? (
+                  <div className="space-y-5">
+                    {weeklyHabits.map((habit, idx) => (
+                      <div key={idx} className="flex flex-col gap-2.5">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[13px] font-extrabold text-slate-800">{habit.name || habit.title}</span>
+                          <Badge variant="outline" className="text-[10px] px-2.5 py-0 h-[18px] border-slate-200 text-slate-600 bg-white rounded-full">
+                            {habit.category || habit.habit_category || 'Other'}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                            <div className="bg-[#0F172A] h-full rounded-full transition-all duration-500" style={{ width: `${habit.completion_percentage || habit.completion_rate || 0}%` }}></div>
+                          </div>
+                          <span className="text-[11px] font-bold text-[#14B8A6] min-w-[28px] text-right">
+                            {habit.completion_percentage || habit.completion_rate || 0}%
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[12px] text-slate-400 italic">No weekly habits</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </Card>
       </div>
 
       {/* Review & Growth */}
@@ -1243,88 +1602,163 @@ const Dashboard = () => {
           </h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Recent Journal Entries */}
-          <Card className="p-6 bg-white border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)] flex flex-col min-h-[220px]">
+          {/* UPDATED: Recent Journal Entries */}
+          <Card className="p-6 bg-[#FFF6EE] border-2 border-[#F97316] shadow-sm flex flex-col min-h-[220px] rounded-[20px]">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-slate-800 text-[15px]">
+              <h3 className="font-bold text-slate-900 text-[16px]">
                 Recent Journal Entries
               </h3>
-              <Link to="/daily-journal#bucket-list-progress">
+              <Link to="/daily-journal">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 text-xs font-semibold text-slate-600 border-slate-200"
+                  className="h-8 text-xs font-semibold text-slate-700 border-slate-200 bg-white hover:bg-slate-50 rounded-full px-4"
                 >
                   <Plus className="w-3.5 h-3.5 mr-1" /> Add Entry
                 </Button>
               </Link>
             </div>
 
-            <div className="flex-1 flex flex-col items-center justify-center">
-              {insightsData.recent_journals.length > 0 ? (
-                <div className="space-y-3 w-full">
-                  {insightsData.recent_journals.slice(0, 3).map((journal) => (
+            <div className="flex-1 flex flex-col gap-4">
+              {recentJournals.length > 0 ? (
+                recentJournals.slice(0, 3).map((journal) => {
+                  const d = new Date(journal.start_date || journal.created_at);
+                  const month = d
+                    .toLocaleDateString("en-US", { month: "short" })
+                    .toUpperCase();
+                  const date = d.getDate();
+                  const weekday = d.toLocaleDateString("en-US", {
+                    weekday: "long",
+                  });
+                  const year = d.getFullYear();
+                  const energy = journal.energy_score ?? 5;
+                  const alignment = journal.alignment_score ?? 5;
+                  const note =
+                    journal.data?.description ||
+                    journal.description ||
+                    journal.gratitude_note ||
+                    journal.affirmation;
+
+                  return (
                     <div
                       key={journal.id}
-                      className="text-sm border-l-[3px] border-blue-400 pl-3 py-1 text-left w-full"
+                      className="bg-white rounded-[16px] p-4 shadow-sm border border-slate-100 flex flex-col gap-3"
                     >
-                      <p className="font-semibold text-slate-800 truncate">
-                        {journal.title || `Journal #${journal.id}`}
-                      </p>
-                      {(journal.journal_date || journal.created_at) && (
-                        <p className="text-xs text-slate-500 font-medium mt-0.5">
-                          {new Date(
-                            (journal.journal_date ||
-                              journal.created_at) as string,
-                          ).toLocaleDateString("en-US", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </p>
-                      )}
+                      <div className="flex items-start gap-4">
+                        {/* Date Badge */}
+                        <div className="bg-[#FFEDD5] rounded-xl py-2 px-3 flex flex-col items-center justify-center min-w-[54px]">
+                          <span className="text-[#EA580C] text-[10px] font-bold">
+                            {month}
+                          </span>
+                          <span className="text-[#9A3412] text-lg font-extrabold leading-none mt-0.5">
+                            {date}
+                          </span>
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 pt-0.5">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-bold text-slate-900 text-[15px]">
+                              {weekday}, {year}
+                            </h4>
+                            <div className="w-4 h-4 rounded-md border border-purple-200 bg-purple-50"></div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Badge
+                              variant="secondary"
+                              className="bg-orange-50 text-[#EA580C] hover:bg-orange-50 border-0 px-2 py-0.5 text-[11px] gap-1 font-bold"
+                            >
+                              <Zap className="w-3 h-3 fill-current" /> {energy}/10
+                            </Badge>
+                            <Badge
+                              variant="secondary"
+                              className="bg-teal-50 text-teal-600 hover:bg-teal-50 border-0 px-2 py-0.5 text-[11px] gap-1 font-bold"
+                            >
+                              <Target className="w-3 h-3" /> {alignment}/10
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="h-px bg-slate-100 w-full my-1"></div>
+
+                      <div className="flex items-center gap-2.5">
+                        {note ? (
+                          <>
+                            <div className="w-5 h-5 rounded-full bg-green-50 border border-green-100 flex items-center justify-center flex-shrink-0">
+                              <svg
+                                width="10"
+                                height="10"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="3"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="text-green-500"
+                              >
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                              </svg>
+                            </div>
+                            <span className="text-[13px] text-slate-600 font-medium truncate">
+                              {note}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-[13px] text-slate-400 italic">
+                            No detailed notes recorded.
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  );
+                })
               ) : (
-                <p className="text-[13px] text-slate-400 font-medium">
+                <p className="text-[13px] text-slate-400 font-medium text-center py-6 bg-white rounded-xl border border-slate-100">
                   No entries yet. Start journaling today!
                 </p>
               )}
             </div>
           </Card>
 
-          {/* Personalized Insights */}
-          <Card className="p-6 bg-[#FCFaff] border border-[#E9D5FF] shadow-[0_4px_20px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)] flex flex-col min-h-[220px]">
-            <div className="flex items-center gap-3 mb-auto">
-              <div className="w-10 h-10 rounded-[10px] bg-[#A855F7] flex items-center justify-center text-white shadow-sm shadow-[#A855F7]/20">
-                <Lightbulb className="w-5 h-5 fill-current" />
+          {/* REBUILT Personalized Insights */}
+          <Card className="p-6 bg-[#FCFaff] border border-[#E9D5FF] shadow-[0_4px_20px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)] flex flex-col min-h-[220px] rounded-[20px]">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-[42px] h-[42px] rounded-[12px] bg-[#A855F7] flex items-center justify-center text-white shadow-sm">
+                <Lightbulb className="w-[20px] h-[20px] fill-current" />
               </div>
-              <h3 className="font-bold text-slate-800 text-[15px]">
+              <h3 className="font-bold text-slate-800 text-[17px]">
                 Personalized Insights
               </h3>
             </div>
 
             {insightsData.personalized_insights.length > 0 ? (
-              <div className="space-y-3 mt-6">
+              <div className="flex-1 flex flex-col gap-3">
                 {insightsData.personalized_insights
-                  .slice(0, 2)
-                  .map((insight, idx) => (
+                  .slice(0, 3)
+                  .map((insight, idx) => {
+                    const insightText = insight.insight || insight.text || JSON.stringify(insight);
+                    // Determine if it's an alert based on content, else standard chart icon
+                    const isAlert = insightText.toLowerCase().includes("hasn't gotten much attention") || insightText.toLowerCase().includes("consider dedicating");
+                    
+                    return (
                     <div
                       key={insight.id ?? idx}
-                      className="text-[13px] text-slate-600 font-medium bg-white rounded-lg p-3 border border-[#F3E8FF] shadow-sm flex items-start gap-3"
+                      className="text-[13px] text-slate-600 font-medium bg-white rounded-[12px] px-4 py-3.5 border border-[#F3E8FF] shadow-sm flex items-start gap-3"
                     >
-                      <TrendingUp className="w-4 h-4 text-[#A855F7] shrink-0 mt-0.5" />
-                      <span>
-                        {insight.insight ||
-                          insight.text ||
-                          JSON.stringify(insight)}
+                      {isAlert ? (
+                        <AlertCircle className="w-4 h-4 text-[#A855F7] shrink-0 mt-[2px]" strokeWidth={2.5} />
+                      ) : (
+                        <TrendingUp className="w-4 h-4 text-[#A855F7] shrink-0 mt-[2px]" strokeWidth={2.5} />
+                      )}
+                      <span className="leading-snug">
+                        {insightText}
                       </span>
                     </div>
-                  ))}
+                  )})}
               </div>
             ) : (
-              <div className="bg-white rounded-xl p-4 border border-[#F3E8FF] shadow-sm flex items-center gap-3 mt-6">
+              <div className="bg-white rounded-[12px] p-4 border border-[#F3E8FF] shadow-sm flex items-center gap-3 mt-auto">
                 <TrendingUp
                   className="w-5 h-5 text-[#A855F7] shrink-0"
                   strokeWidth={2.5}
@@ -1342,7 +1776,7 @@ const Dashboard = () => {
       {/* Bucket List & Leaderboard Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
         {/* Bucket List Dreams */}
-        <Card className="p-6 bg-[#FDF2F8] border border-[#FBCFE8] shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)] flex flex-col min-h-[350px]">
+        <Card className="p-6 bg-[#FDF2F8] border border-[#FBCFE8] shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)] flex flex-col min-h-[350px] rounded-[20px]">
           <div className="flex justify-between items-start mb-8">
             <div className="flex gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F472B6] to-[#EC4899] flex items-center justify-center text-white shadow-sm shadow-pink-200">
@@ -1370,7 +1804,7 @@ const Dashboard = () => {
               previewData.bucket_preview.slice(0, 3).map((item) => (
                 <div
                   key={item.id}
-                  className="bg-white rounded-xl p-4 shadow-sm border border-[#FCE7F3] flex justify-between items-center transition-all hover:bg-pink-50/30"
+                  className="bg-white rounded-[16px] p-4 shadow-sm border border-[#FCE7F3] flex justify-between items-center transition-all hover:bg-pink-50/30"
                 >
                   <span className="font-extrabold text-slate-800 text-sm tracking-tight">
                     {item.title}
@@ -1403,76 +1837,76 @@ const Dashboard = () => {
         </Card>
 
         {/* Leaderboard */}
-        <Card className="p-6 bg-white border border-[#E9D5FF] shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)] flex flex-col min-h-[350px]">
+        <Card className="p-6 bg-white border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.04)] rounded-[20px] transition-all hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)] flex flex-col min-h-[350px]">
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#A855F7] to-[#9333EA] flex items-center justify-center text-white shadow-sm shadow-purple-200">
-                <Trophy className="w-5 h-5 fill-current" />
+              <div className="w-[42px] h-[42px] rounded-[12px] bg-[#A855F7] flex items-center justify-center text-white shadow-sm">
+                <Trophy className="w-[20px] h-[20px] fill-current" />
               </div>
-              <h3 className="font-bold text-slate-800 text-[15px]">
+              <h3 className="font-bold text-slate-800 text-[17px]">
                 Leaderboard
               </h3>
             </div>
             <Button
               variant="outline"
               size="sm"
-              className="h-7 text-[10px] font-bold text-slate-600 border-slate-200 px-3 shadow-none bg-slate-50"
+              className="h-[30px] text-[11px] font-bold text-slate-700 border-slate-200 px-4 rounded-full shadow-none bg-white hover:bg-slate-50"
               asChild
             >
               <Link to="/leaderboard">View All</Link>
             </Button>
           </div>
 
-          <div className="bg-[#F3E8FF] rounded-xl p-3 flex flex-col justify-center border border-[#E9D5FF] mb-5 shadow-sm mx-1">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#A855F7] flex items-center justify-center text-white font-extrabold text-[11px] shadow-sm tracking-tighter">
-                #232
+          <div className="bg-[#F3E8FF] rounded-[16px] p-4 flex flex-col justify-center border border-[#E9D5FF] mb-6">
+            <div className="flex items-center gap-4">
+              <div className="w-[42px] h-[42px] rounded-full bg-[#A855F7] flex items-center justify-center text-white font-extrabold text-[13px] shadow-sm tracking-tight">
+                #{leaderboardData.currentUser?.rank || "232"}
               </div>
               <div>
-                <p className="font-bold text-sm text-[#7E22CE] leading-tight mb-0.5 tracking-tight">
+                <p className="font-bold text-[15px] text-[#7E22CE] leading-tight mb-0.5 tracking-tight">
                   Your Rank
                 </p>
-                <p className="text-[11px] text-[#9333EA] font-semibold leading-tight">
-                  10 pts
+                <p className="text-[13px] text-[#9333EA] font-semibold leading-tight">
+                  {leaderboardData.currentUser?.points ?? summaryData?.total_score ?? 10} pts
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col px-1">
-            {previewData.leaderboard_preview.length > 0 ? (
-              previewData.leaderboard_preview.map((person, idx) => (
+          <div className="flex-1 flex flex-col px-2 gap-1">
+            {leaderboardData.top.length > 0 ? (
+              leaderboardData.top.map((person, idx) => (
                 <div
                   key={idx}
-                  className="flex justify-between items-center py-2.5 border-b border-slate-100 last:border-b-0"
+                  className="flex justify-between items-center py-3 border-b border-slate-100 last:border-b-0"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-4 min-w-0">
                     <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 shadow-sm ${
+                      className={`w-[26px] h-[26px] rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 shadow-sm ${
                         idx === 0
-                          ? "bg-[#FDE047] text-[#854D0E] border border-[#FEF08A]"
+                          ? "bg-[#FEF9C3] border border-[#FDE047] text-[#A16207]"
                           : idx === 1
                             ? "bg-slate-200 text-slate-600 border border-slate-300"
                             : idx === 2
-                              ? "bg-[#FDBA74] text-[#9A3412] border border-[#FED7AA]"
-                              : "bg-slate-100 text-slate-500 font-medium"
+                              ? "bg-[#FFEDD5] border border-[#FED7AA] text-[#9A3412]"
+                              : "bg-slate-50 border border-slate-100 text-slate-500"
                       }`}
                     >
-                      {idx < 3 ? ["👑", "🥈", "🥉"][idx] : idx + 1}
+                      {idx === 0 ? "👑" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : idx + 1}
                     </div>
-                    <span className="font-bold text-[13px] text-slate-700 truncate tracking-tight">
-                      {person.name}
+                    <span className="font-bold text-[14px] text-slate-700 truncate tracking-tight">
+                      {person.name || person.user_name || "Unknown"}
                     </span>
                   </div>
-                  <span className="font-extrabold text-[#9333EA] text-[13px] ml-4 flex-shrink-0">
-                    {person.points}
+                  <span className="font-extrabold text-[#9333EA] text-[14px] ml-4 flex-shrink-0">
+                    {person.points ?? person.score ?? 0}
                   </span>
                 </div>
               ))
             ) : (
               <div className="flex-1 flex items-center justify-center">
                 <p className="text-[13px] text-slate-400 font-medium pb-2">
-                  No leaderboard data yet.
+                  Loading leaderboard data...
                 </p>
               </div>
             )}
@@ -1481,7 +1915,7 @@ const Dashboard = () => {
       </div>
 
       {/* Beta Testing Notice */}
-      <Card className="p-4 bg-red-50 border-l-4 border-l-red-500 shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
+      <Card className="p-4 bg-red-50 border-l-4 border-l-red-500 shadow-[0_4px_20px_rgba(0,0,0,0.06)] rounded-[16px]">
         <div className="flex gap-3">
           <span className="text-lg flex-shrink-0">🔔</span>
           <div>
