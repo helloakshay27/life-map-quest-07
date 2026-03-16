@@ -335,6 +335,169 @@ export default function ForFamily() {
     }
   };
 
+ // --- Download Handler (.txt Format) ---
+  const handleDownload = () => {
+    // Format today's date (e.g., "16 March 2026")
+    const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    const separator = "============================================================";
+
+    // Start building the text document
+    let txt = `WHAT MY FAMILY SHOULD KNOW\nA Guide to Getting Affairs in Order\n\n`;
+    txt += `Prepared by: ${personalInfo.fullName || 'Unknown'}\n`;
+    txt += `Date: ${today}\n\n`;
+
+    // 1. PERSONAL INFORMATION
+    txt += `${separator}\nPERSONAL INFORMATION\n${separator}\n`;
+    txt += `Name: ${personalInfo.fullName || ''}\n`;
+    txt += `Aadhaar: ${personalInfo.aadharNumber || ''}\n`;
+    txt += `PAN: ${personalInfo.panNumber || ''}\n`;
+    txt += `Driving License: ${personalInfo.drivingLicenseNumber || ''}\n`;
+    txt += `Address: ${personalInfo.currentHomeAddress || ''}\n`;
+    txt += `Home Phone: ${personalInfo.mobileNumber || ''}\n`;
+    txt += `Work Phone: ${personalInfo.workPhone || ''}\n\n`;
+    txt += `-- Spouse --\n`;
+    if (personalInfo.spouseName) {
+      txt += `Name: ${personalInfo.spouseName}\n`;
+      txt += `Aadhaar: ${personalInfo.spouseAadharNumber || ''}\n`;
+      txt += `Phone: ${personalInfo.spouseMobile || ''}\n`;
+    }
+    txt += `\n`;
+
+    // 2. CHILDREN
+    txt += `${separator}\nCHILDREN\n${separator}\n\n`;
+    if (children.length === 0) {
+      txt += `(None recorded)\n\n`;
+    } else {
+      children.forEach((c, index) => {
+        txt += `--- #${index + 1} ---\n`;
+        txt += `Name: ${c.name || ''}\n`;
+        txt += `DOB: ${c.dob || ''}\n`;
+        txt += `Aadhaar: ${c.aadhar || ''}\n`;
+        txt += `Address: ${c.address || ''}\n\n`;
+      });
+    }
+
+    // 3. GRANDCHILDREN
+    txt += `${separator}\nGRANDCHILDREN\n${separator}\n\n`;
+    if (grandchildren.length === 0) {
+      txt += `(None recorded)\n\n`;
+    } else {
+      grandchildren.forEach((g, index) => {
+        txt += `--- #${index + 1} ---\n`;
+        txt += `Name: ${g.name || ''}\n`;
+        txt += `DOB: ${g.dob || ''}\n`;
+        txt += `Address: ${g.address || ''}\n\n`;
+      });
+    }
+
+    // 4. EXTENDED FAMILY
+    txt += `${separator}\nEXTENDED FAMILY\n${separator}\n`;
+    txt += `HUSBAND'S FAMILY\n`;
+    if (husbandSiblings.length === 0) txt += `\n`;
+    else husbandSiblings.forEach(s => txt += `Name: ${s.name}, Relation: ${s.relation}, Phone: ${s.phone}\n`);
+    
+    txt += `\nWIFE'S FAMILY\n`;
+    if (wifeSiblings.length === 0) txt += `\n`;
+    else wifeSiblings.forEach(s => txt += `Name: ${s.name}, Relation: ${s.relation}, Phone: ${s.phone}\n`);
+    txt += `\n`;
+
+    // 5. EMERGENCY CONTACTS
+    txt += `${separator}\nEMERGENCY CONTACTS\n${separator}\n\n`;
+    if (emergencyContacts.length === 0) {
+      txt += `(None recorded)\n\n`;
+    } else {
+      emergencyContacts.forEach((c, index) => {
+        txt += `--- #${index + 1} ---\n`;
+        txt += `Name: ${c.name || ''}\n`;
+        txt += `Relationship: ${c.relationship || ''}\n`;
+        txt += `Phone: ${c.homePhone || ''}\n\n`;
+      });
+    }
+
+    // 6. IMPORTANT CONTACTS
+    txt += `${separator}\nIMPORTANT CONTACTS\n${separator}\n`;
+    txt += `ATTORNEY\n${importantContacts.attorneyName ? `Name: ${importantContacts.attorneyName}\nPhone: ${importantContacts.attorneyPhone}\n` : '\n'}\n`;
+    txt += `PHYSICIAN\n${importantContacts.physicianName ? `Name: ${importantContacts.physicianName}\nPhone: ${importantContacts.physicianPhone}\n` : '\n'}\n`;
+    txt += `RELIGIOUS CONTACT\n\n`;
+    txt += `ACCOUNTANT\n${importantContacts.accountantName ? `Name: ${importantContacts.accountantName}\nPhone: ${importantContacts.accountantPhone}\n` : '\n'}\n`;
+    txt += `INSURANCE AGENT\n${importantContacts.insuranceAgentName ? `Name: ${importantContacts.insuranceAgentName}\nPhone: ${importantContacts.insurancePhone}\n` : '\n'}\n`;
+    txt += `BANKER\n${importantContacts.bankerName ? `Name: ${importantContacts.bankerName}\nBank: ${importantContacts.bankName}\n` : '\n'}\n`;
+    txt += `BROKER / INVESTMENT\n${importantContacts.brokerName ? `Name: ${importantContacts.brokerName}\nPhone: ${importantContacts.brokerPhone}\n` : '\n'}\n`;
+
+    // 7. FINANCES
+    txt += `${separator}\nFINANCES\n${separator}\n`;
+    txt += `BANK ACCOUNTS:\n\n`;
+    if (bankAccounts.length === 0) txt += `(None recorded)\n\n`;
+    else bankAccounts.forEach(b => txt += `Bank: ${b.bankName}\nChecking: ${b.checkingAccountNo}\nSavings: ${b.savingsAccountNo}\n\n`);
+    
+    txt += `INVESTMENTS & DOCUMENTS:\n\n`;
+    
+    txt += `LOCKER:\n\n`;
+    
+    txt += `CREDIT CARDS:\n\n`;
+    if (creditCards.length === 0) txt += `(None recorded)\n\n`;
+    else creditCards.forEach(c => txt += `Card: ${c.cardName}\nBank: ${c.bank}\n\n`);
+
+    // 8. REAL ESTATE & VEHICLES
+    txt += `${separator}\nREAL ESTATE & VEHICLES\n${separator}\n`;
+    txt += `PROPERTIES:\n\n`;
+    if (propertyAssets.length === 0) txt += `(None recorded)\n\n`;
+    else propertyAssets.forEach(p => txt += `Type: ${p.propertyType}\nAddress: ${p.address}\n\n`);
+    
+    txt += `VEHICLES:\n\n`;
+    if (vehicleAssets.length === 0) txt += `(None recorded)\n\n`;
+    else vehicleAssets.forEach(v => txt += `Type: ${v.vehicleType}\nModel: ${v.model}\n\n`);
+
+    // 9. BENEFITS & INSURANCE
+    txt += `${separator}\nBENEFITS & INSURANCE\n${separator}\n`;
+    txt += `INSURANCE POLICIES:\n\n`;
+    if (lifeInsurancePolicies.length === 0) txt += `(None recorded)\n\n`;
+    else lifeInsurancePolicies.forEach(p => txt += `Policy: ${p.policyName}\nInsurer: ${p.insurer}\nNo: ${p.policyNumber}\n\n`);
+    
+    txt += `LEAVE & EPF:\n`;
+    txt += `EPF/Gratuity Member: ${benefitsDetails.epfMember ? 'Yes' : 'No'}\n\n`;
+    
+    txt += `RETIREMENT:\n`;
+    txt += `Govt/PSU Employee: ${benefitsDetails.govtEmployee ? 'Yes' : 'No'}\n`;
+    txt += `Spouse Aware of Family Pension: ${benefitsDetails.spouseAwarePension ? 'Yes' : 'No'}\n`;
+    txt += `Spouse Aware of Gratuity: ${benefitsDetails.spouseAwareGratuity ? 'Yes' : 'No'}\n\n`;
+
+    // 10. LEGAL DOCUMENTS
+    txt += `${separator}\nLEGAL DOCUMENTS\n${separator}\n`;
+    txt += `Living Will Executed: ${legalDetails.hasLivingWill ? 'Yes' : 'No'}\n\n`;
+
+    // 11. FINAL WISHES
+    txt += `${separator}\nFINAL WISHES\n${separator}\n\n`;
+    if (finalWishes.length === 0) {
+      txt += `(None recorded)\n\n`;
+    } else {
+      finalWishes.forEach((w, index) => {
+        txt += `--- #${index + 1} ---\n`;
+        txt += `Name: ${w.name || ''}\n`;
+        txt += `Preference: ${w.lastRitesPreference || ''}\n\n`;
+      });
+    }
+
+    txt += `\n${separator}\n`;
+    txt += `Document generated on ${today} from CBX Life Compass\n`;
+
+    // --- Generate and Download File ---
+    const blob = new Blob([txt], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    
+    // Create a safe filename (e.g., ForMyFamily_John_Doe.txt)
+    const safeName = personalInfo.fullName ? personalInfo.fullName.replace(/\s+/g, '_') : 'Profile';
+    link.download = `ForMyFamily_${safeName}.txt`;
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({ title: "Success!", description: "Your profile has been downloaded as a text file." });
+  };
   // --- Handlers ---
   const updatePersonalInfo = (field: keyof PersonalInfo, value: string) => setPersonalInfo(prev => ({ ...prev, [field]: value }));
   const updateImportantContact = (field: keyof ImportantContacts, value: string) => setImportantContacts(prev => ({ ...prev, [field]: value }));
@@ -395,7 +558,16 @@ export default function ForFamily() {
         </div>
         
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" disabled={isFetching || isSaving}>Download</Button>
+          {/* ---> Download Button Updated Here <--- */}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" 
+            disabled={isFetching || isSaving}
+            onClick={handleDownload}
+          >
+            Download
+          </Button>
           <Button size="sm" className="bg-red-500 hover:bg-red-600" onClick={handleSave} disabled={isFetching || isSaving}>
             {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {hasExistingProfile ? "Updating..." : "Saving..."}</> : hasExistingProfile ? "Update Profile" : "Save Profile"}
           </Button>

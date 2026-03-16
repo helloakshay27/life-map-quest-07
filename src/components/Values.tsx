@@ -310,7 +310,7 @@ function Values() {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate-fade-in">
+        <div className="fixed inset-0 bg-black/40 z-50  flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-visible flex flex-col relative">
 
             {isFetchingDetails && (
@@ -385,7 +385,7 @@ function Values() {
                 />
               </div>
 
-              {/* ✅ CUSTOM COLOR PICKER DROPDOWN - Matches your screenshot */}
+              {/* ✅ CUSTOM COLOR PICKER DROPDOWN */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Color Tag
@@ -412,9 +412,9 @@ function Values() {
                     />
                   </button>
 
-                  {/* Dropdown List */}
+                  {/* Dropdown List - MADE SCROLLABLE HERE */}
                   {colorDropdownOpen && (
-                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-[9999] overflow-hidden">
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-[9999] overflow-y-auto max-h-52">
                       {Object.entries(colorMap).map(([colorName, colorValues]) => (
                         <button
                           key={colorName}

@@ -66,8 +66,6 @@ function Leaderboard() {
           // Extract counts — each API may return array or { data: [] } or { total: n }
           const getCount = (result) => {
             if (result.status !== "fulfilled") return 0;
-            // We need to parse JSON — but allSettled gives us the Response object
-            // So we parse it below asynchronously
             return result.value;
           };
 
@@ -77,7 +75,6 @@ function Leaderboard() {
               const res = settledResult.value;
               if (!res.ok) return 0;
               const json = await res.json();
-              // Support: array, { data: [] }, { total: n }, { count: n }, { journals: [] }, { goals: [] }, { dreams: [] }
               if (Array.isArray(json)) return json.length;
               if (typeof json.total === "number") return json.total;
               if (typeof json.count === "number") return json.count;
@@ -150,9 +147,11 @@ function Leaderboard() {
   }, [activeTab]);
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa]   font-sans flex flex-col items-center w-full">
-      {/* Header */}
-      <div className="flex flex-col items-center justify-center mb-8 mt-2 w-full">
+    // Removed `items-center` and added `w-full` explicitly to make it stretch edge-to-edge
+    <div className="w-full min-h-screen bg-[#f8f9fa] font-sans flex flex-col">
+      
+      {/* Header - Keeps content centered visually but spans full width */}
+      <div className="w-full flex flex-col items-center justify-center mb-8 mt-2">
         <div className="flex items-center gap-3">
           <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"
             fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
@@ -170,7 +169,7 @@ function Leaderboard() {
       </div>
 
       {/* Tabs */}
-      <div className="flex bg-[#f1f5f9] p-1 rounded-lg w-full max-w-4xl mb-6 shadow-sm">
+      <div className="flex bg-[#f1f5f9] p-1 rounded-lg w-full mb-6 shadow-sm">
         {tabs.map((tab) => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`flex-1 py-2.5 text-[15px] font-medium rounded-md transition-all duration-200 outline-none ${
@@ -185,39 +184,39 @@ function Leaderboard() {
 
       {/* Error */}
       {error && (
-        <div className="w-full max-w-4xl bg-red-50 text-red-600 p-4 rounded-md mb-4 text-center">
+        <div className="w-full bg-red-50 text-red-600 p-4 rounded-md mb-4 text-center">
           Oops! {error}
         </div>
       )}
 
       {/* Loading */}
       {isLoading && !error && (
-        <div className="flex justify-center items-center py-10">
+        <div className="flex justify-center items-center w-full py-10">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
         </div>
       )}
 
       {/* Content */}
       {!isLoading && !error && (
-        <div className="w-full max-w-4xl">
+        <div className="w-full flex-1">
           {activeTab === "Rankings" && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 flex flex-col gap-8">
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 flex flex-col gap-8 w-full">
               {rankingsData.myStats && <Rankings mockMyStats={rankingsData.myStats} />}
               {rankingsData.leaderboard.length > 0 ? (
                 <RankingsList leaderboardData={rankingsData.leaderboard} loading={isLoading} />
               ) : (
-                <p className="text-center text-gray-500 py-4">No ranking data available.</p>
+                <p className="text-center text-gray-500 py-4 w-full">No ranking data available.</p>
               )}
               <PointsCalculation />
             </div>
           )}
           {activeTab === "Today" && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 w-full">
               <DailyJournalSubmissions data={todayData} />
             </div>
           )}
           {activeTab === "Yesterday" && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 rounded-xl text-center">
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 rounded-xl text-center w-full">
               <YesterdaySubmissions data={yesterdayData} />
             </div>
           )}

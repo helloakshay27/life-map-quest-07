@@ -2,7 +2,7 @@ import React from "react";
 
 export default function PointsCalculation() {
   return (
-    <div className="w-full max-w-4xl mx-auto bg-white border border-gray-200 rounded-xl p-5 shadow-sm font-sans mt-4">
+    <div className="w-full  mx-auto bg-white border border-gray-200 rounded-xl p-5 shadow-sm font-sans mt-4">
       {/* Title */}
       <h3 className="text-[17px] font-semibold text-[#1e293b] mb-4">
         How Points are Calculated

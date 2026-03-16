@@ -304,7 +304,7 @@ export default function MyProfileModal({ setIsProfileModalOpen }: MyProfileModal
                 <button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="px-5 py-2.5 bg-[#3bc2a2] text-white font-medium rounded-lg hover:bg-[#32a88c] transition-colors shadow-sm disabled:opacity-60 flex items-center gap-2"
+                  className="px-5 py-2.5 bg-red-500 text-white font-medium rounded-lg hover:bg-red-600 transition-colors shadow-sm disabled:opacity-60 flex items-center gap-2"
                 >
                   {isSaving ? (
                     <>

@@ -51,7 +51,7 @@ export default function DailyJournalSubmissions({
   // ---- Dost ka Loading skeleton ----
   if (loading) {
     return (
-      <div className="w-full max-w-4xl mx-auto bg-[#f2fcf5] border border-[#bbf7d0] rounded-xl p-5 md:p-6 font-sans animate-pulse">
+      <div className="w-full  mx-auto bg-[#f2fcf5] border border-[#bbf7d0] rounded-xl p-5 md:p-6 font-sans animate-pulse">
         <div className="flex items-center gap-2 mb-4">
           <div className="w-6 h-6 rounded-full bg-green-200" />
           <div className="h-4 bg-green-200 rounded w-64" />
@@ -76,7 +76,7 @@ export default function DailyJournalSubmissions({
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto bg-[#f2fcf5] border border-[#bbf7d0] rounded-xl p-5 md:p-6 font-sans text-left">
+    <div className="w-full  mx-auto bg-[#f2fcf5] border border-[#bbf7d0] rounded-xl p-5 md:p-6 font-sans text-left">
       {/* --- Header Section --- */}
       <div className="flex items-center gap-2 mb-4">
         <svg

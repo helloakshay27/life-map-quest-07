@@ -11,7 +11,9 @@ import {
   Mail,
   Edit2,
   Trash2,
+  ArrowLeft,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import MyProfileModal from "@/components/MyProfileModal";
 import AddPersonModal from "@/components/AddPersonModal";
 
@@ -31,6 +33,7 @@ interface Person {
 }
 
 const People = () => {
+  const navigate = useNavigate();
   const [people, setPeople] = useState<Person[]>([]);
   const [isPeopleLoading, setIsPeopleLoading] = useState(true);
   const [peopleError, setPeopleError] = useState<string | null>(null);
@@ -44,9 +47,18 @@ const People = () => {
   const [personToEdit, setPersonToEdit] = useState<Person | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
+  // Toast State
+  const [customToast, setCustomToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
   const [relationshipFilter, setRelationshipFilter] =
     useState("All Relationships");
   const [priorityFilter, setPriorityFilter] = useState("All Priorities");
+
+  // Helper for Custom Toast
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setCustomToast({ message, type });
+    setTimeout(() => setCustomToast(null), 3000);
+  };
 
   const fetchPeople = async () => {
     try {
@@ -89,13 +101,8 @@ const People = () => {
   ) => {
     e.preventDefault();
     e.stopPropagation();
-    if (
-      !window.confirm(
-        `Are you sure you want to delete ${name}? This action cannot be undone.`,
-      )
-    )
-      return;
-
+    
+    // window.confirm hataya gaya hai, seedha delete API call hoga
     try {
       setDeletingId(id);
       const token = localStorage.getItem("auth_token");
@@ -104,10 +111,12 @@ const People = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error(`Failed to delete (${res.status})`);
-      alert(`${name} deleted successfully.`);
+      
+      // alert hatakar toast lagaya gaya hai
+      showToast(`${name} deleted successfully.`, "success");
       fetchPeople();
     } catch (err: unknown) {
-      alert("Failed to delete person. Check console.");
+      showToast("Failed to delete person.", "error");
       console.error("Delete people error:", err);
     } finally {
       setDeletingId(null);
@@ -180,19 +189,35 @@ const People = () => {
           setIsAddPersonModalOpen(false);
           setPersonToEdit(null);
         }}
-        onSuccess={fetchPeople}
+        onSuccess={() => {
+          fetchPeople();
+          // Modal se save hone par bhi wahi toast show karega
+          showToast(personToEdit ? "Person Updated" : "Person Added", "success");
+        }}
         initialData={personToEdit as any}
       />
 
       <div className="relative w-full animate-fade-in space-y-8">
         {/* HEADER */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">People</h1>
-            <p className="text-sm text-muted-foreground">
-              Nurture your meaningful relationships
-            </p>
+          <div className="flex items-center gap-4">
+            {/* Show Back Button only when people data exists */}
+            {people.length > 0 && (
+              <button 
+                onClick={() => navigate(-1)} 
+                className="w-[42px] h-[42px] rounded-full bg-white border border-gray-200 flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors shrink-0"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-700" />
+              </button>
+            )}
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">People</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Nurture your meaningful relationships
+              </p>
+            </div>
           </div>
+
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsProfileModalOpen(true)}
@@ -216,29 +241,48 @@ const People = () => {
 
         {/* SUMMARY CARDS */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm border border-gray-100 min-h-[140px] justify-between">
-            <div className="flex items-center gap-2 mb-2">
-              <Calendar className="h-5 w-5 text-purple-600" />
-              <h3 className="text-lg font-bold text-foreground">
-                Upcoming Dates
-              </h3>
+          
+          {/* Card 1: Upcoming Dates (CONDITIONAL DESIGN) */}
+          {people.length > 0 ? (
+            <div className="flex flex-col rounded-[16px] border border-[#F48FB1] bg-[#FFF0F5]/50 px-5 pt-5 pb-6 font-sans shadow-sm min-h-[140px] justify-between transition-all hover:shadow-md">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-[32px] h-[32px] rounded-lg bg-[#F06292] flex items-center justify-center shadow-sm">
+                    <Calendar className="w-4 h-4 text-white" strokeWidth={2.5} />
+                  </div>
+                  <span className="font-bold text-[#0F172A] text-[15px]">Upcoming Dates</span>
+                </div>
+                <button className="text-[13px] font-medium text-[#1E293B] hover:text-[#0F172A] transition-colors">
+                  View All
+                </button>
+              </div>
+              <div className="text-center mt-auto mb-auto">
+                {peopleWithBirthdays.length > 0 ? (
+                  <p className="text-[14px] text-[#64748B]">
+                    <span className="font-bold text-[#F06292]">{peopleWithBirthdays.length}</span> upcoming dates in the next 30 days
+                  </p>
+                ) : (
+                  <p className="text-[14px] text-[#64748B]">No upcoming dates in the next 30 days</p>
+                )}
+              </div>
             </div>
-            <div>
-              {peopleWithBirthdays.length > 0 ? (
-                <p className="text-2xl font-extrabold text-purple-700">
-                  {peopleWithBirthdays.length}{" "}
-                  <span className="text-sm font-medium text-gray-500">
-                    Birthdays Recorded
-                  </span>
-                </p>
-              ) : (
+          ) : (
+            <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm border border-gray-100 min-h-[140px] justify-between">
+              <div className="flex items-center gap-2 mb-2">
+                <Calendar className="h-5 w-5 text-purple-600" />
+                <h3 className="text-lg font-bold text-foreground">
+                  Upcoming Dates
+                </h3>
+              </div>
+              <div>
                 <p className="text-sm text-muted-foreground italic">
                   No upcoming dates found in records.
                 </p>
-              )}
+              </div>
             </div>
-          </div>
+          )}
 
+          {/* Card 2: Reach Out To (ALWAYS DEFAULT DESIGN) */}
           <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm border border-gray-100 min-h-[140px] justify-between">
             <div className="flex items-center gap-2 mb-2">
               <MessageSquare className="h-5 w-5 text-orange-500" />
@@ -262,6 +306,7 @@ const People = () => {
             </div>
           </div>
 
+          {/* Card 3: Avg Health (ALWAYS DEFAULT DESIGN) */}
           <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm border border-gray-100 min-h-[140px] justify-between">
             <div className="flex items-center gap-2 mb-2">
               <Heart className="h-5 w-5 text-emerald-600" />
@@ -623,6 +668,24 @@ const People = () => {
           )}
         </div>
       </div>
+      
+      {/* Custom Toast (Bottom Right) */}
+      {customToast && (
+        <div className="fixed bottom-6 right-6 z-[100] animate-in slide-in-from-bottom-5 fade-in duration-300">
+          <div className={`flex items-center gap-2.5 px-5 py-4 rounded-xl shadow-lg ${customToast.type === 'success' ? 'bg-[#b81857]' : 'bg-red-600'}`}>
+            <span className="text-white text-[15.5px] font-bold tracking-wide">
+              {customToast.message}
+            </span>
+            {customToast.type === "success" && (
+              <div className="w-[18px] h-[18px] bg-[#34d399] rounded-[4px] flex items-center justify-center shadow-sm">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 };

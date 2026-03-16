@@ -57,7 +57,7 @@ export default function YesterdaySubmissions({
   // ---- Dost ka Loading skeleton ----
   if (loading) {
     return (
-      <div className="w-full max-w-4xl mx-auto bg-[#f4f7ff] border border-[#d1ddf7] rounded-2xl p-5 md:p-4 font-sans animate-pulse">
+      <div className="w-full  mx-auto bg-[#f4f7ff] border border-[#d1ddf7] rounded-2xl p-5 md:p-4 font-sans animate-pulse">
         <div className="flex items-center gap-2.5 mb-4">
           <div className="w-6 h-6 rounded-full bg-blue-200" />
           <div className="h-4 bg-blue-200 rounded w-72" />
@@ -85,7 +85,7 @@ export default function YesterdaySubmissions({
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto bg-[#f4f7ff] border border-[#d1ddf7] rounded-2xl p-5 md:p-4 font-sans text-left">
+    <div className="w-full  mx-auto bg-[#f4f7ff] border border-[#d1ddf7] rounded-2xl p-5 md:p-4 font-sans text-left">
       {/* --- 1. Header Section --- */}
       <div className="flex items-center gap-2.5 mb-4">
         {/* Blue Calendar Icon */}

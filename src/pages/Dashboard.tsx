@@ -1479,11 +1479,7 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
                   This Week's Strategic Focus
                 </h3>
               </div>
-              <Link to="/weekly-reflection">
-                  <Button variant="outline" size="sm" className="h-[30px] text-[11px] font-bold text-red-700 bg-white border-red-200 rounded-full px-4" asChild>
-                    <span>View All</span>
-                  </Button>
-              </Link>
+              
             </div>
 
             {/* Note: I'm keeping the logic here empty state until the specific API implementation is complete as discussed previously, it acts as a placeholder based on your empty layout request. Let me know if you need to fetch list. */}

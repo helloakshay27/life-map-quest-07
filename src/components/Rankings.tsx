@@ -111,7 +111,7 @@ const StatIcon = ({ name, color }) => {
 
 const Rankings = ({ mockMyStats }) => {
   return (
-    <div className="w-full max-w-4xl border-[1.5px] border-red-500 bg-[#fff9f8] rounded-2xl p-4 md:p-6 shadow-sm mx-auto font-sans">
+    <div className="w-full  border-[1.5px] border-red-500 bg-[#fff9f8] rounded-2xl p-4 md:p-6 shadow-sm mx-auto font-sans">
       {/* --- Top Header Section --- */}
       <div className="flex justify-between items-center mb-6 px-2">
         <div className="flex items-center gap-4">

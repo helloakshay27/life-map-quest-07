@@ -149,6 +149,53 @@ const progressToStatus = (progress: string) =>
 // ── CHILD COMPONENTS ──────────────────────────────────────────────────────────
 // ==============================================================================
 
+// ── Daily Fortune Modal (NEW) ─────────────────────────────────────────────────
+const DailyFortuneModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+  if (!isOpen) return null;
+
+  // You can randomize fortunes here later
+  const fortune = "The universe whispers: Your patience is transforming into wisdom. Continue to trust the journey you're on.";
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4 backdrop-blur-[2px]">
+      <div className="bg-[#FFFCF5] rounded-[24px] shadow-2xl w-full max-w-[420px] p-8 relative animate-in fade-in zoom-in-95 duration-300">
+        <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700">
+          <X className="w-5 h-5" />
+        </button>
+
+        <div className="flex flex-col items-center text-center mt-2">
+          {/* Top Sparkle Icon */}
+          <div className="w-[64px] h-[64px] bg-gradient-to-b from-orange-400 to-[#EA580C] rounded-full flex items-center justify-center shadow-lg mb-5 border-4 border-white">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z" fill="white" />
+              <path d="M19 2L19.8 5.2L23 6L19.8 6.8L19 10L18.2 6.8L15 6L18.2 5.2L19 2Z" fill="white" />
+            </svg>
+          </div>
+
+          <h2 className="text-[22px] font-extrabold text-[#78350F] mb-1 flex items-center justify-center gap-2">
+            <span className="text-2xl">🥠</span> Your Daily Fortune
+          </h2>
+          <p className="text-[14px] text-[#D97706] font-medium mb-6">A special message just for you</p>
+
+          <div className="bg-white border-[1.5px] border-[#FCD34D] rounded-xl p-6 mb-7 shadow-sm w-full relative">
+            <p className="text-[#334155] italic font-medium leading-relaxed text-[15px]">
+              "{fortune}"
+            </p>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="px-8 py-3.5 bg-[#EA580C] hover:bg-[#C2410C] text-white text-[15px] font-bold rounded-full shadow-md transition-all active:scale-95 w-3/4"
+          >
+            Continue Your Journey
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 // ── Dailystrip ────────────────────────────────────────────────────────────────
 const DAY_LABELS_STRIP = ["SU", "M", "TU", "W", "TH", "F", "SA"];
 
@@ -215,7 +262,6 @@ function Dailystrip({
   );
 
   const getDayStatus = (day: Date) => {
-    if (isSameDayStrip(day, selectedDateExternal)) return "selected";
     if (day > today) return "upcoming";
     const key = day.toISOString().split("T")[0];
     if (filledSet.has(key)) return "filled";
@@ -255,7 +301,7 @@ function Dailystrip({
           <div className="flex gap-1.5 w-full justify-between">
             {weekDays.map((day, i) => {
               const status = getDayStatus(day);
-              const isSelected = status === "selected";
+              const isSelected = isSameDayStrip(day, selectedDateExternal);
               const isMissed = status === "missed";
               const isFilled = status === "filled";
               const isUpcoming = status === "upcoming";
@@ -267,21 +313,21 @@ function Dailystrip({
                   onClick={() => onSelectDate(day)}
                   className={`
                     flex flex-col items-center justify-center rounded-xl
-                    flex-1 py-2.5 min-h-[64px] gap-0.5 transition-all relative
-                    ${isSelected && !isUpcoming ? "bg-green-500 text-white border-2 border-orange-400" : ""}
-                    ${isSelected && isUpcoming ? "bg-white text-gray-800 border-2 border-orange-400 shadow-sm" : ""}
-                    ${!isSelected && isMissed ? "bg-red-400 text-white" : ""}
-                    ${!isSelected && isFilled ? "bg-green-500 text-white" : ""}
-                    ${!isSelected && isUpcoming ? "bg-gray-100 text-gray-500 border border-gray-200 hover:border-orange-300" : ""}
+                    flex-1 py-2.5 min-h-[64px] gap-0.5 transition-all duration-200 ease-in-out relative
+                    ${isSelected ? "border-2 border-orange-400 scale-110 z-10 shadow-md" : "border border-transparent scale-100"}
+                    ${isFilled ? "bg-green-500 text-white" : ""}
+                    ${isMissed ? "bg-red-400 text-white" : ""}
+                    ${isUpcoming ? "bg-gray-100 text-gray-500 hover:border-orange-300" : ""}
+                    ${isSelected && isUpcoming ? "bg-white text-gray-800" : ""}
                   `}
                 >
                   <span className="text-[10px] font-bold opacity-80 leading-none">{DAY_LABELS_STRIP[day.getDay()]}</span>
                   <span className="text-base font-bold leading-tight">{day.getDate()}</span>
-                  {isMissed && !isSelected && (
+                  {isMissed && (
                     <span className="text-[9px] font-bold bg-red-600 text-white rounded px-1 leading-tight mt-0.5">-10</span>
                   )}
-                  {(isSelected || isFilled) && !isUpcoming && (
-                    <span className="text-[9px] font-bold bg-green-600 text-white rounded px-1 leading-tight mt-0.5">✓</span>
+                  {isFilled && (
+                    <span className="text-[9px] font-bold bg-green-600 text-white rounded px-1 leading-tight mt-0.5">+10</span>
                   )}
                 </button>
               );
@@ -1196,8 +1242,19 @@ const BucketListProgress = () => {
                 </div>
               ))
             ) : (
-              <div className="bg-white rounded-xl border p-6 text-center">
-                <p className="text-sm text-gray-400">No items match your filters.</p>
+              <div className="flex flex-col items-center justify-center py-10 mt-2">
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-3">
+                  <path d="m12 3-1.9 5.8a2 2 0 0 1-1.275 1.275L3 12l5.8 1.9a2 2 0 0 1 1.275 1.275L12 21l1.9-5.8a2 2 0 0 1 1.275-1.275L21 12l-5.8-1.9a2 2 0 0 1-1.275-1.275L12 3Z"/>
+                  <path d="M19 8v1"/><path d="M18.5 8.5h1"/>
+                  <path d="M6 18v1"/><path d="M5.5 18.5h1"/>
+                </svg>
+                <p className="text-[15px] font-medium text-[#64748B] mb-4">No bucket list items matching filters</p>
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="bg-white border border-[#E2E8F0] text-[#1E293B] font-semibold text-[14px] px-5 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
+                >
+                  Create Your First Dream
+                </button>
               </div>
             )}
           </div>
@@ -1624,6 +1681,7 @@ const DailyJournal = () => {
   const [journalId, setJournalId] = useState<number | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isLoadingDaily, setIsLoadingDaily] = useState(false);
+  const [showFortuneModal, setShowFortuneModal] = useState(false);
 
   // Form state
   const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
@@ -1843,6 +1901,22 @@ const DailyJournal = () => {
 
   // ── Save / Update journal entry ──
   const handleSaveEntry = async () => {
+    // 1. Check if the selected date is in the future
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize to midnight for accurate comparison
+    
+    const entryDate = new Date(selectedDate);
+    entryDate.setHours(0, 0, 0, 0);
+
+    if (entryDate > today) {
+      return toast({ 
+        title: "Cannot Create Future Entry", 
+        description: "You can only create journal entries for today or past dates.", 
+        variant: "destructive" 
+      });
+    }
+
+    // 2. Check if entry already exists and we are not in edit mode
     if (journalId && !isEditMode)
       return toast({ title: "Entry Already Exists ⚠️", description: "Use the Past tab to update it.", variant: "destructive" });
 
@@ -1889,6 +1963,12 @@ const DailyJournal = () => {
 
       setIsEditMode(false);
       toast({ title: isUpdate ? "Journal Updated ✅" : "Journal Entry Saved ✅" });
+
+      // SHOW FORTUNE MODAL IF IT'S A NEW ENTRY
+      if (!isUpdate) {
+        setShowFortuneModal(true);
+      }
+
       await fetchPastJournals();
     } catch {
       toast({ title: "Error saving entry", variant: "destructive" });
@@ -1968,6 +2048,7 @@ const DailyJournal = () => {
 
   return (
     <div className="min-h-screen animate-fade-in font-sans py-4 relative">
+      <DailyFortuneModal isOpen={showFortuneModal} onClose={() => setShowFortuneModal(false)} />
       <div className="w-full mx-auto">
 
         {/* Header */}
@@ -2050,7 +2131,6 @@ const DailyJournal = () => {
                 <DailyAffirmation affirmation={affirmation} setAffirmation={setAffirmation} />
                 <ReviewGoals />
                 <BucketListProgress />
-
                 <PeopleUpcomingDates token={token} />
               </div>
             )}
