@@ -685,9 +685,10 @@ const GoalsHabits = () => {
 
   // Only show footer for affirmations and habits when there are no items
   const shouldShowFooter = () => {
+    if (activeTab === "goals") return goals.length === 0;
     if (activeTab === "affirmations") return affirmations.length === 0;
     if (activeTab === "habits") return habits.length === 0;
-    return true; // Always show for goals and beliefs
+    return true; // Always show for beliefs
   };
 
   // ─── RENDER ───────────────────────────────────────────────────────────────

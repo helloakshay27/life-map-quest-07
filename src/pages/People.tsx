@@ -259,7 +259,7 @@ const People = () => {
               <div className="text-center mt-auto mb-auto">
                 {peopleWithBirthdays.length > 0 ? (
                   <p className="text-[14px] text-[#64748B]">
-                    <span className="font-bold text-[#F06292]">{peopleWithBirthdays.length}</span> upcoming dates in the next 30 days
+                    <span className="font-bold text-[#F06292]"></span> upcoming dates in the next 30 days
                   </p>
                 ) : (
                   <p className="text-[14px] text-[#64748B]">No upcoming dates in the next 30 days</p>
