@@ -130,10 +130,10 @@ function ReviewToDos() {
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <h2 className="text-[17px] font-bold text-gray-900">Review To Do's & Goals</h2>
+                <h2 className="text-[17px] font-bold text-gray-900">Review To Do's</h2>
                 <Info className="w-4 h-4 text-indigo-400 cursor-help" />
               </div>
-              <p className="text-[13px] text-gray-500 mt-0.5">Manage your tasks and track goal progress</p>
+              <p className="text-[13px] text-gray-500 mt-0.5">Manage your tasks for the week</p>
             </div>
           </div>
           <button

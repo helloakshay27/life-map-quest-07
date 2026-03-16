@@ -58,10 +58,22 @@ export const defaultFocusData: FocusData = {
 interface FocusAndBoundariesProps {
   data: FocusData;
   setData: React.Dispatch<React.SetStateAction<FocusData>>;
+  apiGoals?: {
+    id: string | number;
+    title: string;
+    category?: string;
+    area?: string;
+    progress?: number;
+    status?: string;
+    completed?: boolean;
+  }[];
 }
 
-function FocusAndBoundaries({ data, setData }: FocusAndBoundariesProps) {
+function FocusAndBoundaries({ data, setData, apiGoals = [] }: FocusAndBoundariesProps) {
   const navigate = useNavigate();
+  
+  // Use apiGoals if provided, otherwise fallback to data.goals
+  const displayGoals = apiGoals.length > 0 ? apiGoals : data.goals;
 
   const toggleGoal = (goalId: number) => {
     setData((prev) => ({
@@ -173,7 +185,7 @@ function FocusAndBoundaries({ data, setData }: FocusAndBoundariesProps) {
             </button>
           </div>
 
-          {data.goals.length === 0 ? (
+          {displayGoals.length === 0 ? (
             <div className="bg-white/80 border border-violet-100 rounded-xl min-h-[190px] flex flex-col items-center justify-center text-center p-6">
               <CircleDot className="w-14 h-14 text-gray-300 mb-3" strokeWidth={1.5} />
               <p className="text-[30px] text-gray-500 mb-3">No goals yet. Create your first goal!</p>
@@ -190,24 +202,24 @@ function FocusAndBoundaries({ data, setData }: FocusAndBoundariesProps) {
             </div>
           ) : (
             <div className="bg-white rounded-xl p-5 border border-violet-100 shadow-sm space-y-4">
-              {data.goals.map((goal) => (
+              {displayGoals.map((goal) => (
                 <div key={goal.id} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => toggleGoal(goal.id)}
                         className={`flex items-center justify-center w-5 h-5 rounded-full border transition-colors ${
-                          goal.completed
+                          goal.completed || goal.status === 'completed'
                             ? "bg-black border-black text-white"
                             : "bg-white border-gray-300 hover:border-gray-400"
                         }`}
                       >
-                        {goal.completed && <Check strokeWidth={3} className="w-3 h-3" />}
+                        {(goal.completed || goal.status === 'completed') && <Check strokeWidth={3} className="w-3 h-3" />}
                       </button>
                       <span className="text-[16px] font-medium text-gray-900">{goal.title}</span>
                     </div>
                     <span className="text-[12px] font-bold text-violet-900 bg-violet-50 px-2.5 py-1 rounded-md">
-                      {goal.category}
+                      {goal.category || goal.area || 'Other'}
                     </span>
                   </div>
 

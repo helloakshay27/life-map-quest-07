@@ -1,17 +1,21 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import {
   HelpCircle,
   Loader2,
   Lightbulb,
   Trash2,
   CalendarIcon,
-  Pencil,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { apiRequest } from "@/config/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
@@ -24,249 +28,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import WeeklyReflection, { Win } from "@/components/WeeklyReflection";
 import MissionHabitsConnection from "@/components/MissionHabitsConnection";
-import WeeklyPlanComponent, {
-  generateEmptyWeekData,
-} from "@/components/WeeklyPlanComponent";
-import FocusAndBoundaries, {
-  FocusData,
-  defaultFocusData,
-} from "@/components/FocusAndBoundaries";
+import WeeklyPlanComponent, { generateEmptyWeekData } from "@/components/WeeklyPlanComponent";
+import FocusAndBoundaries, { FocusData, defaultFocusData } from "@/components/FocusAndBoundaries";
 import ReviewToDos from "@/components/ReviewToDos";
 import BucketListProgress from "@/components/BucketListProgress";
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface PastWeeklyJournal {
-  id: number;
-  journal_type: string;
-  start_date: string;
-  formatted_date?: string;
-  energy_score: number | null;
-  alignment_score: number | null;
-  affirmation: string | null;
-  priorities: string[] | null;
-  gratitude_note?: string | null;
-  data?: {
-    key_insight?: string;
-    weekly_story?: string;
-    mission_connection?: string;
-    biggest_challenge?: string;
-    challenge_cause?: string;
-    life_balance_rating?: number;
-    weekly_plan?: Record<string, unknown>;
-    focus_and_boundaries?: Record<string, unknown>;
-    wins?: {
-      day: string;
-      category: string;
-      description: string;
-      completed: boolean;
-    }[];
-  };
-}
-
-// ── Expandable Past Journal Row (mirrors DailyJournal PastJournalRow) ─────────
-
-const PastWeeklyJournalRow = ({
-  journal,
-  onDelete,
-  onEdit,
-}: {
-  journal: PastWeeklyJournal;
-  onDelete: (id: number) => void;
-  onEdit: (journal: PastWeeklyJournal) => void;
-}) => {
-  const [expanded, setExpanded] = useState(false);
-  const { toast } = useToast();
-
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (
-      !window.confirm(
-        "Are you sure you want to delete this weekly journal entry?",
-      )
-    )
-      return;
-    try {
-      const res = await apiRequest(`/user_journals/${journal.id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error();
-      toast({
-        title: "Deleted",
-        description: "Weekly journal entry removed successfully.",
-      });
-      onDelete(journal.id);
-    } catch {
-      toast({
-        title: "Error",
-        description: "Could not delete journal entry.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const dateLabel =
-    journal.formatted_date ||
-    format(new Date(journal.start_date), "MMMM d, yyyy");
-
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      {/* Row header */}
-      <div className="flex items-center gap-3 px-5 py-4">
-        <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
-          <CalendarIcon className="w-4 h-4 text-red-400" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-gray-900 truncate text-sm">
-            {dateLabel}
-          </p>
-          {journal.start_date && (
-            <p className="text-xs text-gray-400 mt-0.5">
-              Week of {format(new Date(journal.start_date), "MMM d")} –{" "}
-              {format(
-                endOfWeek(new Date(journal.start_date), { weekStartsOn: 0 }),
-                "MMM d, yyyy",
-              )}
-            </p>
-          )}
-        </div>
-        {journal.alignment_score !== null && (
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100 whitespace-nowrap">
-            Align {journal.alignment_score}/10
-          </span>
-        )}
-        {journal.data?.life_balance_rating && (
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-50 text-purple-600 border border-purple-100 whitespace-nowrap">
-            Balance {journal.data.life_balance_rating}/5
-          </span>
-        )}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit(journal);
-          }}
-          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold border border-blue-100 transition-colors"
-        >
-          <Pencil className="w-3 h-3" /> Update
-        </button>
-        <button
-          onClick={handleDelete}
-          className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-        <button
-          onClick={() => setExpanded((p) => !p)}
-          className="p-1.5 text-gray-400 hover:text-gray-700 transition-colors"
-        >
-          {expanded ? (
-            <ChevronUp className="w-4 h-4" />
-          ) : (
-            <ChevronDown className="w-4 h-4" />
-          )}
-        </button>
-      </div>
-
-      {/* Expandable detail */}
-      {expanded && (
-        <div className="px-5 pb-5 flex flex-col gap-3 border-t border-gray-50 pt-3">
-          {journal.gratitude_note && (
-            <div className="rounded-xl bg-yellow-50 border border-yellow-100 px-4 py-3">
-              <p className="text-xs font-bold text-yellow-700 mb-1">
-                Gratitude
-              </p>
-              <p className="text-sm text-yellow-800 italic">
-                "{journal.gratitude_note}"
-              </p>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {journal.data?.biggest_challenge && (
-              <div className="rounded-xl bg-indigo-50 border border-indigo-100 px-4 py-3">
-                <p className="text-xs font-bold text-indigo-700 mb-1">
-                  Biggest Challenge
-                </p>
-                <p className="text-sm text-indigo-800">
-                  {journal.data.biggest_challenge}
-                </p>
-                {journal.data?.challenge_cause && (
-                  <p className="text-xs text-indigo-600 mt-1.5 border-t border-indigo-100 pt-1.5">
-                    Cause: {journal.data.challenge_cause}
-                  </p>
-                )}
-              </div>
-            )}
-            {journal.data?.key_insight && (
-              <div className="rounded-xl bg-pink-50 border border-pink-100 px-4 py-3">
-                <p className="text-xs font-bold text-pink-700 mb-1">
-                  Key Insight
-                </p>
-                <p className="text-sm text-pink-800">
-                  {journal.data.key_insight}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {journal.data?.weekly_story && (
-            <div className="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3">
-              <p className="text-xs font-bold text-gray-600 mb-1">
-                Weekly Story
-              </p>
-              <p className="text-sm text-gray-700">
-                {journal.data.weekly_story}
-              </p>
-            </div>
-          )}
-
-          {journal.data?.mission_connection && (
-            <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3">
-              <p className="text-xs font-bold text-emerald-700 mb-1">
-                Mission Connection
-              </p>
-              <p className="text-sm text-emerald-800">
-                {journal.data.mission_connection}
-              </p>
-            </div>
-          )}
-
-          {journal.data?.wins && journal.data.wins.length > 0 && (
-            <div className="rounded-xl bg-green-50 border border-green-100 px-4 py-3">
-              <p className="text-xs font-bold text-green-700 mb-2">
-                Weekly Wins
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {journal.data.wins.map((win, i) => (
-                  <div
-                    key={i}
-                    className="flex gap-3 p-2.5 border border-green-100 rounded-lg bg-white shadow-sm"
-                  >
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-800">
-                        {win.description}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {win.day} • {win.category}
-                      </p>
-                    </div>
-                    {win.completed && (
-                      <span className="text-green-500 text-lg flex-shrink-0">
-                        ✅
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ── Main Component ─────────────────────────────────────────────────────────────
 
 const WeeklyJournal = () => {
   const navigate = useNavigate();
@@ -276,8 +41,6 @@ const WeeklyJournal = () => {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [journalId, setJournalId] = useState<number | null>(null);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [isLoadingDaily, setIsLoadingDaily] = useState(false);
 
   // States lifted from WeeklyReflection
   const [challenge, setChallenge] = useState("");
@@ -291,7 +54,7 @@ const WeeklyJournal = () => {
   const [coreValue, setCoreValue] = useState("");
   const [missionText, setMissionText] = useState("");
   const [habitsText, setHabitsText] = useState("");
-
+  
   // States lifted from WeeklyPlanComponent
   const [weeklyPlanData, setWeeklyPlanData] = useState(generateEmptyWeekData());
 
@@ -311,100 +74,171 @@ const WeeklyJournal = () => {
     [key: string]: unknown;
   } | null>(null);
 
+  interface PastWeeklyJournal {
+    id: number;
+    journal_type: string;
+    start_date: string;
+    formatted_date?: string;
+    energy_score: number | null;
+    alignment_score: number | null;
+    affirmation: string | null;
+    priorities: string[] | null;
+    gratitude_note?: string | null;
+    data?: {
+      key_insight?: string;
+      weekly_story?: string;
+      mission_connection?: string;
+      biggest_challenge?: string;
+      challenge_cause?: string;
+      life_balance_rating?: number;
+      weekly_plan?: Record<string, unknown>;
+      focus_and_boundaries?: Record<string, unknown>;
+      wins?: {
+        day: string;
+        category: string;
+        description: string;
+        completed: boolean;
+      }[];
+    };
+  }
+
+  interface Goal {
+    id: string;
+    title: string;
+    status: "planning" | "started" | "progress" | "completed";
+    area?: string;
+    progress?: number;
+  }
+
   const [pastJournals, setPastJournals] = useState<PastWeeklyJournal[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [isLoadingPast, setIsLoadingPast] = useState(false);
+  const [isLoadingGoals, setIsLoadingGoals] = useState(false);
   const [calendarDate, setCalendarDate] = useState<Date | undefined>(undefined);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   // === INSIGHTS STATE ===
   const [insights, setInsights] = useState<string[]>([]);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
+  const [selectedPastJournal, setSelectedPastJournal] =
+    useState<PastWeeklyJournal | null>(null);
+  const [isJournalModalOpen, setIsJournalModalOpen] = useState(false);
+  const [isLoadingJournal, setIsLoadingJournal] = useState(false);
 
-  // Derive real filledDates from past journals (like DailyJournal)
-  const filledDates = useMemo(() => {
-    return pastJournals.map((j) => new Date(j.start_date + "T00:00:00"));
-  }, [pastJournals]);
+  const myFilledDates = [
+    new Date(), // Today
+    subDays(new Date(), 2), // 2 days ago
+    subDays(new Date(), 4), // 4 days ago
+  ];
 
-  // ── Standalone fetchPastJournals (mirrors DailyJournal) ──
-  const fetchPastJournals = async () => {
+  // ==========================================
+  // 🚨 FIXED SAVE PLAN LOGIC
+  // ==========================================
+  const handleSavePlan = async () => {
+    setIsSaving(true);
     try {
-      const res = await apiRequest("/user_journals?journal_type=weekly");
-      const data = await res.json();
-      const journals = Array.isArray(data) ? data : [];
-      setPastJournals(journals);
-      return journals;
+      const startDate = format(
+        startOfWeek(currentDate, { weekStartsOn: 0 }),
+        "yyyy-MM-dd",
+      );
+      const endDate = format(
+        endOfWeek(currentDate, { weekStartsOn: 0 }),
+        "yyyy-MM-dd",
+      );
+
+      const payload = {
+        user_journal: {
+          user_id: user?.id ? parseInt(user.id, 10) : 1,
+          journal_type: "weekly",
+          start_date: startDate,
+          end_date: endDate,
+          description: null,
+          gratitude_note: gratitude,
+          alignment_score: balanceRating,
+          data: {
+            weekly_story: habitsText,
+            wins: wins,
+            biggest_challenge: challenge,
+            challenge_cause: challengeCause,
+            key_insight: insight,
+            mission_connection: missionText,
+            life_balance_rating: balanceRating,
+            weekly_plan: weeklyPlanData,
+            focus_and_boundaries: focusData
+          },
+        },
+      };
+
+      const url = journalId ? `/user_journals/${journalId}` : `/user_journals`;
+      const method = journalId ? "PUT" : "POST";
+
+      const res = await apiRequest(url, {
+        method,
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.text();
+        console.error("🚨 Backend error:", errorData);
+        console.error("🚨 Payload sent:", JSON.stringify(payload, null, 2));
+        throw new Error(`Failed to save weekly journal: ${res.status}`);
+      }
+
+      const responseData = await res.json();
+
+      // Capture the id returned by the API for subsequent PUT calls
+      const newId =
+        responseData.journal?.id ??
+        responseData.user_journal?.id ??
+        responseData.id;
+      if (newId) setJournalId(newId);
+
+      toast({
+        title: "Weekly plan saved ✅",
+        description: `Plan for week ${format(currentDate, "MMMM d")} saved successfully.`,
+      });
     } catch (error) {
-      console.error("Failed to fetch past journals", error);
-      return [];
+      console.error("Save weekly journal error:", error);
+      toast({
+        title: "Error saving journal",
+        description: "Please check your connection and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  // ── Fetch past journals on mount (so filledDates are immediately correct) ──
+  // Fetch journal dynamically based on the active currentDate
   useEffect(() => {
-    fetchPastJournals();
-  }, [token]);
-
-  // ── Reset form helper ──
-  const resetForm = () => {
-    setJournalId(null);
-    setIsEditMode(false);
-    setGratitude("");
-    setBalanceRating(3);
-    setChallenge("");
-    setChallengeCause("");
-    setInsight("");
-    setWins([]);
-    setMissionText("");
-    setHabitsText("");
-    setCoreValue("");
-    setWeeklyPlanData(generateEmptyWeekData(currentDate));
-    setFocusData(defaultFocusData);
-  };
-
-  // ── Fetch journal on date change (like DailyJournal's fetchDateData) ──
-  useEffect(() => {
-    if (activeTab !== "new") return;
-
-    let isMounted = true;
-
-    const fetchJournalForDate = async () => {
-      setIsLoadingDaily(true);
-      try {
-        const formattedDate = format(currentDate, "yyyy-MM-dd");
-        const res = await apiRequest(
-          `/user_journals/0?date=${formattedDate}&journal_type=weekly`,
-        );
-
-        if (!isMounted) return;
-
-        if (res.ok) {
-          const data = await res.json();
-
-          if (data && data.id) {
-            setJournalId(data.id);
-            setIsEditMode(false); // existing data loaded — NOT in edit mode by default
-            setGratitude(data.gratitude_note || "");
-            setBalanceRating(
-              data.data?.life_balance_rating ?? data.alignment_score ?? 3,
-            );
-            setChallenge(data.data?.biggest_challenge || "");
-            setChallengeCause(data.data?.challenge_cause || "");
-            setInsight(data.data?.key_insight || "");
-            setWins(data.data?.wins || []);
-            setMissionText(data.data?.mission_connection || "");
-            setHabitsText(data.data?.weekly_story || "");
-            setWeeklyPlanData(
-              data.data?.weekly_plan || generateEmptyWeekData(currentDate),
-            );
-            setFocusData(data.data?.focus_and_boundaries || defaultFocusData);
-            return;
+    if (activeTab === "new") {
+      const fetchJournalForDate = async () => {
+        try {
+          const formattedDate = format(currentDate, "yyyy-MM-dd");
+          const res = await apiRequest(`/user_journals/0?date=${formattedDate}&journal_type=weekly`);
+          
+          if (res.ok) {
+            const data = await res.json();
+            
+            // If data exists, populate the form
+            if (data.id) {
+              setJournalId(data.id);
+              setGratitude(data.gratitude_note || "");
+              setBalanceRating(data.data?.life_balance_rating ?? data.alignment_score ?? 3);
+              setChallenge(data.data?.biggest_challenge || "");
+              setChallengeCause(data.data?.challenge_cause || "");
+              setInsight(data.data?.key_insight || "");
+              setWins(data.data?.wins || []);
+              setMissionText(data.data?.mission_connection || "");
+              setHabitsText(data.data?.weekly_story || "");
+              setWeeklyPlanData(data.data?.weekly_plan || generateEmptyWeekData(currentDate));
+              setFocusData(data.data?.focus_and_boundaries || defaultFocusData);
+              return;
+            }
           }
-        }
-
-        // No journal for this week → blank form
-        if (isMounted) {
+          
+          // If no journal is returned (e.g. 404 or empty response), reset the form for a fresh entry
           setJournalId(null);
-          setIsEditMode(false);
           setGratitude("");
           setBalanceRating(3);
           setChallenge("");
@@ -415,21 +249,16 @@ const WeeklyJournal = () => {
           setHabitsText("");
           setWeeklyPlanData(generateEmptyWeekData(currentDate));
           setFocusData(defaultFocusData);
+          
+        } catch (error) {
+          console.error("Failed to fetch journal for date:", error);
         }
-      } catch (error) {
-        console.error("Failed to fetch journal for date:", error);
-      } finally {
-        if (isMounted) setIsLoadingDaily(false);
-      }
-    };
+      };
 
-    fetchJournalForDate();
-    return () => {
-      isMounted = false;
-    };
+      fetchJournalForDate();
+    }
   }, [currentDate, activeTab, token]);
 
-  // ── Insights ──
   useEffect(() => {
     if (activeTab === "insights") {
       const fetchInsights = async () => {
@@ -460,6 +289,8 @@ const WeeklyJournal = () => {
             } else {
               setInsightsData(data);
             }
+          } else {
+            console.error("Failed to fetch insights");
           }
         } catch (error) {
           console.error("Error fetching insights:", error);
@@ -472,205 +303,182 @@ const WeeklyJournal = () => {
     }
   }, [activeTab, token]);
 
-  // ── Past tab re-fetch on tab switch ──
   useEffect(() => {
     if (activeTab === "past") {
-      setIsLoadingPast(true);
-      fetchPastJournals().finally(() => setIsLoadingPast(false));
+      const fetchPastJournals = async () => {
+        setIsLoadingPast(true);
+        try {
+          const res = await apiRequest("/user_journals?journal_type=weekly");
+          const data = await res.json();
+          setPastJournals(Array.isArray(data) ? data : []);
+        } catch (error) {
+          console.error("Failed to fetch past journals", error);
+        } finally {
+          setIsLoadingPast(false);
+        }
+      };
+      fetchPastJournals();
     }
   }, [activeTab, token]);
 
-  // ── Load past journal into edit mode (like DailyJournal's loadJournalIntoForm) ──
-  const loadJournalIntoForm = (journal: PastWeeklyJournal) => {
-    setActiveTab("new");
-    setCurrentDate(new Date(journal.start_date + "T00:00:00"));
-
-    // A small delay so the date-fetch useEffect fires first, then we override edit mode
-    setTimeout(() => {
-      setIsEditMode(true);
-    }, 600);
-
-    toast({
-      title: "Ready to edit ✏️",
-      description: "Make your changes and click Save.",
-    });
-  };
-
-  // ── Save Plan ──
-  const handleSavePlan = async () => {
-    // 1. Future-date guard
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
-    weekStart.setHours(0, 0, 0, 0);
-
-    if (weekStart > today) {
-      return toast({
-        title: "Cannot Create Future Entry",
-        description:
-          "You can only create weekly journals for the current or past weeks.",
-        variant: "destructive",
-      });
-    }
-
-    // 2. Duplicate-create guard (like DailyJournal)
-    if (journalId && !isEditMode) {
-      return toast({
-        title: "Entry Already Exists ⚠️",
-        description:
-          "Use the Update button in the Past tab to edit this entry.",
-        variant: "destructive",
-      });
-    }
-
-    setIsSaving(true);
-    try {
-      const startDate = format(
-        startOfWeek(currentDate, { weekStartsOn: 0 }),
-        "yyyy-MM-dd",
-      );
-      const endDate = format(
-        endOfWeek(currentDate, { weekStartsOn: 0 }),
-        "yyyy-MM-dd",
-      );
-
-      const payload = {
-        user_journal: {
-          user_id: user?.id ? parseInt(user.id, 10) : 1,
-          journal_type: "weekly",
-          start_date: startDate,
-          end_date: endDate,
-          description: null,
-          gratitude_note: gratitude,
-          alignment_score: balanceRating,
-          data: {
-            weekly_story: habitsText,
-            wins: wins,
-            biggest_challenge: challenge,
-            challenge_cause: challengeCause,
-            key_insight: insight,
-            mission_connection: missionText,
-            life_balance_rating: balanceRating,
-            weekly_plan: weeklyPlanData,
-            focus_and_boundaries: focusData,
-          },
-        },
-      };
-
-      const isUpdate = isEditMode && !!journalId;
-      const url = isUpdate ? `/user_journals/${journalId}` : `/user_journals`;
-      const method = isUpdate ? "PUT" : "POST";
-
-      const res = await apiRequest(url, {
-        method,
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.text();
-        console.error("🚨 Backend error:", errorData);
-        throw new Error(`Failed to save weekly journal: ${res.status}`);
+  useEffect(() => {
+    const fetchGoals = async () => {
+      setIsLoadingGoals(true);
+      try {
+        const res = await apiRequest("/goals");
+        if (res.ok) {
+          const data = await res.json();
+          const raw: any[] = Array.isArray(data)
+            ? data
+            : Array.isArray(data.goals)
+            ? data.goals
+            : Array.isArray(data.data)
+            ? data.data
+            : [];
+          
+          const normalized: Goal[] = raw.map((g) => ({
+            ...g,
+            id: String(g.id),
+            status: (g.status === "in_progress" ? "progress" : g.status) || "planning",
+          }));
+          setGoals(normalized);
+        }
+      } catch (e) {
+        console.error("Error loading goals", e);
+      } finally {
+        setIsLoadingGoals(false);
       }
+    };
+    fetchGoals();
+  }, [token]);
 
-      const responseData = await res.json();
-
-      const newId =
-        responseData.journal?.id ??
-        responseData.user_journal?.id ??
-        responseData.id;
-      if (newId) setJournalId(newId);
-
-      setIsEditMode(false);
-
-      toast({
-        title: isUpdate
-          ? "Weekly Journal Updated ✅"
-          : "Weekly Journal Saved ✅",
-        description: `Plan for week ${format(currentDate, "MMMM d")} saved successfully.`,
-      });
-
-      // Refresh past journals list (like DailyJournal does after save)
-      await fetchPastJournals();
+  const fetchPastJournalById = async (id: number) => {
+    setIsJournalModalOpen(true);
+    setIsLoadingJournal(true);
+    try {
+      const res = await apiRequest(`/user_journals/${id}?journal_type=weekly`);
+      const data = await res.json();
+      setSelectedPastJournal(data);
     } catch (error) {
-      console.error("Save weekly journal error:", error);
+      console.error("Failed to fetch detailed journal", error);
       toast({
-        title: "Error saving journal",
-        description: "Please check your connection and try again.",
+        title: "Error",
+        description: "Could not load journal details.",
         variant: "destructive",
       });
     } finally {
-      setIsSaving(false);
+      setIsLoadingJournal(false);
     }
   };
 
-  const handleDeletePastJournal = (id: number) => {
-    setPastJournals((prev) => prev.filter((j) => j.id !== id));
-    if (journalId === id) {
-      setJournalId(null);
-      setIsEditMode(false);
+  const handleEditPastJournal = () => {
+    if (!selectedPastJournal) return;
+    
+    // Set active tab to 'new' (which is the form)
+    setActiveTab("new");
+    setIsJournalModalOpen(false);
+    
+    // Populate form data
+    setJournalId(selectedPastJournal.id);
+    setCurrentDate(new Date(selectedPastJournal.start_date));
+    
+    // Reflection
+    setGratitude(selectedPastJournal.gratitude_note || "");
+    setBalanceRating(selectedPastJournal.data?.life_balance_rating ?? selectedPastJournal.alignment_score ?? 3);
+    setChallenge(selectedPastJournal.data?.biggest_challenge || "");
+    setChallengeCause(selectedPastJournal.data?.challenge_cause || "");
+    setInsight(selectedPastJournal.data?.key_insight || "");
+    
+    if (selectedPastJournal.data?.wins) {
+      setWins(selectedPastJournal.data.wins);
+    } else {
+      setWins([]);
+    }
+
+    // Mission & Habits
+    setMissionText(selectedPastJournal.data?.mission_connection || "");
+    setHabitsText(selectedPastJournal.data?.weekly_story || "");
+    
+    // Weekly Plan and Focus & Boundaries
+    if (selectedPastJournal.data?.weekly_plan) {
+      setWeeklyPlanData(selectedPastJournal.data.weekly_plan);
+    }
+    if (selectedPastJournal.data?.focus_and_boundaries) {
+      setFocusData(selectedPastJournal.data.focus_and_boundaries);
     }
   };
 
+  const handleDeletePastJournal = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this weekly journal entry?",
+      )
+    )
+      return;
+
+    try {
+      const res = await apiRequest(`/user_journals/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Failed to delete weekly journal");
+
+      toast({
+        title: "Deleted",
+        description: "Weekly journal entry removed successfully.",
+      });
+
+      setPastJournals((prev) => prev.filter((j) => j.id !== id));
+
+      if (journalId === id) {
+        setJournalId(null);
+      }
+    } catch (error) {
+      console.error("Failed to delete journal", error);
+      toast({
+        title: "Error",
+        description: "Could not delete journal entry.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Reset form when clicking "New" tab explicitly
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+    if (value === "new" && journalId !== null) {
+      // Optional: reset to a fresh blank slate when they manually click the 'New' tab
+      // uncomment the lines below if you want "New" to always be explicitly new
+      // setJournalId(null);
+      // setChallenge("");
+      // ... reset others
+    }
   };
 
   return (
     <div className="relative w-full animate-fade-in space-y-6">
-      {/* HEADER */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Weekly Journal</h1>
-          <p className="text-sm text-muted-foreground">
-            Strategic review and planning
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate("/help")}
-            className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 shadow-sm transition-colors hover:bg-red-100"
-            title="Help"
-          >
-            <HelpCircle className="h-4 w-4" />
-            Help?
-          </button>
-        </div>
-      </div>
-
-      {/* Edit Mode Banner (mirrors DailyJournal) */}
-      {isEditMode && activeTab === "new" && (
-        <div className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Pencil className="w-4 h-4 text-blue-500" />
-            <span className="text-sm font-semibold text-blue-700">
-              Editing entry for week of{" "}
-              {format(startOfWeek(currentDate, { weekStartsOn: 0 }), "MMM d")} –{" "}
-              {format(
-                endOfWeek(currentDate, { weekStartsOn: 0 }),
-                "MMM d, yyyy",
-              )}
-            </span>
+        {/* HEADER */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Weekly Journal</h1>
+            <p className="text-sm text-muted-foreground">Strategic review and planning</p>
           </div>
-          <button
-            onClick={() => {
-              setIsEditMode(false);
-              // Re-trigger date fetch to restore original data
-              setCurrentDate(new Date(currentDate));
-            }}
-            className="text-xs text-blue-500 hover:text-blue-700 font-semibold underline"
-          >
-            Cancel Edit
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate("/help")}
+              className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 shadow-sm transition-colors hover:bg-red-100"
+              title="Help"
+            >
+              <HelpCircle className="h-4 w-4" />
+              Help?
+            </button>
+          </div>
         </div>
-      )}
-
       <div className="w-full">
+
         {/* Tabs Area */}
-        <Tabs
-          value={activeTab}
-          onValueChange={handleTabChange}
-          className="w-full"
-        >
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="mb-6 w-full p-1 bg-gray-100 border border-gray-200 rounded-xl h-auto shadow-inner flex">
             <TabsTrigger
               value="new"
@@ -692,7 +500,7 @@ const WeeklyJournal = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* ── NEW TAB ── */}
+          {/* NEW TAB CONTENT */}
           <TabsContent value="new" className="focus:outline-none">
             <div className="flex flex-col w-full gap-6">
               {/* Week Strip */}
@@ -700,84 +508,64 @@ const WeeklyJournal = () => {
                 <WeekStrip
                   selectedDate={currentDate}
                   onDateChange={(newDate) => setCurrentDate(newDate)}
-                  filledDates={filledDates}
+                  filledDates={myFilledDates}
                 />
               </div>
 
-              {/* Loading overlay while fetching date data */}
-              {isLoadingDaily ? (
-                <div className="py-20 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
-                  <div className="flex items-center justify-center gap-3">
-                    <Loader2 className="h-6 w-6 animate-spin text-red-400" />
-                    <p className="text-gray-500 font-medium">
-                      Loading journal for this week...
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {/* Weekly Reflection */}
-                  <div className="border-2 border-orange-300 bg-orange-50/20 rounded-2xl overflow-hidden">
-                    <WeeklyReflection
-                      currentDate={currentDate}
-                      wins={wins}
-                      setWins={setWins}
-                      challenge={challenge}
-                      setChallenge={setChallenge}
-                      challengeCause={challengeCause}
-                      setChallengeCause={setChallengeCause}
-                      gratitude={gratitude}
-                      setGratitude={setGratitude}
-                      insight={insight}
-                      setInsight={setInsight}
-                      balanceRating={balanceRating}
-                      setBalanceRating={setBalanceRating}
-                    />
-                  </div>
+              {/* Weekly Reflection */}
+              <div className="border-2 border-orange-300 bg-orange-50/20 rounded-2xl overflow-hidden">
+                <WeeklyReflection 
+                  currentDate={currentDate}
+                  wins={wins}
+                  setWins={setWins}
+                  challenge={challenge}
+                  setChallenge={setChallenge}
+                  challengeCause={challengeCause}
+                  setChallengeCause={setChallengeCause}
+                  gratitude={gratitude}
+                  setGratitude={setGratitude}
+                  insight={insight}
+                  setInsight={setInsight}
+                  balanceRating={balanceRating}
+                  setBalanceRating={setBalanceRating}
+                />
+              </div>
 
-                  {/* Mission & Habits Connection */}
-                  <div className="border-2 border-purple-300 bg-purple-50/20 rounded-2xl overflow-hidden">
-                    <MissionHabitsConnection
-                      coreValue={coreValue}
-                      setCoreValue={setCoreValue}
-                      missionText={missionText}
-                      setMissionText={setMissionText}
-                      habitsText={habitsText}
-                      setHabitsText={setHabitsText}
-                    />
-                  </div>
+              {/* Mission & Habits Connection */}
+              <div className="border-2 border-purple-300 bg-purple-50/20 rounded-2xl overflow-hidden">
+                <MissionHabitsConnection
+                  coreValue={coreValue}
+                  setCoreValue={setCoreValue}
+                  missionText={missionText}
+                  setMissionText={setMissionText}
+                  habitsText={habitsText}
+                  setHabitsText={setHabitsText}
+                />
+              </div>
 
-                  {/* Weekly Plan */}
-                  <div className="border-2 border-red-300 bg-red-50/20 rounded-2xl overflow-hidden">
-                    <WeeklyPlanComponent
-                      data={weeklyPlanData}
-                      setData={setWeeklyPlanData}
-                    />
-                  </div>
+              {/* Weekly Plan */}
+              <div className="border-2 border-red-300 bg-red-50/20 rounded-2xl overflow-hidden">
+                <WeeklyPlanComponent data={weeklyPlanData} setData={setWeeklyPlanData} />
+              </div>
 
-                  {/* Focus & Boundaries */}
-                  <div className="border-2 border-violet-300 bg-violet-50/20 rounded-2xl overflow-hidden">
-                    <FocusAndBoundaries
-                      data={focusData}
-                      setData={setFocusData}
-                    />
-                  </div>
+              {/* Focus & Boundaries */}
+              <div className="border-2 border-violet-300 bg-violet-50/20 rounded-2xl overflow-hidden">
+                <FocusAndBoundaries data={focusData} setData={setFocusData} apiGoals={goals} />
+              </div>
 
-                  {/* Review ToDos */}
-                  <div className="border-2 border-indigo-300 bg-indigo-50/20 rounded-2xl overflow-hidden">
-                    <ReviewToDos />
-                  </div>
+              {/* Review ToDos */}
+              <div className="border-2 border-indigo-300 bg-indigo-50/20 rounded-2xl overflow-hidden">
+                <ReviewToDos initialGoals={goals} />
+              </div>
 
-                  {/* Bucket List Progress */}
-                  <div className="rounded-2xl overflow-hidden">
-                    <BucketListProgress />
-                  </div>
-                </>
-              )}
+              {/* Bucket List Progress */}
+              <div className="rounded-2xl overflow-hidden">
+                <BucketListProgress />
+              </div>
             </div>
           </TabsContent>
 
-          {/* ── PAST TAB ── */}
+          {/* PAST TAB CONTENT */}
           <TabsContent value="past" className="focus:outline-none">
             {/* Calendar Date Picker */}
             <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -787,7 +575,7 @@ const WeeklyJournal = () => {
                     <CalendarIcon className="w-4 h-4" />
                     {calendarDate
                       ? format(calendarDate, "MMMM d, yyyy")
-                      : "Filter by week"}
+                      : "Pick a date"}
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0 z-50" align="start">
@@ -807,12 +595,7 @@ const WeeklyJournal = () => {
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-50 border border-green-200 text-green-800 font-semibold text-sm">
                     <CalendarIcon className="w-4 h-4 text-green-600" />
-                    <span>
-                      Week of{" "}
-                      <span className="text-green-700 font-bold">
-                        {format(calendarDate, "MMMM d, yyyy")}
-                      </span>
-                    </span>
+                    <span>Selected: <span className="text-green-700 font-bold">{format(calendarDate, "EEEE, MMMM d, yyyy")}</span></span>
                   </div>
                   <button
                     onClick={() => setCalendarDate(undefined)}
@@ -828,59 +611,105 @@ const WeeklyJournal = () => {
               <div className="py-20 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
                 <div className="flex items-center justify-center gap-3">
                   <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-                  <p className="text-gray-500 font-medium">
-                    Loading past entries...
-                  </p>
+                  <p className="text-gray-500 font-medium">Loading past entries...</p>
                 </div>
               </div>
             ) : pastJournals.length === 0 ? (
               <div className="py-20 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
-                <p className="text-gray-500 font-medium">
-                  No past entries yet.
-                </p>
+                <p className="text-gray-500 font-medium">No past entries yet.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-1 gap-4">
                 {pastJournals
                   .filter((journal) => {
                     if (!calendarDate) return true;
-                    return isSameWeek(
-                      new Date(journal.start_date),
-                      calendarDate,
-                      {
-                        weekStartsOn: 0,
-                      },
-                    );
+                    return isSameWeek(new Date(journal.start_date), calendarDate, { weekStartsOn: 0 });
                   })
                   .map((journal) => (
-                    <PastWeeklyJournalRow
-                      key={journal.id}
-                      journal={journal}
-                      onDelete={handleDeletePastJournal}
-                      onEdit={loadJournalIntoForm}
-                    />
-                  ))}
-                {calendarDate &&
-                  pastJournals.filter((j) =>
-                    isSameWeek(new Date(j.start_date), calendarDate, {
-                      weekStartsOn: 0,
-                    }),
-                  ).length === 0 && (
-                    <div className="py-16 text-center bg-white rounded-2xl border border-dashed border-gray-200">
-                      <CalendarIcon className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                      <p className="text-gray-500 font-medium">
-                        No journal found for the week of
-                      </p>
-                      <p className="text-gray-700 font-bold mt-1">
-                        {format(calendarDate, "MMMM d, yyyy")}
-                      </p>
+                  <div
+                    key={journal.id}
+                    onClick={() => fetchPastJournalById(journal.id)}
+                    className="p-6 bg-white rounded-2xl shadow-sm border border-gray-100 transition-all text-left cursor-pointer hover:border-gray-300 hover:shadow-md"
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h4 className="font-bold text-lg text-gray-900">
+                          {journal.formatted_date ||
+                            format(
+                              new Date(journal.start_date),
+                              "MMMM d, yyyy",
+                            )}
+                        </h4>
+                        {journal.alignment_score !== null && (
+                          <span className="bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-0.5 rounded-full text-xs font-semibold mt-2 inline-block">
+                            Alignment: {journal.alignment_score}/10
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={(e) => handleDeletePastJournal(journal.id, e)}
+                        className="p-2 text-red-400 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                        title="Delete entry"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
-                  )}
+                    {journal.data?.key_insight && (
+                      <div className="mb-4">
+                        <p className="text-sm font-semibold text-gray-700">
+                          Key Insight:
+                        </p>
+                        <p className="text-sm text-gray-600 italic">
+                          "{journal.data.key_insight}"
+                        </p>
+                      </div>
+                    )}
+                    {journal.data?.biggest_challenge && (
+                      <div className="mb-4">
+                        <p className="text-sm font-semibold text-gray-700">
+                          Biggest Challenge:
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {journal.data.biggest_challenge}
+                        </p>
+                        {journal.data?.challenge_cause && (
+                          <p className="text-sm text-gray-500 mt-1">
+                            <span className="font-medium text-gray-700">Cause:</span> {journal.data.challenge_cause}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {journal.data?.wins && journal.data.wins.length > 0 && (
+                      <div>
+                        <p className="text-sm font-semibold text-gray-700 mb-1">
+                          Wins:
+                        </p>
+                        <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+                          {journal.data.wins.map((win, idx) => (
+                            <li key={idx}>
+                              <strong>{win.day}</strong>: {win.description}{" "}
+                              {win.completed ? "✅" : ""}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {calendarDate && pastJournals.filter((j) =>
+                  isSameWeek(new Date(j.start_date), calendarDate, { weekStartsOn: 0 })
+                ).length === 0 && (
+                  <div className="py-16 text-center bg-white rounded-2xl border border-dashed border-gray-200">
+                    <CalendarIcon className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500 font-medium">No journal found for the week of</p>
+                    <p className="text-gray-700 font-bold mt-1">{format(calendarDate, "MMMM d, yyyy")}</p>
+                  </div>
+                )}
               </div>
             )}
           </TabsContent>
 
-          {/* ── INSIGHTS TAB ── */}
+          {/* INSIGHTS TAB CONTENT */}
           <TabsContent value="insights" className="focus:outline-none">
             {isLoadingInsights ? (
               <div className="py-20 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
@@ -977,28 +806,25 @@ const WeeklyJournal = () => {
                     )}
 
                   {insightsData.category_distribution &&
-                    Object.keys(insightsData.category_distribution).length >
-                      0 && (
+                    Object.keys(insightsData.category_distribution).length > 0 && (
                       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                         <h3 className="text-lg font-bold text-gray-900 mb-4">
                           Win Categories
                         </h3>
                         <ul className="space-y-3">
-                          {Object.entries(
-                            insightsData.category_distribution,
-                          ).map(([category, count], idx: number) => (
-                            <li
-                              key={idx}
-                              className="flex justify-between items-center text-gray-700"
-                            >
-                              <span className="capitalize">
-                                {category.replace("_", " ")}
-                              </span>
-                              <span className="bg-orange-100 text-orange-800 px-2.5 py-0.5 rounded-full text-sm font-medium border border-orange-200">
-                                {count}
-                              </span>
-                            </li>
-                          ))}
+                          {Object.entries(insightsData.category_distribution).map(
+                            ([category, count], idx: number) => (
+                              <li
+                                key={idx}
+                                className="flex justify-between items-center text-gray-700"
+                              >
+                                <span className="capitalize">{category.replace("_", " ")}</span>
+                                <span className="bg-orange-100 text-orange-800 px-2.5 py-0.5 rounded-full text-sm font-medium border border-orange-200">
+                                  {count}
+                                </span>
+                              </li>
+                            ),
+                          )}
                         </ul>
                       </div>
                     )}
@@ -1048,9 +874,170 @@ const WeeklyJournal = () => {
         </Tabs>
       </div>
 
+      {/* Detail Dialog */}
+      <Dialog open={isJournalModalOpen} onOpenChange={setIsJournalModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex justify-between items-center pr-6">
+              <DialogTitle>Weekly Journal Entry</DialogTitle>
+              {selectedPastJournal && (
+                <button
+                  onClick={handleEditPastJournal}
+                  className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors"
+                >
+                  Edit Entry
+                </button>
+              )}
+            </div>
+            <DialogDescription>
+              {selectedPastJournal?.formatted_date ||
+                (selectedPastJournal?.start_date &&
+                  format(
+                    new Date(selectedPastJournal.start_date),
+                    "MMMM d, yyyy",
+                  ))}
+            </DialogDescription>
+          </DialogHeader>
+
+          {isLoadingJournal ? (
+            <div className="py-10 text-center text-gray-500">
+              Loading details...
+            </div>
+          ) : selectedPastJournal ? (
+            <div className="space-y-6 mt-4">
+              {/* Date Range Banner */}
+              {selectedPastJournal.start_date && (
+                <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-red-50 to-orange-50 border border-red-100">
+                  <CalendarIcon className="w-4 h-4 text-red-500 shrink-0" />
+                  <p className="text-sm font-bold text-red-700">
+                    Review of Past Week:{" "}
+                    <span className="text-red-600">
+                      {format(new Date(selectedPastJournal.start_date), "MMM d")} –{" "}
+                      {format(endOfWeek(new Date(selectedPastJournal.start_date), { weekStartsOn: 0 }), "MMM d, yyyy")}
+                    </span>
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-4">
+                {selectedPastJournal.alignment_score !== null && (
+                  <span className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 rounded-full text-sm font-semibold">
+                    Alignment: {selectedPastJournal.alignment_score}/10
+                  </span>
+                )}
+                {selectedPastJournal.data?.life_balance_rating && (
+                  <span className="bg-purple-50 text-purple-700 border border-purple-200 px-3 py-1 rounded-full text-sm font-semibold">
+                    Balance: {selectedPastJournal.data.life_balance_rating}/5
+                  </span>
+                )}
+              </div>
+
+              {selectedPastJournal.gratitude_note && (
+                <div className="bg-yellow-50/50 p-4 rounded-xl border border-yellow-100">
+                  <p className="text-sm font-bold text-gray-800 mb-1">
+                    Gratitude
+                  </p>
+                  <p className="text-gray-700 text-sm italic">
+                    "{selectedPastJournal.gratitude_note}"
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {selectedPastJournal.data?.biggest_challenge && (
+                  <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+                    <p className="text-sm font-bold text-gray-800 mb-1">
+                      Biggest Challenge
+                    </p>
+                    <p className="text-gray-700 text-sm">
+                      {selectedPastJournal.data.biggest_challenge}
+                    </p>
+                    {selectedPastJournal.data?.challenge_cause && (
+                      <p className="text-gray-500 text-xs mt-2 border-t border-indigo-100 pt-2">
+                        Cause: {selectedPastJournal.data.challenge_cause}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {selectedPastJournal.data?.key_insight && (
+                  <div className="bg-pink-50/50 p-4 rounded-xl border border-pink-100">
+                    <p className="text-sm font-bold text-gray-800 mb-1">
+                      Key Insight
+                    </p>
+                    <p className="text-gray-700 text-sm">
+                      {selectedPastJournal.data.key_insight}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {selectedPastJournal.data?.weekly_story && (
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                  <p className="text-sm font-bold text-gray-800 mb-1">
+                    My Weekly Story for{" "}
+                    {selectedPastJournal.start_date && (
+                      <span className="text-gray-600 font-semibold">
+                        {format(new Date(selectedPastJournal.start_date), "MMM d")} –{" "}
+                        {format(endOfWeek(new Date(selectedPastJournal.start_date), { weekStartsOn: 0 }), "MMM d, yyyy")}
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-gray-700 text-sm">
+                    {selectedPastJournal.data.weekly_story}
+                  </p>
+                </div>
+              )}
+
+              {selectedPastJournal.data?.mission_connection && (
+                <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                  <p className="text-sm font-bold text-gray-800 mb-1">
+                    Mission Connection
+                  </p>
+                  <p className="text-gray-700 text-sm">
+                    {selectedPastJournal.data.mission_connection}
+                  </p>
+                </div>
+              )}
+
+              {selectedPastJournal.data?.wins &&
+                selectedPastJournal.data.wins.length > 0 && (
+                  <div>
+                    <p className="text-sm font-bold text-gray-800 mb-3">
+                      Weekly Wins
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {selectedPastJournal.data.wins.map((win, i) => (
+                        <div
+                          key={i}
+                          className="flex gap-3 p-3 border border-gray-100 rounded-lg bg-white shadow-sm"
+                        >
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-gray-800">
+                              {win.description}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {win.day} • {win.category}
+                            </p>
+                          </div>
+                          {win.completed && (
+                            <div className="flex-shrink-0 flex items-center justify-center">
+                              <span className="text-green-500 text-xl">✅</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
       {/* STICKY FOOTER - Save / Cancel (ONLY FOR NEW TAB) */}
       {activeTab === "new" && (
-        <div className="z-30 bg-white border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+        <div className=" z-30 bg-white border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
           <div className="flex items-center gap-3 px-6 py-4">
             <button
               onClick={() => navigate(-1)}
@@ -1066,25 +1053,13 @@ const WeeklyJournal = () => {
               {isSaving ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  strokeWidth="2.5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                  />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                 </svg>
               )}
               {isSaving
                 ? "Saving..."
-                : isEditMode
-                  ? `Update Entry WK#${format(startOfWeek(currentDate, { weekStartsOn: 0 }), "ww")} ${format(startOfWeek(currentDate, { weekStartsOn: 0 }), "MMM d")}-${format(endOfWeek(currentDate, { weekStartsOn: 0 }), "d")}`
-                  : `Save Plan WK#${format(startOfWeek(currentDate, { weekStartsOn: 0 }), "ww")} ${format(startOfWeek(currentDate, { weekStartsOn: 0 }), "MMM d")}-${format(endOfWeek(currentDate, { weekStartsOn: 0 }), "d")}`}
+                : `Save Plan WK#${format(startOfWeek(currentDate, { weekStartsOn: 0 }), "ww")} ${format(startOfWeek(currentDate, { weekStartsOn: 0 }), "MMM d")}-${format(endOfWeek(currentDate, { weekStartsOn: 0 }), "d")}`}
             </button>
           </div>
         </div>
