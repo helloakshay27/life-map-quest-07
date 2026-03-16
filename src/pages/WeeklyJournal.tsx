@@ -237,7 +237,35 @@ const WeeklyJournal = () => {
           setMissionText("");
           setHabitsText("");
           setWeeklyPlanData(generateEmptyWeekData(currentDate));
-          setFocusData(defaultFocusData);
+          
+          // PRE-POPULATE GOALS FROM API
+          try {
+            const goalsRes = await apiRequest("/goals");
+            if (goalsRes.ok) {
+              const goalsData = await goalsRes.json();
+              const rawGoals: any[] = Array.isArray(goalsData) 
+                ? goalsData 
+                : (goalsData.goals || goalsData.data || []);
+              
+              const mappedGoals = rawGoals.map((g: any) => ({
+                id: parseInt(g.id),
+                title: g.title,
+                category: g.area || g.category || "General",
+                progress: g.progress || 0,
+                completed: g.status === "completed"
+              }));
+              
+              setFocusData({
+                ...defaultFocusData,
+                goals: mappedGoals
+              });
+            } else {
+              setFocusData(defaultFocusData);
+            }
+          } catch (err) {
+            console.error("Failed to fetch current goals:", err);
+            setFocusData(defaultFocusData);
+          }
           
         } catch (error) {
           console.error("Failed to fetch journal for date:", error);
