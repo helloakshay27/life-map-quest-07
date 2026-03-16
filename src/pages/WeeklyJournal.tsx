@@ -464,6 +464,7 @@ const WeeklyJournal = () => {
               {/* Weekly Reflection */}
               <div className="border-2 border-orange-300 bg-orange-50/20 rounded-2xl overflow-hidden">
                 <WeeklyReflection 
+                  currentDate={currentDate}
                   wins={wins}
                   setWins={setWins}
                   challenge={challenge}

@@ -7,7 +7,7 @@ import {
   ArrowLeft,
   Edit,
   Trash2,
-  BookOpen,
+  Lightbulb,
 } from "lucide-react";
 import { apiRequest } from "@/config/api";
 import { format, startOfWeek, endOfWeek } from "date-fns";
@@ -20,6 +20,7 @@ export interface Win {
 }
 
 interface WeeklyReflectionProps {
+  currentDate: Date;
   wins: Win[];
   setWins: React.Dispatch<React.SetStateAction<Win[]>>;
   challenge: string;
@@ -35,6 +36,7 @@ interface WeeklyReflectionProps {
 }
 
 function WeeklyReflection({
+  currentDate,
   wins,
   setWins,
   challenge,
@@ -83,11 +85,11 @@ function WeeklyReflection({
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-orange-500 shadow-sm shrink-0">
-              <BookOpen className="w-5 h-5 text-white" strokeWidth={2} />
+              <Lightbulb className="w-5 h-5 text-white" strokeWidth={2} />
             </div>
             <div>
               <h2 className="text-[17px] font-bold text-gray-900">
-                Weekly Reflection
+                Review of Past Week
               </h2>
               <p className="text-[13px] text-gray-500 mt-0.5">Wins, challenges, gratitude & life balance</p>
             </div>

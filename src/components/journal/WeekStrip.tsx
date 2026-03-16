@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 import {
   addDays,
+  endOfWeek,
   format,
   isAfter,
   isBefore,
-  isSameDay,
   isSameWeek,
   startOfWeek,
 } from "date-fns";
@@ -18,28 +18,41 @@ interface WeekStripProps {
 
 const WeekStrip = ({ selectedDate, onDateChange, filledDates = [] }: WeekStripProps) => {
   const today = useMemo(() => new Date(), []);
+  const todayWeekStart = useMemo(() => startOfWeek(today, { weekStartsOn: 0 }), [today]);
   const selectedWeekStart = useMemo(
     () => startOfWeek(selectedDate, { weekStartsOn: 0 }),
     [selectedDate],
   );
+  const selectedWeekEnd = useMemo(
+    () => endOfWeek(selectedDate, { weekStartsOn: 0 }),
+    [selectedDate],
+  );
 
-  const weekDays = useMemo(() => {
-    const days = [];
-    for (let i = 0; i < 7; i++) {
-      const day = addDays(selectedWeekStart, i);
-      const isFilled = filledDates.some((d) => isSameDay(d, day));
-      const isPast = isBefore(day, today) && !isSameDay(day, today);
-      const isUpcoming = isAfter(day, today) && !isSameDay(day, today);
+  const weeks = useMemo(() => {
+    // Show 6 weeks ending with currently selected week (like the screenshot strip)
+    return Array.from({ length: 6 }).map((_, i) => {
+      const weekStart = addDays(selectedWeekStart, (i - 5) * 7);
+      const weekEnd = endOfWeek(weekStart, { weekStartsOn: 0 });
+      const isFilled = filledDates.some((d) => isSameWeek(d, weekStart, { weekStartsOn: 0 }));
+      const isPast = isBefore(weekEnd, todayWeekStart);
+      const isUpcoming = isAfter(weekStart, todayWeekStart);
 
-      days.push({
-        date: day,
+      const rangeLabel =
+        format(weekStart, "MMM") === format(weekEnd, "MMM")
+          ? `${format(weekStart, "MMM d")}-${format(weekEnd, "d")}`
+          : `${format(weekStart, "MMM d")}-${format(weekEnd, "MMM d")}`;
+
+      return {
+        weekStart,
+        weekEnd,
         isFilled,
         isPast,
         isUpcoming,
-      });
-    }
-    return days;
-  }, [selectedWeekStart, today, filledDates]);
+        weekLabel: `WK#${format(weekStart, "ww")}`,
+        rangeLabel: rangeLabel.toUpperCase(),
+      };
+    });
+  }, [selectedWeekStart, filledDates, todayWeekStart]);
 
   const goToPrevWeek = () => onDateChange(addDays(selectedWeekStart, -7));
   const goToNextWeek = () => onDateChange(addDays(selectedWeekStart, 7));
@@ -54,62 +67,70 @@ const WeekStrip = ({ selectedDate, onDateChange, filledDates = [] }: WeekStripPr
         </div>
         <div>
           <h3 className="text-lg font-bold tracking-tight text-slate-800 sm:text-xl">
-            {format(selectedDate, "EEEE, MMMM d, yyyy")}
+            {`Creating WK#${format(selectedWeekStart, "ww")}, ${format(selectedWeekStart, "MMM d")}-${format(selectedWeekEnd, "d")}`.toUpperCase()}
           </h3>
+          <p className="text-sm font-semibold text-slate-500">
+            {`WK#${format(selectedWeekStart, "ww")} • ${format(selectedWeekStart, "MMM d")}-${format(selectedWeekEnd, "d")}`}
+          </p>
         </div>
       </div>
 
-      <div className="mb-2.5 text-center text-base font-semibold text-slate-500">This Week</div>
+      <div className="mb-2.5 text-center text-base font-semibold text-slate-500">
+        {`This Week (WK#${format(selectedWeekStart, "ww")})`}
+      </div>
 
-      {/* Day Cards */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5">
+      {/* Week Cards */}
+      <div className="flex items-center gap-1 overflow-x-auto pb-1.5">
         <button
           onClick={goToPrevWeek}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-slate-100 text-slate-500 shadow-sm transition-colors hover:bg-slate-200"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-slate-100 text-slate-500 shadow-sm transition-colors hover:bg-slate-200"
           title="Previous week"
         >
-          <ChevronLeft className="h-3.5 w-3.5" />
+          <ChevronLeft className="h-3 w-3" />
         </button>
 
-        {weekDays.map((day) => {
-          const isSelected = isSameDay(day.date, selectedDate);
+        {weeks.map((week) => {
+          const isSelected = isSameWeek(week.weekStart, selectedDate, { weekStartsOn: 0 });
 
           let cardStyles =
-            "border-slate-300 bg-slate-200 text-slate-500";
-          if (day.isPast && !day.isFilled) {
+            "border-slate-300 bg-slate-200 text-slate-600";
+          if (week.isPast && !week.isFilled) {
             cardStyles = "border-red-400 bg-red-400 text-white";
           }
-          if (day.isFilled || isSelected) {
+          if (week.isFilled) {
             cardStyles = "border-green-500 bg-green-500 text-white";
           }
+          if (isSelected) {
+            cardStyles = "border-green-400 bg-slate-200 text-slate-900";
+          }
 
-          const isMissed = day.isPast && !day.isFilled;
+          const isMissed = week.isPast && !week.isFilled;
 
           return (
             <button
-              key={day.date.toISOString()}
-              onClick={() => onDateChange(day.date)}
-              className={`relative min-w-[92px] sm:min-w-[100px] rounded-xl border p-2 sm:p-2.5 text-center shadow-sm transition-all hover:opacity-95 ${cardStyles} ${
+              key={week.weekStart.toISOString()}
+              onClick={() => onDateChange(week.weekStart)}
+              className={`relative min-w-[80px] sm:min-w-[90px] rounded-lg border p-2 text-center shadow-sm transition-all hover:opacity-95 ${cardStyles} ${
                 isSelected ? "ring-1 ring-green-300 border-green-300" : ""
               }`}
             >
-              <div className="text-[11px] font-semibold uppercase leading-none opacity-80 sm:text-xs">
-                {format(day.date, "EEE")}
+              <div className="text-sm font-bold leading-none tracking-tight sm:text-base">
+                {week.weekLabel}
               </div>
 
-              <div className="mt-1 text-lg font-bold leading-none sm:text-xl">
-                {format(day.date, "d")}
+              <div className="mt-0.5 text-xs font-bold leading-tight sm:text-sm">
+                {week.rangeLabel}
               </div>
 
               {isMissed && (
-                <div className="mx-auto mt-1 inline-flex rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold text-white sm:text-[10px]">
+                <div className="mx-auto mt-1 inline-flex rounded-full bg-red-600 px-1 py-0.5 text-[8px] font-bold text-white sm:text-[9px]">
                   -10
                 </div>
               )}
 
-              {(day.isFilled || isSelected) && (
-                <div className="mx-auto mt-1 inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-green-700 px-1 text-white">
-                  <Check className="h-2.5 w-2.5" />
+              {(week.isFilled || isSelected) && (
+                <div className="mx-auto mt-1 inline-flex h-3 min-w-3 items-center justify-center rounded-full bg-green-700 px-0.5 text-white">
+                  <Check className="h-2 w-2" />
                 </div>
               )}
             </button>
@@ -118,10 +139,10 @@ const WeekStrip = ({ selectedDate, onDateChange, filledDates = [] }: WeekStripPr
 
         <button
           onClick={goToNextWeek}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-slate-100 text-slate-500 shadow-sm transition-colors hover:bg-slate-200"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-slate-100 text-slate-500 shadow-sm transition-colors hover:bg-slate-200"
           title="Next week"
         >
-          <ChevronRight className="h-3.5 w-3.5" />
+          <ChevronRight className="h-3 w-3" />
         </button>
       </div>
 
