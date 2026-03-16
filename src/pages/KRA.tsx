@@ -168,7 +168,7 @@ function ScoreCard({ data }) {
     Math.min(100, Math.round((score.achieved / score.total) * 100)) || 0;
 
   return (
-    <div className="relative w-full overflow-hidden bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700 rounded-2xl p-10 pb-10 shadow-xl">
+    <div className="relative w-full overflow-hidden bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700 rounded-2xl p-4 pb-4 shadow-xl">
       {/* Decorative circles */}
       <div className="absolute -top-10 -right-10 w-52 h-52 rounded-full bg-white/10" />
       <div className="absolute top-4 right-4 w-32 h-32 rounded-full bg-white/10" />
@@ -178,29 +178,29 @@ function ScoreCard({ data }) {
         <TrendingUp className="text-white w-6 h-6" strokeWidth={2.2} />
       </div>
 
-      <p className="text-orange-100 text-base font-semibold mb-2 tracking-widest uppercase">
+      <p className="text-orange-100 text-sm font-semibold mb-1 tracking-widest uppercase">
         Your Total Score
       </p>
-      <div className="flex items-baseline gap-2 mb-4">
-        <span className="text-8xl font-black text-white leading-none">
+      <div className="flex items-baseline gap-2 mb-2">
+        <span className="text-5xl font-black text-white leading-none">
           {score.achieved}
         </span>
-        <span className="text-4xl font-semibold text-orange-200 leading-none">
+        <span className="text-2xl font-semibold text-orange-200 leading-none">
           /{score.total}
         </span>
       </div>
 
-      <p className="text-3xl font-extrabold text-white mb-1">{title}</p>
-      <p className="text-orange-100 text-base mb-8 italic">{message}</p>
+      <p className="text-xl font-extrabold text-white mb-1">{title}</p>
+      <p className="text-orange-100 text-sm mb-4 italic">{message}</p>
 
       {/* Progress bar */}
-      <div className="bg-white/25 rounded-full h-3.5 overflow-hidden">
+      <div className="bg-white/25 rounded-full h-2 overflow-hidden">
         <div
           className="h-full bg-white rounded-full transition-all duration-700 ease-out"
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className="flex justify-between mt-2">
+      <div className="flex justify-between mt-1">
         <span className="text-orange-100 text-xs font-medium">0</span>
         <span className="text-orange-100 text-xs font-medium">{pct}%</span>
         <span className="text-orange-100 text-xs font-medium">

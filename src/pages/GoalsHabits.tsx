@@ -683,6 +683,13 @@ const GoalsHabits = () => {
 
   const currentFooter = footerConfig[activeTab as keyof typeof footerConfig];
 
+  // Only show footer for affirmations and habits when there are no items
+  const shouldShowFooter = () => {
+    if (activeTab === "affirmations") return affirmations.length === 0;
+    if (activeTab === "habits") return habits.length === 0;
+    return true; // Always show for goals and beliefs
+  };
+
   // ─── RENDER ───────────────────────────────────────────────────────────────
   return (
     <div className="relative w-full animate-fade-in space-y-8">
@@ -967,7 +974,7 @@ const GoalsHabits = () => {
       </Tabs>
 
       {/* Footer Action */}
-      {currentFooter && (
+      {currentFooter && shouldShowFooter() && (
         <div className="flex items-center justify-center pt-2 pb-1">
           <Button className={`h-8 rounded-md px-4 text-xs sm:text-sm font-semibold shadow-sm ${currentFooter.className}`} onClick={currentFooter.onClick}>
             <Plus className="h-3.5 w-3.5 mr-1.5 shrink-0" />
