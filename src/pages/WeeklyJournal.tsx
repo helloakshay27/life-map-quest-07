@@ -4,6 +4,7 @@ import {
   Loader2,
   Lightbulb,
   Trash2,
+  CalendarIcon,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { apiRequest } from "@/config/api";
@@ -15,8 +16,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import WeekStrip from "@/components/journal/WeekStrip";
-import { subDays, startOfWeek, endOfWeek, format } from "date-fns";
+import { subDays, startOfWeek, endOfWeek, format, isSameWeek } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import WeeklyReflection, { Win } from "@/components/WeeklyReflection";
@@ -96,6 +103,8 @@ const WeeklyJournal = () => {
   }
   const [pastJournals, setPastJournals] = useState<PastWeeklyJournal[]>([]);
   const [isLoadingPast, setIsLoadingPast] = useState(false);
+  const [calendarDate, setCalendarDate] = useState<Date | undefined>(undefined);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   // === INSIGHTS STATE ===
   const [insights, setInsights] = useState<string[]>([]);
@@ -516,6 +525,46 @@ const WeeklyJournal = () => {
 
           {/* PAST TAB CONTENT */}
           <TabsContent value="past" className="focus:outline-none">
+            {/* Calendar Date Picker */}
+            <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 bg-red-50 text-red-700 font-semibold text-sm shadow-sm hover:bg-red-100 transition-colors">
+                    <CalendarIcon className="w-4 h-4" />
+                    {calendarDate
+                      ? format(calendarDate, "MMMM d, yyyy")
+                      : "Pick a date"}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 z-50" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={calendarDate}
+                    onSelect={(date) => {
+                      setCalendarDate(date);
+                      setIsCalendarOpen(false);
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {calendarDate && (
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-50 border border-green-200 text-green-800 font-semibold text-sm">
+                    <CalendarIcon className="w-4 h-4 text-green-600" />
+                    <span>Selected: <span className="text-green-700 font-bold">{format(calendarDate, "EEEE, MMMM d, yyyy")}</span></span>
+                  </div>
+                  <button
+                    onClick={() => setCalendarDate(undefined)}
+                    className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-500 text-sm hover:bg-gray-50 transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+            </div>
+
             {isLoadingPast ? (
               <div className="py-20 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
                 <div className="flex items-center justify-center gap-3">
@@ -529,7 +578,12 @@ const WeeklyJournal = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4">
-                {pastJournals.map((journal) => (
+                {pastJournals
+                  .filter((journal) => {
+                    if (!calendarDate) return true;
+                    return isSameWeek(new Date(journal.start_date), calendarDate, { weekStartsOn: 0 });
+                  })
+                  .map((journal) => (
                   <div
                     key={journal.id}
                     onClick={() => fetchPastJournalById(journal.id)}
@@ -600,6 +654,15 @@ const WeeklyJournal = () => {
                     )}
                   </div>
                 ))}
+                {calendarDate && pastJournals.filter((j) =>
+                  isSameWeek(new Date(j.start_date), calendarDate, { weekStartsOn: 0 })
+                ).length === 0 && (
+                  <div className="py-16 text-center bg-white rounded-2xl border border-dashed border-gray-200">
+                    <CalendarIcon className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500 font-medium">No journal found for the week of</p>
+                    <p className="text-gray-700 font-bold mt-1">{format(calendarDate, "MMMM d, yyyy")}</p>
+                  </div>
+                )}
               </div>
             )}
           </TabsContent>
@@ -800,6 +863,20 @@ const WeeklyJournal = () => {
             </div>
           ) : selectedPastJournal ? (
             <div className="space-y-6 mt-4">
+              {/* Date Range Banner */}
+              {selectedPastJournal.start_date && (
+                <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-red-50 to-orange-50 border border-red-100">
+                  <CalendarIcon className="w-4 h-4 text-red-500 shrink-0" />
+                  <p className="text-sm font-bold text-red-700">
+                    Review of Past Week:{" "}
+                    <span className="text-red-600">
+                      {format(new Date(selectedPastJournal.start_date), "MMM d")} –{" "}
+                      {format(endOfWeek(new Date(selectedPastJournal.start_date), { weekStartsOn: 0 }), "MMM d, yyyy")}
+                    </span>
+                  </p>
+                </div>
+              )}
+
               <div className="flex gap-4">
                 {selectedPastJournal.alignment_score !== null && (
                   <span className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 rounded-full text-sm font-semibold">
@@ -856,7 +933,13 @@ const WeeklyJournal = () => {
               {selectedPastJournal.data?.weekly_story && (
                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
                   <p className="text-sm font-bold text-gray-800 mb-1">
-                    Weekly Story
+                    My Weekly Story for{" "}
+                    {selectedPastJournal.start_date && (
+                      <span className="text-gray-600 font-semibold">
+                        {format(new Date(selectedPastJournal.start_date), "MMM d")} –{" "}
+                        {format(endOfWeek(new Date(selectedPastJournal.start_date), { weekStartsOn: 0 }), "MMM d, yyyy")}
+                      </span>
+                    )}
                   </p>
                   <p className="text-gray-700 text-sm">
                     {selectedPastJournal.data.weekly_story}

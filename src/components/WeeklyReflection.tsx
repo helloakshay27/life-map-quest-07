@@ -59,13 +59,20 @@ export default function WeeklyReflection({
   };
 
   return (
-    <div className="font-sans w-full mx-auto bg-white border border-gray-200 rounded-lg shadow-sm">
-      
-      {/* HEADER SECTION */}
-      <div className="p-6 pb-4">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-orange-500 shrink-0">
-            <Lightbulb className="w-4 h-4 text-white" />
+    <div className="font-sans">
+      {/* Orange Header */}
+      <div className="px-6 pt-5 pb-4 border-b border-orange-100 bg-white">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-orange-500 shadow-sm shrink-0">
+              <Lightbulb className="w-5 h-5 text-white" strokeWidth={2} />
+            </div>
+            <div>
+              <h2 className="text-[17px] font-bold text-gray-900">
+                Review of Past Week
+              </h2>
+              <p className="text-[13px] text-gray-500 mt-0.5">Wins, challenges, gratitude & life balance</p>
+            </div>
           </div>
           <h1 className="text-lg font-bold text-gray-800">Review of Past Week</h1>
           <Info className="w-4 h-4 text-gray-400 cursor-help" />
