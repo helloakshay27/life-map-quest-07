@@ -49,12 +49,15 @@ const toApiPriority = (ui: string) => ui.toLowerCase();
 
 interface DragState {
   todoId: string;
+  pointerId: number;
   startX: number;
   startY: number;
   currentX: number;
   currentY: number;
   cardWidth: number;
   cardHeight: number;
+  offsetX: number;
+  offsetY: number;
   isDragging: boolean;
 }
 
@@ -71,6 +74,11 @@ const Todos = () => {
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [hoveredStatus, setHoveredStatus] = useState<string | null>(null);
   const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const dragStateRef = useRef<DragState | null>(null);
+
+  useEffect(() => {
+    dragStateRef.current = dragState;
+  }, [dragState]);
 
   useEffect(() => {
     const loadTodos = async () => {
@@ -324,48 +332,59 @@ const Todos = () => {
 
   const handlePointerDown = (e: React.PointerEvent, todoId: string) => {
     if (e.button !== undefined && e.button !== 0) return;
+    // Prevent text selection / native drag behaviors from interfering.
+    e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setDragState({
       todoId,
+      pointerId: e.pointerId,
       startX: e.clientX,
       startY: e.clientY,
       currentX: e.clientX,
       currentY: e.clientY,
       cardWidth: rect.width,
       cardHeight: rect.height,
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top,
       isDragging: false,
     });
   };
 
-  const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!dragState) return;
-    const dx = e.clientX - dragState.startX;
-    const dy = e.clientY - dragState.startY;
+  const updateDragPosition = useCallback((clientX: number, clientY: number) => {
+    const current = dragStateRef.current;
+    if (!current) return;
+    const dx = clientX - current.startX;
+    const dy = clientY - current.startY;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    const isDragging = dragState.isDragging || dist > 6;
+    const isDragging = current.isDragging || dist > 6;
     if (isDragging) {
-      setDragState((prev) => prev ? { ...prev, currentX: e.clientX, currentY: e.clientY, isDragging: true } : null);
-      setHoveredStatus(getHoveredColumn(e.clientX, e.clientY));
+      setDragState((prev) =>
+        prev
+          ? { ...prev, currentX: clientX, currentY: clientY, isDragging: true }
+          : null,
+      );
+      setHoveredStatus(getHoveredColumn(clientX, clientY));
       document.body.style.cursor = "grabbing";
       document.body.style.userSelect = "none";
     }
-  }, [dragState, getHoveredColumn]);
+  }, [getHoveredColumn]);
 
-  const handlePointerUp = useCallback((e: React.PointerEvent) => {
-    if (!dragState) return;
-    if (dragState.isDragging) {
-      const targetStatus = getHoveredColumn(e.clientX, e.clientY);
-      const todo = todos.find((t) => t.id === dragState.todoId);
+  const commitDrop = useCallback((clientX: number, clientY: number) => {
+    const current = dragStateRef.current;
+    if (!current) return;
+    if (current.isDragging) {
+      const targetStatus = getHoveredColumn(clientX, clientY);
+      const todo = todos.find((t) => t.id === current.todoId);
       if (targetStatus && todo && todo.status !== targetStatus) {
-        handleUpdateStatus(dragState.todoId, targetStatus);
+        handleUpdateStatus(current.todoId, targetStatus);
       }
     }
     setDragState(null);
     setHoveredStatus(null);
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
-  }, [dragState, todos, getHoveredColumn]);
+  }, [todos, getHoveredColumn]);
 
   const handlePointerCancel = useCallback(() => {
     setDragState(null);
@@ -374,11 +393,48 @@ const Todos = () => {
     document.body.style.userSelect = "";
   }, []);
 
+  // Ensure dragging stays smooth even if the pointer leaves the card quickly.
+  useEffect(() => {
+    if (!dragState) return;
+
+    const onMove = (e: PointerEvent) => {
+      const current = dragStateRef.current;
+      if (!current) return;
+      if (e.pointerId !== current.pointerId) return;
+      e.preventDefault();
+      updateDragPosition(e.clientX, e.clientY);
+    };
+
+    const onUp = (e: PointerEvent) => {
+      const current = dragStateRef.current;
+      if (!current) return;
+      if (e.pointerId !== current.pointerId) return;
+      e.preventDefault();
+      commitDrop(e.clientX, e.clientY);
+    };
+
+    const onCancel = (e: PointerEvent) => {
+      const current = dragStateRef.current;
+      if (!current) return;
+      if (e.pointerId !== current.pointerId) return;
+      handlePointerCancel();
+    };
+
+    window.addEventListener("pointermove", onMove, { passive: false });
+    window.addEventListener("pointerup", onUp, { passive: false });
+    window.addEventListener("pointercancel", onCancel);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+    };
+  }, [dragState, updateDragPosition, commitDrop, handlePointerCancel]);
+
   const ghostStyle = dragState?.isDragging
     ? {
         position: "fixed" as const,
-        left: dragState.currentX - dragState.cardWidth / 2,
-        top: dragState.currentY - dragState.cardHeight / 2,
+        left: dragState.currentX - dragState.offsetX,
+        top: dragState.currentY - dragState.offsetY,
         width: dragState.cardWidth,
         pointerEvents: "none" as const,
         zIndex: 9999,
@@ -508,8 +564,6 @@ const Todos = () => {
                               <Card
                                 key={todo.id}
                                 onPointerDown={(e) => handlePointerDown(e, todo.id)}
-                                onPointerMove={handlePointerMove}
-                                onPointerUp={handlePointerUp}
                                 onPointerCancel={handlePointerCancel}
                                 className={`
                                   bg-white p-2 sm:p-3 shadow-sm select-none touch-none
