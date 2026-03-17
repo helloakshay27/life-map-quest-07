@@ -34,9 +34,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { API_CONFIG } from "@/config/api";
 
 // ─── API CONFIG ──────────────────────────────────────────────────────────────
-const API_BASE_URL = "https://life-api.lockated.com";
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 const getAuthHeaders = (): Record<string, string> => {
   const token = localStorage.getItem("auth_token");
@@ -285,7 +286,33 @@ const GoalsHabits = () => {
     loadData("/limiting_beliefs", "user_beliefs", setBeliefs, "limiting_beliefs");
     loadData("/behavioral_patterns", "user_patterns", setPatterns, "behavioral_patterns");
     loadData("/affirmations", "user_affirmations", setAffirmations, "affirmations");
-    loadData("/habits", "user_habits", setHabits, "habits");
+    // Habits: normalize id to string so updates always match
+    const loadHabits = async () => {
+      try {
+        const saved = localStorage.getItem("user_habits");
+        if (saved) setHabits(JSON.parse(saved));
+        const res = await fetchWithAuth("/habits");
+        if (res.ok) {
+          const data = await res.json();
+          const raw: any[] = Array.isArray(data)
+            ? data
+            : Array.isArray(data.habits)
+            ? data.habits
+            : Array.isArray(data.data)
+            ? data.data
+            : [];
+          const normalized: Habit[] = raw.map((h) => ({
+            ...h,
+            id: String(h.id),
+          }));
+          setHabits(normalized);
+          save("user_habits", normalized);
+        }
+      } catch (e) {
+        console.error("Error loading habits", e);
+      }
+    };
+    loadHabits();
   }, []);
 
   // ─── GOALS CRUD ───────────────────────────────────────────────────────────
@@ -713,24 +740,90 @@ const GoalsHabits = () => {
   };
 
   const handleUpdateHabit = async () => {
-    if (!habitName.trim() || editingHabitId === null) return;
+    if (!habitName.trim()) {
+      toast({ title: "Missing habit name", description: "Please enter a habit name.", variant: "destructive" });
+      return;
+    }
+    if (editingHabitId === null) {
+      toast({ title: "Nothing to update", description: "No habit selected for update.", variant: "destructive" });
+      return;
+    }
     setHabitSaving(true);
     const previous = [...habits];
 
     setHabits((prev) => {
-      const u = prev.map(h => h.id === editingHabitId ? { ...h, name: habitName, frequency: habitFrequency, description: habitDescription, category: habitCategory, time: habitTime, place: habitPlace, start_date: habitStartDate } : h);
+      const u = prev.map(h => String(h.id) === String(editingHabitId) ? { ...h, name: habitName, frequency: habitFrequency, description: habitDescription, category: habitCategory, time: habitTime, place: habitPlace, start_date: habitStartDate } : h);
       save("user_habits", u); return u;
     });
 
     try {
-      const res = await fetchWithAuth(`/habits/${editingHabitId}`, {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        toast({ title: "Not logged in", description: "Missing auth token. Please log in again.", variant: "destructive" });
+        console.debug("Habit update blocked: missing auth_token", { editingHabitId });
+        setHabits(previous); save("user_habits", previous);
+        return;
+      }
+
+      // If it's a local-only habit, we can't sync it yet.
+      if (String(editingHabitId).startsWith("temp-")) {
+        toast({ title: "Habit updated", description: "Saved locally." });
+        console.debug("Habit update local-only (temp id)", { editingHabitId });
+        setEditingHabitId(null); setHabitName(""); setHabitDescription(""); setHabitFrequency("daily"); setHabitCategory(""); setHabitTime(""); setHabitPlace(""); setHabitStartDate(""); setHabitLinkedGoals([]);
+        setIsHabitDialogOpen(false);
+        return;
+      }
+
+      const payloadFlat = { name: habitName, frequency: habitFrequency, description: habitDescription, category: habitCategory, time: habitTime, place: habitPlace, start_date: habitStartDate, linked_goals: habitLinkedGoals };
+      const payloadWrapped = { habit: payloadFlat };
+
+      // Try common API shapes/methods (PUT then PATCH fallback)
+      toast({ title: "Updating habit...", description: "Syncing with server." });
+      console.debug("Updating habit", { id: editingHabitId, payloadWrapped, payloadFlat });
+      let res = await fetchWithAuth(`/habits/${editingHabitId}`, {
         method: "PUT",
-        body: JSON.stringify({ name: habitName, frequency: habitFrequency, description: habitDescription, category: habitCategory, time: habitTime, place: habitPlace, start_date: habitStartDate, linked_goals: habitLinkedGoals }),
+        body: JSON.stringify(payloadWrapped),
       });
-      if (!res.ok) throw new Error("Failed");
-      const updated = await res.json();
+      if (!res.ok) {
+        res = await fetchWithAuth(`/habits/${editingHabitId}`, {
+          method: "PATCH",
+          body: JSON.stringify(payloadWrapped),
+        });
+      }
+      if (!res.ok) {
+        res = await fetchWithAuth(`/habits/${editingHabitId}`, {
+          method: "PUT",
+          body: JSON.stringify(payloadFlat),
+        });
+        if (!res.ok) {
+          res = await fetchWithAuth(`/habits/${editingHabitId}`, {
+            method: "PATCH",
+            body: JSON.stringify(payloadFlat),
+          });
+        }
+      }
+
+      if (!res.ok) {
+        let msg = "";
+        try { msg = await res.text(); } catch { /* ignore */ }
+        throw new Error(msg || `Failed (${res.status})`);
+      }
+
+      const updated = await res.json().catch(() => ({}));
+      const updatedHabit = (updated?.habit ?? updated?.data ?? updated) as any;
       setHabits((prev) => {
-        const u = prev.map(h => h.id === editingHabitId ? { ...updated, id: updated.id ?? updated.habit?.id ?? editingHabitId } : h);
+        const u = prev.map(h => String(h.id) === String(editingHabitId) ? {
+          ...h,
+          ...updatedHabit,
+          id: String(updatedHabit?.id ?? updated?.id ?? editingHabitId),
+          name: updatedHabit?.name ?? h.name,
+          frequency: updatedHabit?.frequency ?? h.frequency,
+          description: updatedHabit?.description ?? h.description,
+          category: updatedHabit?.category ?? h.category,
+          time: updatedHabit?.time ?? h.time,
+          place: updatedHabit?.place ?? h.place,
+          start_date: updatedHabit?.start_date ?? h.start_date,
+        } : h);
         save("user_habits", u); return u;
       });
 
@@ -738,7 +831,11 @@ const GoalsHabits = () => {
       setIsHabitDialogOpen(false);
       toast({ title: "Habit updated", description: "Your changes have been saved." });
     } catch (err) {
-      toast({ title: "Error", description: "Failed to update habit", variant: "destructive" });
+      const msg =
+        typeof (err as any)?.message === "string" && (err as any).message.trim()
+          ? (err as any).message
+          : "Failed to update habit";
+      toast({ title: "Error", description: msg, variant: "destructive" });
       setHabits(previous); save("user_habits", previous);
     } finally {
       setHabitSaving(false);
@@ -746,7 +843,7 @@ const GoalsHabits = () => {
   };
 
   const openEditHabit = (habit: Habit) => {
-    setEditingHabitId(habit.id);
+    setEditingHabitId(String(habit.id));
     setHabitName(habit.name);
     setHabitDescription(habit.description || "");
     setHabitFrequency(habit.frequency || "daily");
@@ -760,15 +857,54 @@ const GoalsHabits = () => {
 
   // FIX 3: Habits delete — id can be string | number from API
   const handleDeleteHabit = async (id: string | number) => {
-    if (String(id).startsWith("temp-")) return setHabits((p) => p.filter((h) => h.id !== id));
+    const idStr = String(id);
+    // Local-only habit: delete locally only
+    if (idStr.startsWith("temp-")) {
+      toast({ title: "Habit deleted", description: "Removed locally." });
+      return setHabits((p) => {
+        const u = p.filter((h) => String(h.id) !== idStr);
+        save("user_habits", u);
+        return u;
+      });
+    }
+
+    const token = localStorage.getItem("auth_token");
+    if (!token) {
+      toast({ title: "Not logged in", description: "Missing auth token. Please log in again.", variant: "destructive" });
+      console.debug("Habit delete blocked: missing auth_token", { id: idStr });
+      return;
+    }
+
     const previous = [...habits];
-    setHabits((prev) => { const u = prev.filter((h) => h.id !== id); save("user_habits", u); return u; });
+    setHabits((prev) => { const u = prev.filter((h) => String(h.id) !== idStr); save("user_habits", u); return u; });
     try {
-      const res = await fetchWithAuth(`/habits/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed");
+      toast({ title: "Deleting habit...", description: "Syncing with server." });
+      console.debug("Deleting habit", { id: idStr });
+      // Try common delete patterns
+      let res = await fetchWithAuth(`/habits/${idStr}`, { method: "DELETE" });
+      if (!res.ok) {
+        // Some APIs expose a custom delete endpoint
+        res = await fetchWithAuth(`/habits/${idStr}/delete`, { method: "POST" });
+      }
+      if (!res.ok) {
+        // Rails-style method override
+        res = await fetchWithAuth(`/habits/${idStr}`, {
+          method: "POST",
+          body: JSON.stringify({ _method: "delete" }),
+        });
+      }
+      if (!res.ok) {
+        let msg = "";
+        try { msg = await res.text(); } catch { /* ignore */ }
+        throw new Error(msg || `Failed (${res.status})`);
+      }
       toast({ title: "Habit deleted", description: "Habit removed successfully." });
     } catch (err) {
-      toast({ title: "Error", description: "Failed to delete habit", variant: "destructive" });
+      const msg =
+        typeof (err as any)?.message === "string" && (err as any).message.trim()
+          ? (err as any).message
+          : "Failed to delete habit";
+      toast({ title: "Error", description: msg, variant: "destructive" });
       setHabits(previous); save("user_habits", previous);
     }
   };
@@ -812,7 +948,19 @@ const GoalsHabits = () => {
 
   // Only show footer for affirmations and habits when there are no items
   const shouldShowFooter = () => {
+    // Hide footer CTA while any dialog is open (prevents duplicate CTAs)
+    if (
+      isGoalDialogOpen ||
+      isBeliefDialogOpen ||
+      isPatternDialogOpen ||
+      isAffirmationDialogOpen ||
+      isHabitDialogOpen
+    ) {
+      return false;
+    }
     if (activeTab === "goals") return goals.length === 0;
+    // In Beliefs tab, only show footer when both lists are empty
+    if (activeTab === "beliefs") return beliefs.length === 0 && patterns.length === 0;
     if (activeTab === "affirmations") return affirmations.length === 0;
     if (activeTab === "habits") return habits.length === 0;
     return true; // Always show for beliefs
