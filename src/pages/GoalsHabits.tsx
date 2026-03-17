@@ -310,6 +310,7 @@ const GoalsHabits = () => {
       setGoalName(""); setGoalDescription(""); setGoalCategory(""); setGoalStatus("planning"); setGoalStartDate(""); setGoalTargetDate(""); setGoalProgress(0);
       setEditingGoalId(null);
       setIsGoalDialogOpen(false);
+      toast({ title: "Goal created", description: "Your goal has been saved." });
     } catch (err) {
       toast({ title: "Error", description: "Failed to save goal", variant: "destructive" });
       setGoals((prev) => { const u = prev.filter((g) => g.id !== tempId); save("user_goals", u); return u; });
@@ -342,6 +343,7 @@ const GoalsHabits = () => {
 
       setEditingGoalId(null); setGoalName(""); setGoalDescription(""); setGoalCategory(""); setGoalStatus("planning"); setGoalStartDate(""); setGoalTargetDate(""); setGoalProgress(0);
       setIsGoalDialogOpen(false);
+      toast({ title: "Goal updated", description: "Your changes have been saved." });
     } catch (err) {
       toast({ title: "Error", description: "Failed to update goal", variant: "destructive" });
       setGoals(previous); save("user_goals", previous);
@@ -375,6 +377,7 @@ const GoalsHabits = () => {
         signal: AbortSignal.timeout(10000) // 10 second timeout
       });
       if (!res.ok) throw new Error(`Failed to delete: ${res.status}`);
+      toast({ title: "Goal deleted", description: "Goal removed successfully." });
     } catch (error) {
       console.error("Delete error:", error);
       toast({ 
@@ -405,6 +408,7 @@ const GoalsHabits = () => {
         try { msg = await res.text(); } catch { /* ignore */ }
         throw new Error(msg || `Failed (${res.status})`);
       }
+      toast({ title: "Goal moved", description: `Updated status to ${newStatus}.` });
     } catch (err) {
       toast({ title: "Error", description: "Could not update goal status", variant: "destructive" });
       setGoals(previous); save("user_goals", previous);
@@ -699,6 +703,7 @@ const GoalsHabits = () => {
 
       setHabitName(""); setHabitDescription(""); setHabitFrequency("daily"); setHabitCategory(""); setHabitTime(""); setHabitPlace(""); setHabitStartDate(""); setHabitLinkedGoals([]);
       setIsHabitDialogOpen(false);
+      toast({ title: "Habit created", description: "Your habit has been saved." });
     } catch (err) {
       toast({ title: "Error", description: "Failed to create habit", variant: "destructive" });
       setHabits((prev) => { const u = prev.filter(h => h.id !== tempId); save("user_habits", u); return u; });
@@ -731,6 +736,7 @@ const GoalsHabits = () => {
 
       setEditingHabitId(null); setHabitName(""); setHabitDescription(""); setHabitFrequency("daily"); setHabitCategory(""); setHabitTime(""); setHabitPlace(""); setHabitStartDate(""); setHabitLinkedGoals([]);
       setIsHabitDialogOpen(false);
+      toast({ title: "Habit updated", description: "Your changes have been saved." });
     } catch (err) {
       toast({ title: "Error", description: "Failed to update habit", variant: "destructive" });
       setHabits(previous); save("user_habits", previous);
@@ -760,6 +766,7 @@ const GoalsHabits = () => {
     try {
       const res = await fetchWithAuth(`/habits/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed");
+      toast({ title: "Habit deleted", description: "Habit removed successfully." });
     } catch (err) {
       toast({ title: "Error", description: "Failed to delete habit", variant: "destructive" });
       setHabits(previous); save("user_habits", previous);

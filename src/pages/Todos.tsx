@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Plus, Eye, EyeOff, GripVertical, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 import {
   Select,
   SelectContent,
@@ -58,6 +59,7 @@ interface DragState {
 }
 
 const Todos = () => {
+  const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [editingTodo, setEditingTodo] = useState<TodoItem | null>(null);
@@ -167,7 +169,11 @@ const Todos = () => {
         if (response.ok) { const data = await response.json(); newTodo.id = data.id || newTodo.id; }
       } catch { console.log("API unavailable, saving locally"); }
       setTodos((prev) => { const updated = [...prev, newTodo]; localStorage.setItem("user_todos", JSON.stringify(updated)); return updated; });
-    } catch (error) { console.error("Failed to create todo:", error); }
+      toast({ title: "To do created", description: "Saved successfully." });
+    } catch (error) {
+      console.error("Failed to create todo:", error);
+      toast({ title: "Error", description: "Failed to create to do", variant: "destructive" });
+    }
   };
 
   const handleUpdateTodo = async (updated: TodoItem) => {
@@ -225,10 +231,12 @@ const Todos = () => {
       }
 
       if (!res.ok) throw new Error(`Failed (${res.status})`);
+      toast({ title: "To do updated", description: "Your changes have been saved." });
     } catch (e) {
       console.error("Failed to update todo:", e);
       setTodos(previous);
       localStorage.setItem("user_todos", JSON.stringify(previous));
+      toast({ title: "Error", description: "Failed to update to do", variant: "destructive" });
     }
   };
 
@@ -236,7 +244,11 @@ const Todos = () => {
     try {
       try { await fetchWithAuth(`/todos/${id}`, { method: "DELETE" }); } catch { console.log("API unavailable, deleting locally"); }
       setTodos((prev) => { const updated = prev.filter((t) => t.id !== id); localStorage.setItem("user_todos", JSON.stringify(updated)); return updated; });
-    } catch (error) { console.error("Failed to delete todo:", error); }
+      toast({ title: "To do deleted", description: "Removed successfully." });
+    } catch (error) {
+      console.error("Failed to delete todo:", error);
+      toast({ title: "Error", description: "Failed to delete to do", variant: "destructive" });
+    }
   };
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
@@ -284,8 +296,19 @@ const Todos = () => {
             });
           }
         }
-      } catch { console.log("API unavailable, updating locally"); }
-    } catch (error) { console.error("Failed to update todo:", error); }
+        if (res.ok) {
+          toast({ title: "To do moved", description: `Updated status to ${newStatus}.` });
+        } else {
+          toast({ title: "Error", description: "Failed to move to do", variant: "destructive" });
+        }
+      } catch {
+        console.log("API unavailable, updating locally");
+        toast({ title: "To do moved", description: `Updated status to ${newStatus}.` });
+      }
+    } catch (error) {
+      console.error("Failed to update todo:", error);
+      toast({ title: "Error", description: "Failed to move to do", variant: "destructive" });
+    }
   };
 
   const getHoveredColumn = useCallback((x: number, y: number): string | null => {
