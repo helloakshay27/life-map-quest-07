@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Plus, Eye, EyeOff, GripVertical } from "lucide-react";
+import { Plus, Eye, EyeOff, GripVertical, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 import {
   Select,
   SelectContent,
@@ -34,20 +35,37 @@ const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
 const LIFE_AREAS = ["Career", "Health", "Relationships", "Personal Growth", "Finance"];
 const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
 
+const toApiStatus = (ui: string) => {
+  const map: Record<string, string> = {
+    "Not Started": "not_started",
+    "In Progress": "in_progress",
+    "Completed": "completed",
+    "Someday": "someday",
+  };
+  return map[ui] ?? ui.toLowerCase().replace(/ /g, "_");
+};
+
+const toApiPriority = (ui: string) => ui.toLowerCase();
+
 interface DragState {
   todoId: string;
+  pointerId: number;
   startX: number;
   startY: number;
   currentX: number;
   currentY: number;
   cardWidth: number;
   cardHeight: number;
+  offsetX: number;
+  offsetY: number;
   isDragging: boolean;
 }
 
 const Todos = () => {
+  const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [todos, setTodos] = useState<TodoItem[]>([]);
+  const [editingTodo, setEditingTodo] = useState<TodoItem | null>(null);
   const [selectedArea, setSelectedArea] = useState("all-areas");
   const [selectedPriority, setSelectedPriority] = useState("all-priorities");
   const [selectedStatus, setSelectedStatus] = useState("all-statuses");
@@ -56,10 +74,19 @@ const Todos = () => {
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [hoveredStatus, setHoveredStatus] = useState<string | null>(null);
   const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const dragStateRef = useRef<DragState | null>(null);
+
+  useEffect(() => {
+    dragStateRef.current = dragState;
+  }, [dragState]);
 
   useEffect(() => {
     const loadTodos = async () => {
       try {
+        const savedTodosRaw = localStorage.getItem("user_todos");
+        const savedTodos: TodoItem[] | null = savedTodosRaw ? JSON.parse(savedTodosRaw) : null;
+        if (savedTodos) setTodos(savedTodos);
+
         const response = await fetchWithAuth("/todos", { method: "GET" });
         if (response.ok) {
           const rawData = await response.json();
@@ -84,8 +111,32 @@ const Todos = () => {
               priority: priorityMap[item.priority] || "Medium",
             };
           });
-          setTodos(formattedData);
-          localStorage.setItem("user_todos", JSON.stringify(formattedData));
+          // Prefer locally-saved values so drag/drop "sticks" across navigation.
+          const localById = new Map<string, TodoItem>(
+            (savedTodos ?? []).map((t) => [String(t.id), t]),
+          );
+          const merged: TodoItem[] = formattedData.map((t: TodoItem) => {
+            const local = localById.get(String(t.id));
+            return local
+              ? {
+                  ...t,
+                  title: local.title ?? t.title,
+                  description: local.description ?? t.description,
+                  lifeArea: local.lifeArea ?? t.lifeArea,
+                  priority: local.priority ?? t.priority,
+                  status: local.status ?? t.status,
+                }
+              : t;
+          });
+
+          for (const lt of savedTodos ?? []) {
+            if (!formattedData.some((t: TodoItem) => String(t.id) === String(lt.id))) {
+              merged.push(lt);
+            }
+          }
+
+          setTodos(merged);
+          localStorage.setItem("user_todos", JSON.stringify(merged));
           return;
         }
         throw new Error("Failed to fetch from API");
@@ -126,14 +177,86 @@ const Todos = () => {
         if (response.ok) { const data = await response.json(); newTodo.id = data.id || newTodo.id; }
       } catch { console.log("API unavailable, saving locally"); }
       setTodos((prev) => { const updated = [...prev, newTodo]; localStorage.setItem("user_todos", JSON.stringify(updated)); return updated; });
-    } catch (error) { console.error("Failed to create todo:", error); }
+      toast({ title: "To do created", description: "Saved successfully." });
+    } catch (error) {
+      console.error("Failed to create todo:", error);
+      toast({ title: "Error", description: "Failed to create to do", variant: "destructive" });
+    }
+  };
+
+  const handleUpdateTodo = async (updated: TodoItem) => {
+    const previous = [...todos];
+    setTodos((prev) => {
+      const next = prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t));
+      localStorage.setItem("user_todos", JSON.stringify(next));
+      return next;
+    });
+
+    try {
+      const payloadWrapped = {
+        todo: {
+          title: updated.title,
+          description: updated.description,
+          life_area: updated.lifeArea,
+          priority: toApiPriority(updated.priority),
+          status: toApiStatus(updated.status),
+          recurring: updated.recurring,
+          target_date: updated.targetDate
+            ? new Date(updated.targetDate).toISOString().split("T")[0]
+            : null,
+          goal_id: updated.goalId ? Number(updated.goalId) : null,
+        },
+      };
+
+      let res = await fetchWithAuth(`/todos/${updated.id}`, {
+        method: "PUT",
+        body: JSON.stringify(payloadWrapped),
+      });
+      if (!res.ok) {
+        res = await fetchWithAuth(`/todos/${updated.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(payloadWrapped),
+        });
+      }
+
+      if (!res.ok) {
+        // fallback: flat payload
+        const payloadFlat: any = {
+          ...updated,
+          status: toApiStatus(updated.status),
+          priority: toApiPriority(updated.priority),
+        };
+        res = await fetchWithAuth(`/todos/${updated.id}`, {
+          method: "PUT",
+          body: JSON.stringify(payloadFlat),
+        });
+        if (!res.ok) {
+          res = await fetchWithAuth(`/todos/${updated.id}`, {
+            method: "PATCH",
+            body: JSON.stringify(payloadFlat),
+          });
+        }
+      }
+
+      if (!res.ok) throw new Error(`Failed (${res.status})`);
+      toast({ title: "To do updated", description: "Your changes have been saved." });
+    } catch (e) {
+      console.error("Failed to update todo:", e);
+      setTodos(previous);
+      localStorage.setItem("user_todos", JSON.stringify(previous));
+      toast({ title: "Error", description: "Failed to update to do", variant: "destructive" });
+    }
   };
 
   const handleDeleteTodo = async (id: string) => {
     try {
       try { await fetchWithAuth(`/todos/${id}`, { method: "DELETE" }); } catch { console.log("API unavailable, deleting locally"); }
       setTodos((prev) => { const updated = prev.filter((t) => t.id !== id); localStorage.setItem("user_todos", JSON.stringify(updated)); return updated; });
-    } catch (error) { console.error("Failed to delete todo:", error); }
+      toast({ title: "To do deleted", description: "Removed successfully." });
+    } catch (error) {
+      console.error("Failed to delete todo:", error);
+      toast({ title: "Error", description: "Failed to delete to do", variant: "destructive" });
+    }
   };
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
@@ -146,9 +269,54 @@ const Todos = () => {
         return newTodos;
       });
       try {
-        await fetchWithAuth(`/todos/${id}`, { method: "PUT", body: JSON.stringify({ ...updatedTodo, status: newStatus }) });
-      } catch { console.log("API unavailable, updating locally"); }
-    } catch (error) { console.error("Failed to update todo:", error); }
+        const payloadWrapped = {
+          todo: {
+            status: toApiStatus(newStatus),
+            priority: toApiPriority(updatedTodo.priority),
+            life_area: updatedTodo.lifeArea,
+            title: updatedTodo.title,
+            description: updatedTodo.description,
+          },
+        };
+
+        // Try common API shapes/methods (PUT then PATCH fallback)
+        let res = await fetchWithAuth(`/todos/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(payloadWrapped),
+        });
+        if (!res.ok) {
+          res = await fetchWithAuth(`/todos/${id}`, {
+            method: "PATCH",
+            body: JSON.stringify(payloadWrapped),
+          });
+        }
+        if (!res.ok) {
+          // fallback: some endpoints accept unwrapped payload
+          const payloadFlat = { ...updatedTodo, status: toApiStatus(newStatus) };
+          res = await fetchWithAuth(`/todos/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(payloadFlat),
+          });
+          if (!res.ok) {
+            res = await fetchWithAuth(`/todos/${id}`, {
+              method: "PATCH",
+              body: JSON.stringify(payloadFlat),
+            });
+          }
+        }
+        if (res.ok) {
+          toast({ title: "To do moved", description: `Updated status to ${newStatus}.` });
+        } else {
+          toast({ title: "Error", description: "Failed to move to do", variant: "destructive" });
+        }
+      } catch {
+        console.log("API unavailable, updating locally");
+        toast({ title: "To do moved", description: `Updated status to ${newStatus}.` });
+      }
+    } catch (error) {
+      console.error("Failed to update todo:", error);
+      toast({ title: "Error", description: "Failed to move to do", variant: "destructive" });
+    }
   };
 
   const getHoveredColumn = useCallback((x: number, y: number): string | null => {
@@ -164,48 +332,59 @@ const Todos = () => {
 
   const handlePointerDown = (e: React.PointerEvent, todoId: string) => {
     if (e.button !== undefined && e.button !== 0) return;
+    // Prevent text selection / native drag behaviors from interfering.
+    e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setDragState({
       todoId,
+      pointerId: e.pointerId,
       startX: e.clientX,
       startY: e.clientY,
       currentX: e.clientX,
       currentY: e.clientY,
       cardWidth: rect.width,
       cardHeight: rect.height,
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top,
       isDragging: false,
     });
   };
 
-  const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!dragState) return;
-    const dx = e.clientX - dragState.startX;
-    const dy = e.clientY - dragState.startY;
+  const updateDragPosition = useCallback((clientX: number, clientY: number) => {
+    const current = dragStateRef.current;
+    if (!current) return;
+    const dx = clientX - current.startX;
+    const dy = clientY - current.startY;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    const isDragging = dragState.isDragging || dist > 6;
+    const isDragging = current.isDragging || dist > 6;
     if (isDragging) {
-      setDragState((prev) => prev ? { ...prev, currentX: e.clientX, currentY: e.clientY, isDragging: true } : null);
-      setHoveredStatus(getHoveredColumn(e.clientX, e.clientY));
+      setDragState((prev) =>
+        prev
+          ? { ...prev, currentX: clientX, currentY: clientY, isDragging: true }
+          : null,
+      );
+      setHoveredStatus(getHoveredColumn(clientX, clientY));
       document.body.style.cursor = "grabbing";
       document.body.style.userSelect = "none";
     }
-  }, [dragState, getHoveredColumn]);
+  }, [getHoveredColumn]);
 
-  const handlePointerUp = useCallback((e: React.PointerEvent) => {
-    if (!dragState) return;
-    if (dragState.isDragging) {
-      const targetStatus = getHoveredColumn(e.clientX, e.clientY);
-      const todo = todos.find((t) => t.id === dragState.todoId);
+  const commitDrop = useCallback((clientX: number, clientY: number) => {
+    const current = dragStateRef.current;
+    if (!current) return;
+    if (current.isDragging) {
+      const targetStatus = getHoveredColumn(clientX, clientY);
+      const todo = todos.find((t) => t.id === current.todoId);
       if (targetStatus && todo && todo.status !== targetStatus) {
-        handleUpdateStatus(dragState.todoId, targetStatus);
+        handleUpdateStatus(current.todoId, targetStatus);
       }
     }
     setDragState(null);
     setHoveredStatus(null);
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
-  }, [dragState, todos, getHoveredColumn]);
+  }, [todos, getHoveredColumn]);
 
   const handlePointerCancel = useCallback(() => {
     setDragState(null);
@@ -214,11 +393,48 @@ const Todos = () => {
     document.body.style.userSelect = "";
   }, []);
 
+  // Ensure dragging stays smooth even if the pointer leaves the card quickly.
+  useEffect(() => {
+    if (!dragState) return;
+
+    const onMove = (e: PointerEvent) => {
+      const current = dragStateRef.current;
+      if (!current) return;
+      if (e.pointerId !== current.pointerId) return;
+      e.preventDefault();
+      updateDragPosition(e.clientX, e.clientY);
+    };
+
+    const onUp = (e: PointerEvent) => {
+      const current = dragStateRef.current;
+      if (!current) return;
+      if (e.pointerId !== current.pointerId) return;
+      e.preventDefault();
+      commitDrop(e.clientX, e.clientY);
+    };
+
+    const onCancel = (e: PointerEvent) => {
+      const current = dragStateRef.current;
+      if (!current) return;
+      if (e.pointerId !== current.pointerId) return;
+      handlePointerCancel();
+    };
+
+    window.addEventListener("pointermove", onMove, { passive: false });
+    window.addEventListener("pointerup", onUp, { passive: false });
+    window.addEventListener("pointercancel", onCancel);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+    };
+  }, [dragState, updateDragPosition, commitDrop, handlePointerCancel]);
+
   const ghostStyle = dragState?.isDragging
     ? {
         position: "fixed" as const,
-        left: dragState.currentX - dragState.cardWidth / 2,
-        top: dragState.currentY - dragState.cardHeight / 2,
+        left: dragState.currentX - dragState.offsetX,
+        top: dragState.currentY - dragState.offsetY,
         width: dragState.cardWidth,
         pointerEvents: "none" as const,
         zIndex: 9999,
@@ -248,7 +464,14 @@ const Todos = () => {
           <h1 className="text-3xl font-bold text-foreground">To Do's</h1>
           <p className="text-sm text-muted-foreground">Manage your tasks and action items</p>
         </div>
-        <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto px-4 py-2.5" onClick={() => setIsCreateDialogOpen(true)}>
+        <Button
+          size="sm"
+          className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto px-4 py-2.5"
+          onClick={() => {
+            setEditingTodo(null);
+            setIsCreateDialogOpen(true);
+          }}
+        >
           <Plus className="h-4 w-4 mr-2" />New To Do
         </Button>
       </div>
@@ -341,8 +564,6 @@ const Todos = () => {
                               <Card
                                 key={todo.id}
                                 onPointerDown={(e) => handlePointerDown(e, todo.id)}
-                                onPointerMove={handlePointerMove}
-                                onPointerUp={handlePointerUp}
                                 onPointerCancel={handlePointerCancel}
                                 className={`
                                   bg-white p-2 sm:p-3 shadow-sm select-none touch-none
@@ -359,8 +580,20 @@ const Todos = () => {
                                     <p className="text-sm sm:text-base font-medium text-foreground flex-1 line-clamp-2">{todo.title}</p>
                                     <button
                                       onPointerDown={(e) => e.stopPropagation()}
+                                      onClick={() => {
+                                        setEditingTodo(todo);
+                                        setIsCreateDialogOpen(true);
+                                      }}
+                                      className="text-gray-400 hover:text-gray-700 transition-colors flex-shrink-0"
+                                      title="Edit"
+                                    >
+                                      <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
+                                    </button>
+                                    <button
+                                      onPointerDown={(e) => e.stopPropagation()}
                                       onClick={() => handleDeleteTodo(todo.id)}
                                       className="text-red-500 hover:text-red-700 transition-colors flex-shrink-0"
+                                      title="Delete"
                                     >
                                       <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />
                                     </button>
@@ -412,6 +645,18 @@ const Todos = () => {
                               {statuses.map((s) => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
                             </SelectContent>
                           </Select>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setEditingTodo(todo);
+                              setIsCreateDialogOpen(true);
+                            }}
+                            className="flex-shrink-0 text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                            title="Edit"
+                          >
+                            <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
                           <Button variant="ghost" size="sm" onClick={() => handleDeleteTodo(todo.id)} className="flex-shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50">
                             <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
@@ -446,8 +691,18 @@ const Todos = () => {
 
       <CreateToDoDialog
         open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        onSubmit={handleCreateTodo}
+        onOpenChange={(open) => {
+          setIsCreateDialogOpen(open);
+          if (!open) setEditingTodo(null);
+        }}
+        initialData={editingTodo}
+        onSubmit={(todo) => {
+          if (editingTodo) {
+            handleUpdateTodo(todo);
+          } else {
+            handleCreateTodo(todo);
+          }
+        }}
       />
     </div>
   );

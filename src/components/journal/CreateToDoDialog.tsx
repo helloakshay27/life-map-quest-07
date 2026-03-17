@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { CalendarIcon, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ interface CreateToDoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (todo: TodoItem) => void;
+  initialData?: TodoItem | null;
   // 🚀 Naya prop availableGoals receive karne ke liye
   availableGoals?: any[]; 
 }
@@ -57,6 +58,7 @@ const CreateToDoDialog = ({
   open, 
   onOpenChange, 
   onSubmit, 
+  initialData = null,
   availableGoals = [] 
 }: CreateToDoDialogProps) => {
   const [title, setTitle] = useState("");
@@ -67,11 +69,38 @@ const CreateToDoDialog = ({
   const [targetDate, setTargetDate] = useState<Date>();
   const [recurring, setRecurring] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<string>("none"); // 🚀 State for dropdown
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+
+  const isEditMode = Boolean(initialData?.id);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!initialData) {
+      setTitle("");
+      setDescription("");
+      setLifeArea("Career");
+      setPriority("Medium");
+      setStatus("Not Started");
+      setTargetDate(undefined);
+      setRecurring(false);
+      setSelectedGoal("none");
+      return;
+    }
+
+    setTitle(initialData.title ?? "");
+    setDescription(initialData.description ?? "");
+    setLifeArea(initialData.lifeArea ?? "Career");
+    setPriority(initialData.priority ?? "Medium");
+    setStatus(initialData.status ?? "Not Started");
+    setTargetDate(initialData.targetDate);
+    setRecurring(Boolean(initialData.recurring));
+    setSelectedGoal(initialData.goalId ?? "none");
+  }, [open, initialData]);
 
   const handleSubmit = () => {
     if (!title.trim()) return;
     onSubmit({
-      id: crypto.randomUUID(),
+      id: initialData?.id ?? crypto.randomUUID(),
       title: title.trim(),
       description: description.trim(),
       lifeArea,
@@ -98,7 +127,9 @@ const CreateToDoDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-title-1 text-foreground">Create New To Do</DialogTitle>
+          <DialogTitle className="text-title-1 text-foreground">
+            {isEditMode ? "Update To Do" : "Create New To Do"}
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
@@ -160,7 +191,7 @@ const CreateToDoDialog = ({
             </div>
             <div>
               <label className="text-body-5 font-medium text-primary">Target Date</label>
-              <Popover>
+              <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -177,7 +208,10 @@ const CreateToDoDialog = ({
                   <Calendar
                     mode="single"
                     selected={targetDate}
-                    onSelect={setTargetDate}
+                    onSelect={(d) => {
+                      setTargetDate(d);
+                      if (d) setIsDatePickerOpen(false);
+                    }}
                     initialFocus
                     className="p-3 pointer-events-auto"
                   />
@@ -221,7 +255,7 @@ const CreateToDoDialog = ({
           <div className="flex justify-end gap-3 border-t pt-3">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button variant="secondary" onClick={handleSubmit} disabled={!title.trim()} className="gap-1">
-              <Save className="h-4 w-4" /> Create To Do
+              <Save className="h-4 w-4" /> {isEditMode ? "Update To Do" : "Create To Do"}
             </Button>
           </div>
         </div>
