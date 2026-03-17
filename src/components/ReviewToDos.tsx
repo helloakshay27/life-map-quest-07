@@ -1,182 +1,99 @@
-import React, { useState, useEffect } from 'react';
-import { Target, Info, Plus, Trash2 } from 'lucide-react';
-import CreateToDoDialog, { TodoItem } from "@/components/journal/CreateToDoDialog";
+import React from "react";
+import { Target, Info } from "lucide-react";
 
-const API_BASE_URL = "https://life-api.lockated.com";
+interface Goal {
+  id: number | string;
+  title: string;
+  category?: string;
+  area?: string;
+  progress: number;
+}
 
-const getAuthHeaders = (): Record<string, string> => {
-  const token = localStorage.getItem("auth_token");
-  return token
-    ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
-    : { "Content-Type": "application/json" };
+interface ReviewGoalsProps {
+  goals: Goal[];
+}
+
+// Helper to determine status text based on percentage
+const getStatusText = (progress: number) => {
+  if (progress === 0) return "Not Started";
+  if (progress > 0 && progress <= 25) return "Just Started";
+  if (progress > 25 && progress <= 50) return "Making Progress";
+  if (progress > 50 && progress <= 75) return "Halfway There";
+  if (progress > 75 && progress < 100) return "Almost Done";
+  return "Completed";
 };
 
-const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: { ...getAuthHeaders(), ...options.headers },
-  });
-  return response;
-};
-
-const LIFE_AREA_IDS: Record<string, number> = {
-  "Career": 1,
-  "Health": 2,
-  "Relationships": 3,
-  "Personal Growth": 4,
-  "Finance": 5,
-};
-
-function ReviewToDos() {
-  const [todos, setTodos] = useState<TodoItem[]>([]);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [goals, setGoals] = useState<any[]>([]);
-
-  // GET todos on mount
-  useEffect(() => {
-    const fetchTodos = async () => {
-      try {
-        const res = await fetchWithAuth("/todos");
-        if (res.ok) {
-          const data = await res.json();
-          const list = Array.isArray(data) ? data : (data.todos || data.data || []);
-          const normalized: TodoItem[] = list.map((t: any) => ({
-            id: String(t.id),
-            title: t.title ?? "",
-            description: t.description ?? "",
-            lifeArea: t.life_area?.name ?? t.life_area ?? "",
-            priority: t.priority ?? "medium",
-            status: t.status ?? "not_started",
-            targetDate: t.target_date ? new Date(t.target_date) : undefined,
-            recurring: t.recurring ?? false,
-            goalId: t.goal_id ? String(t.goal_id) : undefined,
-          }));
-          setTodos(normalized);
-        }
-      } catch (e) {
-        console.error("Failed to fetch todos:", e);
-      }
-    };
-    fetchTodos();
-  }, []);
-
-  // GET goals for dialog dropdown
-  useEffect(() => {
-    const fetchGoals = async () => {
-      try {
-        const res = await fetchWithAuth("/goals");
-        if (res.ok) {
-          const data = await res.json();
-          setGoals(Array.isArray(data) ? data : (data.goals || data.data || []));
-        }
-      } catch (e) {
-        console.error("Failed to fetch goals:", e);
-      }
-    };
-    fetchGoals();
-  }, []);
-
-  // POST new todo
-  const handleCreateTodo = async (newTodo: TodoItem) => {
-    setTodos((prev) => [...prev, newTodo]); // optimistic
-    try {
-      const payload = {
-        todo: {
-          title: newTodo.title,
-          description: newTodo.description,
-          life_area_id: LIFE_AREA_IDS[newTodo.lifeArea] ?? 1,
-          priority: newTodo.priority.toLowerCase(),
-          status: newTodo.status.toLowerCase().replace(/ /g, "_"),
-          target_date: newTodo.targetDate
-            ? new Date(newTodo.targetDate).toISOString().split("T")[0]
-            : null,
-          recurring: newTodo.recurring,
-          goal_id: newTodo.goalId ? Number(newTodo.goalId) : null,
-        },
-      };
-      const res = await fetchWithAuth("/todos", { method: "POST", body: JSON.stringify(payload) });
-      if (res.ok) {
-        const data = await res.json();
-        const createdId = data.id ?? data.todo?.id;
-        if (createdId) {
-          setTodos((prev) => prev.map((t) => t.id === newTodo.id ? { ...t, id: String(createdId) } : t));
-        }
-      }
-    } catch {
-      console.log("API unavailable, saved locally");
-    }
-  };
-
-  // DELETE todo
-  const handleDeleteTodo = async (id: string) => {
-    setTodos((prev) => prev.filter((t) => t.id !== id));
-    try {
-      await fetchWithAuth(`/todos/${id}`, { method: "DELETE" });
-    } catch {
-      console.log("API unavailable, deleted locally");
-    }
-  };
-
+export default function ReviewToDos({ goals }: ReviewGoalsProps) {
   return (
-    <div className="relative w-full font-sans overflow-hidden">
-      <div className="absolute -top-12 -right-12 w-64 h-64 bg-indigo-50/50 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Indigo Header */}
-      <div className="relative z-10 px-6 pt-5 pb-4 border-b border-indigo-100 bg-white">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#6770f4] shadow-sm shrink-0">
-              <Target className="text-white w-5 h-5" strokeWidth={2.5} />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h2 className="text-[17px] font-bold text-gray-900">Review To Do's</h2>
-                <Info className="w-4 h-4 text-indigo-400 cursor-help" />
-              </div>
-              <p className="text-[13px] text-gray-500 mt-0.5">Manage your tasks for the week</p>
-            </div>
-          </div>
-          <button
-            className="flex items-center gap-1.5 bg-[#5b64f0] hover:bg-[#4a53d3] text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm shrink-0"
-            onClick={() => setIsCreateDialogOpen(true)}
-          >
-            <Plus className="w-4 h-4" strokeWidth={2.5} /> Add To Do
-          </button>
+    <div className="w-full bg-[#f8f9fc] border border-indigo-200 rounded-2xl p-6 font-sans">
+      {/* Header section */}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center justify-center w-10 h-10 bg-[#7c83fd] rounded-xl shadow-sm">
+          <Target className="w-5 h-5 text-white" strokeWidth={2.5} />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <h2 className="text-[18px] font-bold text-gray-900">Review Goals</h2>
+          <Info className="w-4 h-4 text-indigo-500 cursor-help" />
         </div>
       </div>
 
-      {/* Todos Section */}
-      <div className="relative z-10 p-6">
+      {/* Sub-header */}
+      <h3 className="text-[13px] font-bold text-indigo-700 uppercase tracking-wider mb-3">
+        THIS WEEK'S GOALS
+      </h3>
 
-        {todos.length === 0 ? (
-          <div className="w-full bg-white rounded-xl py-5 flex items-center justify-center shadow-sm">
-            <span className="text-[14px] font-medium text-gray-500">No to-do's yet</span>
-          </div>
-        ) : (
-          <div className="w-full bg-white rounded-xl shadow-sm divide-y divide-gray-100 overflow-hidden">
-            {todos.map((todo) => (
-              <div key={todo.id} className="flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors">
-                <span className="text-[15px] flex-1 text-gray-800 font-medium">{todo.title}</span>
-                <button
-                  onClick={() => handleDeleteTodo(todo.id)}
-                  className="text-gray-300 hover:text-red-500 transition-colors ml-2 flex-shrink-0"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+      {/* Goals List */}
+      <div className="space-y-3">
+        {goals && goals.length > 0 ? (
+          goals.map((goal) => {
+            const progress = goal.progress || 0;
+            const statusText = getStatusText(progress);
+
+            return (
+              <div
+                key={goal.id}
+                className="flex items-center justify-between bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
+              >
+                {/* Left Side: Dot, Title, Category */}
+                <div className="flex items-center gap-3">
+                  <div className="w-2.5 h-2.5 rounded-full bg-pink-500 shrink-0 mt-0.5"></div>
+                  <div>
+                    <h4 className="text-[15px] font-bold text-gray-900 leading-tight">
+                      {goal.title}
+                    </h4>
+                    <p className="text-[13px] text-gray-500 mt-0.5">
+                      {goal.category || goal.area || "Relationships"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right Side: Status Badge, Progress Bar, Percentage */}
+                <div className="flex items-center gap-4">
+                  <span className="bg-gray-100 text-gray-700 text-[12px] font-medium px-3 py-1 rounded-full whitespace-nowrap">
+                    {statusText}
+                  </span>
+
+                  <div className="flex items-center gap-2">
+                    <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden flex">
+                      <div
+                        className="bg-indigo-600 h-full rounded-full transition-all duration-300"
+                        style={{ width: `${progress}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-[13px] font-bold text-indigo-600 w-8 text-right">
+                      {progress}%
+                    </span>
+                  </div>
+                </div>
               </div>
-            ))}
+            );
+          })
+        ) : (
+          <div className="text-center p-4 text-gray-500 text-sm bg-white rounded-xl border border-gray-200">
+            No active goals found for this week.
           </div>
         )}
       </div>
-
-      <CreateToDoDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        onSubmit={handleCreateTodo}
-        availableGoals={goals}
-      />
     </div>
   );
 }
-
-export default ReviewToDos;
