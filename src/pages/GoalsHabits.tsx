@@ -54,7 +54,7 @@ const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
 };
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
-interface Goal { id: string; title: string; status: "planning" | "started" | "progress" | "completed"; area?: string; progress?: number; }
+interface Goal { id: string; title: string; status: "planning" | "started" | "progress" | "completed"; area?: string; progress?: number; description?: string; start_date?: string; target_date?: string; }
 interface Belief { id: string | number; belief: string; statement?: string; limiting_belief?: string; goal_id?: number | null; user_id?: number; affirmation_id?: number | null; active?: number; changed_by?: number; created_at?: string; updated_at?: string; reflection_data?: { origin?: string; supporting_evidence?: string; contradicting_evidence?: string; impact?: string; reframe?: string; }; origin?: string; evidence?: string; alternative: string; }
 interface Pattern { id: string | number; name: string; recurring_behavior?: string; trigger?: string; consequence?: string; alternative: string; pattern_data?: { triggers?: string; underlying_reason?: string; impact?: string; desired_behavior?: string; strategies?: string; }; affirmation_id?: number | null; created_at?: string; }
 interface Affirmation { id: string | number; text?: string; statement?: string; category?: string; linkedBelief?: string; priority?: number; }
@@ -62,15 +62,32 @@ interface Habit { id: string | number; name: string; description?: string; frequ
 interface DragState { goalId: string; startX: number; startY: number; currentX: number; currentY: number; cardWidth: number; cardHeight: number; isDragging: boolean; }
 
 // ─── HELPER COMPONENTS ────────────────────────────────────────────────────────
-const DelBtn = ({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) => (
+const DelBtn = ({ onClick, disabled, loading }: { onClick: () => void; disabled?: boolean; loading?: boolean }) => (
+  <button
+    onPointerDown={(e) => e.stopPropagation()}
+    onClick={(e) => { e.stopPropagation(); onClick(); }}
+    disabled={disabled || loading}
+    className="absolute top-3 right-3 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+  >
+    {loading ? (
+      <Loader2 className="h-4 w-4 animate-spin" />
+    ) : (
+      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      </svg>
+    )}
+  </button>
+);
+
+const EditBtn = ({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) => (
   <button
     onPointerDown={(e) => e.stopPropagation()}
     onClick={(e) => { e.stopPropagation(); onClick(); }}
     disabled={disabled}
-    className="absolute top-3 right-3 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+    className="absolute top-3 right-12 text-blue-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
   >
     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
     </svg>
   </button>
 );
@@ -108,6 +125,7 @@ const GoalsHabits = () => {
   const [patternSaving, setPatternSaving] = useState(false);
   const [affirmationSaving, setAffirmationSaving] = useState(false);
   const [habitSaving, setHabitSaving] = useState(false);
+  const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
 
   // Form states: Goal
   const [goalName, setGoalName] = useState("");
@@ -117,6 +135,7 @@ const GoalsHabits = () => {
   const [goalStartDate, setGoalStartDate] = useState("");
   const [goalTargetDate, setGoalTargetDate] = useState("");
   const [goalProgress, setGoalProgress] = useState(0);
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
 
   // Form states: Belief
   const [beliefText, setBeliefText] = useState("");
@@ -256,6 +275,7 @@ const GoalsHabits = () => {
       setGoals((prev) => { const u = prev.map((g) => (g.id === tempId ? { ...g, id: String(createdId) } : g)); save("user_goals", u); return u; });
 
       setGoalName(""); setGoalDescription(""); setGoalCategory(""); setGoalStatus("planning"); setGoalStartDate(""); setGoalTargetDate(""); setGoalProgress(0);
+      setEditingGoalId(null);
       setIsGoalDialogOpen(false);
     } catch (err) {
       toast({ title: "Error", description: "Failed to save goal", variant: "destructive" });
@@ -265,16 +285,74 @@ const GoalsHabits = () => {
     }
   };
 
+  const handleUpdateGoal = async () => {
+    if (!goalName.trim() || editingGoalId === null) return;
+    setGoalSaving(true);
+    const previous = [...goals];
+
+    setGoals((prev) => {
+      const u = prev.map((g) => g.id === editingGoalId ? { ...g, title: goalName, status: goalStatus, area: goalCategory, progress: goalProgress } : g);
+      save("user_goals", u); return u;
+    });
+
+    try {
+      const res = await fetchWithAuth(`/goals/${editingGoalId}`, {
+        method: "PUT",
+        body: JSON.stringify({ goal: { title: goalName, description: goalDescription, category: goalCategory || "other", status: toApiStatus(goalStatus), priority: "high", progress: goalProgress, start_date: goalStartDate || null, target_date: goalTargetDate || null, end_date: goalTargetDate || null, core_value_ids: [] } }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const updated = await res.json();
+      setGoals((prev) => {
+        const u = prev.map((g) => g.id === editingGoalId ? { ...g, ...updated.goal, id: String(updated.goal?.id || updated.id || editingGoalId) } : g);
+        save("user_goals", u); return u;
+      });
+
+      setEditingGoalId(null); setGoalName(""); setGoalDescription(""); setGoalCategory(""); setGoalStatus("planning"); setGoalStartDate(""); setGoalTargetDate(""); setGoalProgress(0);
+      setIsGoalDialogOpen(false);
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to update goal", variant: "destructive" });
+      setGoals(previous); save("user_goals", previous);
+    } finally {
+      setGoalSaving(false);
+    }
+  };
+
+  const openEditGoal = (goal: Goal) => {
+    setEditingGoalId(goal.id);
+    setGoalName(goal.title);
+    setGoalDescription(goal.description || "");
+    setGoalCategory(goal.area || "");
+    setGoalStatus(goal.status);
+    setGoalStartDate(goal.start_date || "");
+    setGoalTargetDate(goal.target_date || "");
+    setGoalProgress(goal.progress || 0);
+    setIsGoalDialogOpen(true);
+  };
+
   const handleDeleteGoal = async (id: string) => {
     if (String(id).startsWith("temp-")) return setGoals((p) => p.filter((g) => g.id !== id));
+    
+    setDeletingGoalId(id);
     const previous = [...goals];
     setGoals((prev) => { const u = prev.filter((g) => g.id !== id); save("user_goals", u); return u; });
+    
     try {
-      const res = await fetchWithAuth(`/goals/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed");
+      const res = await fetchWithAuth(`/goals/${id}`, { 
+        method: "DELETE",
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      });
+      if (!res.ok) throw new Error(`Failed to delete: ${res.status}`);
     } catch (error) {
-      toast({ title: "Error", description: "Could not delete goal", variant: "destructive" });
-      setGoals(previous); save("user_goals", previous);
+      console.error("Delete error:", error);
+      toast({ 
+        title: "Error", 
+        description: error.name === 'TimeoutError' ? "Delete request timed out. Please try again." : "Could not delete goal", 
+        variant: "destructive" 
+      });
+      setGoals(previous); 
+      save("user_goals", previous);
+    } finally {
+      setDeletingGoalId(null);
     }
   };
 
@@ -774,7 +852,7 @@ const GoalsHabits = () => {
                         )}
                         {cols.map((goal) => (
                           <Card key={goal.id} onPointerDown={(e) => handlePointerDown(e, goal.id)} className={`p-3 sm:p-4 relative group cursor-grab active:cursor-grabbing touch-none select-none hover:shadow-md transition-shadow ${dragState?.goalId === goal.id ? "opacity-30 scale-95" : ""}`}>
-                            <p className="font-semibold text-sm sm:text-base text-foreground pr-8">{goal.title}</p>
+                            <p className="font-semibold text-sm sm:text-base text-foreground pr-16">{goal.title}</p>
                             <div className="mt-3">
                               <div className="flex items-center justify-between mb-1">
                                 <span className="text-xs text-muted-foreground">Progress</span>
@@ -784,7 +862,8 @@ const GoalsHabits = () => {
                                 <div className="bg-gradient-to-r from-blue-500 to-teal-500 h-2.5 rounded-full" style={{ width: `${goal.progress || 0}%` }} />
                               </div>
                             </div>
-                            <DelBtn onClick={() => handleDeleteGoal(goal.id)} />
+                            <EditBtn onClick={() => openEditGoal(goal)} />
+                            <DelBtn onClick={() => handleDeleteGoal(goal.id)} loading={deletingGoalId === goal.id} />
                           </Card>
                         ))}
                       </div>
@@ -808,7 +887,7 @@ const GoalsHabits = () => {
             <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {goals.map((goal) => (
                 <Card key={goal.id} className="p-3 sm:p-4 relative group">
-                  <p className="font-semibold text-sm sm:text-base text-foreground pr-8">{goal.title}</p>
+                  <p className="font-semibold text-sm sm:text-base text-foreground pr-16">{goal.title}</p>
                   <p className="text-xs sm:text-sm text-muted-foreground capitalize mt-1">{goal.status}</p>
                   <div className="mt-3">
                     <div className="flex items-center justify-between mb-1">
@@ -819,7 +898,8 @@ const GoalsHabits = () => {
                       <div className="bg-gradient-to-r from-blue-500 to-teal-500 h-2.5 rounded-full" style={{ width: `${goal.progress || 0}%` }} />
                     </div>
                   </div>
-                  <DelBtn onClick={() => handleDeleteGoal(goal.id)} />
+                  <EditBtn onClick={() => openEditGoal(goal)} />
+                  <DelBtn onClick={() => handleDeleteGoal(goal.id)} loading={deletingGoalId === goal.id} />
                 </Card>
               ))}
             </div>
@@ -987,9 +1067,9 @@ const GoalsHabits = () => {
       {/* ── DIALOGS ── */}
 
       {/* Goal Dialog */}
-      <Dialog open={isGoalDialogOpen} onOpenChange={setIsGoalDialogOpen}>
+      <Dialog open={isGoalDialogOpen} onOpenChange={(open) => { setIsGoalDialogOpen(open); if (!open) setEditingGoalId(null); }}>
         <DialogContent className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="text-xl sm:text-2xl">🎯 Create New Goal</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-xl sm:text-2xl">{editingGoalId !== null ? "✏️ Edit Goal" : "🎯 Create New Goal"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2"><Label>Goal Name *</Label><Input placeholder="e.g., Run a marathon..." value={goalName} onChange={(e) => setGoalName(e.target.value)} /></div>
             <div className="space-y-2"><Label>Description</Label><Textarea placeholder="Details..." rows={3} value={goalDescription} onChange={(e) => setGoalDescription(e.target.value)} /></div>
@@ -1032,8 +1112,8 @@ const GoalsHabits = () => {
             </div>
             <div className="flex justify-end gap-2 pt-4">
               <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" onClick={() => setIsGoalDialogOpen(false)} disabled={goalSaving}>Cancel</Button>
-              <Button className="bg-red-500 hover:bg-red-600 text-white" onClick={handleCreateGoal} disabled={goalSaving || !goalName.trim()}>
-                {goalSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : "Create Goal"}
+              <Button className="bg-red-500 hover:bg-red-600 text-white" onClick={editingGoalId !== null ? handleUpdateGoal : handleCreateGoal} disabled={goalSaving || !goalName.trim()}>
+                {goalSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : editingGoalId !== null ? "Update Goal" : "Create Goal"}
               </Button>
             </div>
           </div>
