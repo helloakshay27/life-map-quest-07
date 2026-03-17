@@ -59,7 +59,6 @@ interface Belief { id: string | number; belief: string; statement?: string; limi
 interface Pattern { id: string | number; name: string; recurring_behavior?: string; trigger?: string; consequence?: string; alternative: string; pattern_data?: { triggers?: string; underlying_reason?: string; impact?: string; desired_behavior?: string; strategies?: string; }; affirmation_id?: number | null; created_at?: string; }
 interface Affirmation { id: string | number; text?: string; statement?: string; category?: string; linkedBelief?: string; priority?: number; }
 interface Habit { id: string | number; name: string; description?: string; frequency?: "daily" | "weekly" | "custom"; category?: string; time?: string; place?: string; start_date?: string; target_date?: string; startDate?: string; }
-interface DragState { goalId: string; startX: number; startY: number; currentX: number; currentY: number; cardWidth: number; cardHeight: number; isDragging: boolean; }
 
 // ─── HELPER COMPONENTS ────────────────────────────────────────────────────────
 const DelBtn = ({ onClick, disabled, loading }: { onClick: () => void; disabled?: boolean; loading?: boolean }) => (
@@ -99,6 +98,7 @@ const GoalsHabits = () => {
   const navigate = useNavigate();
   const [selectedArea, setSelectedArea] = useState("all-areas");
   const [viewMode, setViewMode] = useState<"kanban" | "grid">("kanban");
+  // Always start on Goals when you open this page
   const [activeTab, setActiveTab] = useState("goals");
 
   // Data States
@@ -174,9 +174,7 @@ const GoalsHabits = () => {
   const [editingHabitId, setEditingHabitId] = useState<string | number | null>(null);
 
   // Drag & Drop State
-  const [dragState, setDragState] = useState<DragState | null>(null);
   const [hoveredStatus, setHoveredStatus] = useState<string | null>(null);
-  const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     if (location.state?.openGoalDialog) {
@@ -185,6 +183,13 @@ const GoalsHabits = () => {
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location.pathname, location.state, navigate]);
+
+  // Always reset to the same "frame" when this page mounts
+  useEffect(() => {
+    setActiveTab("goals");
+    setSelectedArea("all-areas");
+    setViewMode("kanban");
+  }, []);
 
   const save = <T,>(key: string, items: T[]) => localStorage.setItem(key, JSON.stringify(items));
 
@@ -229,7 +234,8 @@ const GoalsHabits = () => {
     const loadGoals = async () => {
       try {
         const saved = localStorage.getItem("user_goals");
-        if (saved) setGoals(JSON.parse(saved));
+        const savedGoals: Goal[] | null = saved ? JSON.parse(saved) : null;
+        if (savedGoals) setGoals(savedGoals);
         const res = await fetchWithAuth("/goals");
         if (res.ok) {
           const data = await res.json();
@@ -245,8 +251,33 @@ const GoalsHabits = () => {
             id: String(g.id),
             status: fromApiStatus(g.status),
           }));
-          setGoals(normalized);
-          save("user_goals", normalized);
+          // Prefer locally-saved status/progress/category so drag/drop "sticks"
+          // even if the API is eventually consistent or status update fails.
+          const localById = new Map<string, Goal>(
+            (savedGoals ?? []).map((g) => [String(g.id), g]),
+          );
+          const merged: Goal[] = normalized.map((g) => {
+            const local = localById.get(String(g.id));
+            return local
+              ? {
+                  ...g,
+                  title: local.title ?? g.title,
+                  area: local.area ?? g.area,
+                  progress: local.progress ?? g.progress,
+                  status: local.status ?? g.status,
+                }
+              : g;
+          });
+
+          // Keep any local-only goals (temp/offline) that API didn't return yet
+          for (const lg of savedGoals ?? []) {
+            if (!normalized.some((g) => String(g.id) === String(lg.id))) {
+              merged.push(lg);
+            }
+          }
+
+          setGoals(merged);
+          save("user_goals", merged);
         }
       } catch (e) { console.error("Error loading goals", e); }
     };
@@ -362,8 +393,18 @@ const GoalsHabits = () => {
     const previous = [...goals];
     setGoals((prev) => { const u = prev.map((g) => g.id === id ? { ...g, status: newStatus as Goal["status"] } : g); save("user_goals", u); return u; });
     try {
-      const res = await fetchWithAuth(`/goals/${id}`, { method: "PUT", body: JSON.stringify({ goal: { status: toApiStatus(newStatus) } }) });
-      if (!res.ok) throw new Error("Failed");
+      const payload = JSON.stringify({ goal: { status: toApiStatus(newStatus) } });
+
+      // Some backends expect PATCH for partial updates; try PUT then PATCH fallback.
+      let res = await fetchWithAuth(`/goals/${id}`, { method: "PUT", body: payload });
+      if (!res.ok) {
+        res = await fetchWithAuth(`/goals/${id}`, { method: "PATCH", body: payload });
+      }
+      if (!res.ok) {
+        let msg = "";
+        try { msg = await res.text(); } catch { /* ignore */ }
+        throw new Error(msg || `Failed (${res.status})`);
+      }
     } catch (err) {
       toast({ title: "Error", description: "Could not update goal status", variant: "destructive" });
       setGoals(previous); save("user_goals", previous);
@@ -726,105 +767,20 @@ const GoalsHabits = () => {
   };
 
   // ─── DRAG AND DROP ────────────────────────────────────────────────────────
-  const getHoveredColumn = useCallback((x: number, y: number): string | null => {
-    for (const [key, el] of Object.entries(columnRefs.current)) {
-      if (!el) continue;
-      const r = el.getBoundingClientRect();
-      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return key;
-    }
-    return null;
-  }, []);
-
-  const handlePointerDown = (e: React.PointerEvent, goalId: string) => {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    if ((e.currentTarget as HTMLElement).setPointerCapture) {
-      try {
-        e.currentTarget.setPointerCapture(e.pointerId);
-      } catch {
-        // no-op: some environments can fail to capture pointer
-      }
-    }
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setDragState({ goalId, startX: e.clientX, startY: e.clientY, currentX: e.clientX, currentY: e.clientY, cardWidth: r.width, cardHeight: r.height, isDragging: false });
+  const handleGoalDragStart = (e: React.DragEvent, goalId: string) => {
+    e.dataTransfer.setData("text/plain", goalId);
+    e.dataTransfer.effectAllowed = "move";
   };
 
-  const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!dragState) return;
-    const dist = Math.sqrt((e.clientX - dragState.startX) ** 2 + (e.clientY - dragState.startY) ** 2);
-    if (dist > 6 || dragState.isDragging) {
-      setDragState((p) => p ? { ...p, currentX: e.clientX, currentY: e.clientY, isDragging: true } : null);
-      setHoveredStatus(getHoveredColumn(e.clientX, e.clientY));
-      document.body.style.cursor = "grabbing";
-      document.body.style.userSelect = "none";
-    }
-  }, [dragState, getHoveredColumn]);
-
-  const handlePointerUp = useCallback((e: React.PointerEvent) => {
-    if (!dragState) return;
-    if (dragState.isDragging) {
-      const target = getHoveredColumn(e.clientX, e.clientY);
-      const goal = goals.find((g) => g.id === dragState.goalId);
-      if (target && goal && goal.status !== target) handleUpdateGoalStatus(dragState.goalId, target);
-    }
-    setDragState(null); setHoveredStatus(null);
-    document.body.style.cursor = ""; document.body.style.userSelect = "";
-  }, [dragState, goals, getHoveredColumn, handleUpdateGoalStatus]);
-
-  const handlePointerCancel = useCallback(() => {
-    setDragState(null); setHoveredStatus(null);
-    document.body.style.cursor = ""; document.body.style.userSelect = "";
-  }, []);
-
-  useEffect(() => {
-    if (!dragState) return;
-
-    const onWindowPointerMove = (e: PointerEvent) => {
-      const dist = Math.sqrt((e.clientX - dragState.startX) ** 2 + (e.clientY - dragState.startY) ** 2);
-      if (dist > 6 || dragState.isDragging) {
-        setDragState((p) => p ? { ...p, currentX: e.clientX, currentY: e.clientY, isDragging: true } : null);
-        setHoveredStatus(getHoveredColumn(e.clientX, e.clientY));
-        document.body.style.cursor = "grabbing";
-        document.body.style.userSelect = "none";
-      }
-    };
-
-    const onWindowPointerUp = (e: PointerEvent) => {
-      if (!dragState) return;
-      if (dragState.isDragging) {
-        const target = getHoveredColumn(e.clientX, e.clientY);
-        const goal = goals.find((g) => g.id === dragState.goalId);
-        if (target && goal && goal.status !== target) {
-          handleUpdateGoalStatus(dragState.goalId, target);
-        }
-      }
-      setDragState(null);
-      setHoveredStatus(null);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-
-    const onWindowPointerCancel = () => {
-      setDragState(null);
-      setHoveredStatus(null);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-
-    window.addEventListener("pointermove", onWindowPointerMove);
-    window.addEventListener("pointerup", onWindowPointerUp);
-    window.addEventListener("pointercancel", onWindowPointerCancel);
-
-    return () => {
-      window.removeEventListener("pointermove", onWindowPointerMove);
-      window.removeEventListener("pointerup", onWindowPointerUp);
-      window.removeEventListener("pointercancel", onWindowPointerCancel);
-    };
-  }, [dragState, getHoveredColumn, goals, handleUpdateGoalStatus]);
-
-  const ghostStyle = dragState?.isDragging
-    ? { position: "fixed" as const, left: dragState.currentX - dragState.cardWidth / 2, top: dragState.currentY - dragState.cardHeight / 2, width: dragState.cardWidth, pointerEvents: "none" as const, zIndex: 9999, transform: "rotate(2deg) scale(1.04)", boxShadow: "0 25px 50px rgba(0,0,0,0.25)", transition: "none" }
-    : undefined;
+  const handleGoalDrop = (e: React.DragEvent, statusKey: Goal["status"]) => {
+    e.preventDefault();
+    const goalId = e.dataTransfer.getData("text/plain");
+    if (!goalId) return;
+    const goal = goals.find((g) => g.id === goalId);
+    if (!goal || goal.status === statusKey) return;
+    handleUpdateGoalStatus(goalId, statusKey);
+    setHoveredStatus(null);
+  };
 
   // ─── UI CONFIG ────────────────────────────────────────────────────────────
   const goalStatuses = [
@@ -869,7 +825,13 @@ const GoalsHabits = () => {
         </p>
       </Card>
 
-      <Tabs defaultValue="goals" className="space-y-5" onValueChange={setActiveTab}>
+      <Tabs
+        value={activeTab}
+        className="space-y-5"
+        onValueChange={(v) => {
+          setActiveTab(v);
+        }}
+      >
         <div className="overflow-x-auto">
           <TabsList className="grid w-full max-w-md min-w-[280px] grid-cols-4">
             <TabsTrigger value="goals" className="text-xs sm:text-sm data-[state=active]:bg-red-500 data-[state=active]:text-white">Goals</TabsTrigger>
@@ -882,7 +844,12 @@ const GoalsHabits = () => {
         {/* ── GOALS ── */}
         <TabsContent value="goals" className="space-y-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <Select value={selectedArea} onValueChange={setSelectedArea}>
+            <Select
+              value={selectedArea}
+              onValueChange={(v) => {
+                setSelectedArea(v);
+              }}
+            >
               <SelectTrigger className="w-full sm:w-48 text-sm"><SelectValue placeholder="Select area" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all-areas">All Areas</SelectItem>
@@ -894,10 +861,24 @@ const GoalsHabits = () => {
               </SelectContent>
             </Select>
             <div className="flex items-center gap-1 sm:gap-2">
-              <Button variant="outline" size="sm" className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "kanban" ? "bg-red-500 text-white border-red-500 hover:bg-red-600 hover:text-white" : "text-red-600 border-red-200 hover:bg-red-50"}`} onClick={() => setViewMode("kanban")}>
+              <Button
+                variant="outline"
+                size="sm"
+                className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "kanban" ? "bg-red-500 text-white border-red-500 hover:bg-red-600 hover:text-white" : "text-red-600 border-red-200 hover:bg-red-50"}`}
+                onClick={() => {
+                  setViewMode("kanban");
+                }}
+              >
                 <Columns3 className="h-3.5 w-3.5 mr-1.5" /> Kanban
               </Button>
-              <Button variant="outline" size="sm" className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "grid" ? "bg-red-500 text-white border-red-500 hover:bg-red-600 hover:text-white" : "text-red-600 border-red-200 hover:bg-red-50"}`} onClick={() => setViewMode("grid")}>
+              <Button
+                variant="outline"
+                size="sm"
+                className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "grid" ? "bg-red-500 text-white border-red-500 hover:bg-red-600 hover:text-white" : "text-red-600 border-red-200 hover:bg-red-50"}`}
+                onClick={() => {
+                  setViewMode("grid");
+                }}
+              >
                 <LayoutGrid className="h-3.5 w-3.5 mr-1.5" /> Grid
               </Button>
               <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white flex-1 sm:flex-none text-xs sm:text-sm" onClick={() => setIsGoalDialogOpen(true)}>
@@ -910,7 +891,7 @@ const GoalsHabits = () => {
             <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {goalStatuses.map((status) => {
                 const cols = getGoalsByStatus(status.key as Goal["status"]);
-                const isHovered = hoveredStatus === status.key && dragState?.isDragging;
+                const isHovered = hoveredStatus === status.key;
                 return (
                   <div key={status.key} className="space-y-2">
                     <div className={`flex items-center justify-between rounded-xl border ${status.border} ${status.bg} px-3 py-2.5`}>
@@ -920,7 +901,17 @@ const GoalsHabits = () => {
                       </div>
                       <span className="rounded-md bg-white border border-gray-200 px-1.5 py-0.5 text-xs font-medium text-gray-600">{cols.length}</span>
                     </div>
-                    <div ref={(el) => { columnRefs.current[status.key] = el; }} className={`min-h-[420px] rounded-xl border p-3 sm:p-4 transition-all duration-150 ${isHovered ? `${status.hoverBg} ${status.hoverBorder} border-2 border-dashed shadow-lg scale-[1.015]` : `${status.bg} ${status.border} border`} ${dragState?.isDragging && !isHovered ? "opacity-70" : ""}`}>
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setHoveredStatus(status.key);
+                      }}
+                      onDragLeave={() => {
+                        setHoveredStatus((prev) => (prev === status.key ? null : prev));
+                      }}
+                      onDrop={(e) => handleGoalDrop(e, status.key as Goal["status"])}
+                      className={`min-h-[420px] rounded-xl border p-3 sm:p-4 transition-all duration-150 ${isHovered ? `${status.hoverBg} ${status.hoverBorder} border-2 border-dashed shadow-lg scale-[1.015]` : `${status.bg} ${status.border} border`}`}
+                    >
                       {isHovered && (
                         <div className="mb-3 rounded-lg border-2 border-dashed border-gray-400 bg-white/70 h-14 flex items-center justify-center gap-2">
                           <div className="w-1.5 h-5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0ms" }} />
@@ -930,14 +921,19 @@ const GoalsHabits = () => {
                         </div>
                       )}
                       <div className="space-y-3">
-                        {cols.length === 0 && !dragState?.isDragging && (
+                        {cols.length === 0 && (
                           <div className="flex flex-col items-center justify-center py-8 gap-2">
                             <Target className="h-7 w-7 text-muted-foreground/25" />
                             <p className="text-xs text-muted-foreground">No goals yet</p>
                           </div>
                         )}
                         {cols.map((goal) => (
-                          <Card key={goal.id} onPointerDown={(e) => handlePointerDown(e, goal.id)} className={`p-3 sm:p-4 relative group cursor-grab active:cursor-grabbing touch-none select-none hover:shadow-md transition-shadow ${dragState?.goalId === goal.id ? "opacity-30 scale-95" : ""}`}>
+                          <Card
+                            key={goal.id}
+                            draggable
+                            onDragStart={(e) => handleGoalDragStart(e, goal.id)}
+                            className="p-3 sm:p-4 relative group cursor-grab active:cursor-grabbing select-none hover:shadow-md transition-shadow"
+                          >
                             <p className="font-semibold text-sm sm:text-base text-foreground pr-16">{goal.title}</p>
                             <div className="mt-3">
                               <div className="flex items-center justify-between mb-1">
@@ -957,11 +953,6 @@ const GoalsHabits = () => {
                   </div>
                 );
               })}
-              {dragState?.isDragging && (
-                <Card style={ghostStyle} className="bg-white p-2 sm:p-3 border-2 border-teal-500 rounded-xl">
-                  <p className="text-xs sm:text-sm font-medium text-foreground opacity-90">{goals.find((g) => g.id === dragState.goalId)?.title}</p>
-                </Card>
-              )}
             </div>
           )}
 
