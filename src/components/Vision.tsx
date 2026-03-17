@@ -14,9 +14,6 @@ function Vision() {
   const [toast, setToast] = useState(null);
   const [visionId, setVisionId] = useState(null);
 
-  // =========================================
-  // TOAST TIMER FIX (Prevents Memory Leaks)
-  // =========================================
   useEffect(() => {
     let timer;
     if (toast) {
@@ -41,7 +38,6 @@ function Vision() {
         },
       });
 
-      // 🚨 FIX: Agar GET request fail ho, toh API ka error catch karo
       if (!response.ok) {
         let errMessage = "Could not load your vision board";
         try {
@@ -66,23 +62,16 @@ function Vision() {
       }
     } catch (error) {
       console.error("Error fetching vision data:", error);
-      // Backend error toast me dikhega
       showToast(error.message || "Could not load your vision board", "error");
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // =========================================
-  // FETCH VISION DATA (GET)
-  // =========================================
   useEffect(() => {
     fetchVisionData();
   }, [fetchVisionData]);
 
-  // =========================================
-  // FILE HELPERS & UPLOAD
-  // =========================================
   const fileToBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -126,9 +115,6 @@ function Vision() {
     }
   };
 
-  // =========================================
-  // HANDLE ADD URL
-  // =========================================
   const handleAddUrl = () => {
     const trimmedUrl = imageUrl.trim();
     if (!trimmedUrl) {
@@ -166,9 +152,6 @@ function Vision() {
     showToast("Prompt copied to clipboard!", "success");
   };
 
-  // =========================================
-  // SAVE VISION DATA (POST)
-  // =========================================
   const handleSave = async () => {
     setIsSaving(true);
     try {
@@ -192,12 +175,10 @@ function Vision() {
         body: JSON.stringify(payload),
       });
 
-      // 🚨 FIX: Backend se exact error nikaal ke Toast me bhejna
       if (!response.ok) {
         let errorMessage = "Failed to save. Please try again.";
         try {
           const errorData = await response.json();
-          // Backend chahe .message de, .error de ya .detail de, hum sab catch karenge
           errorMessage =
             errorData.message ||
             errorData.error ||
@@ -213,13 +194,10 @@ function Vision() {
       setVisionId(data.id || null);
       showToast("Vision & Mission saved successfully! 🎉", "success");
 
-      // Trigger Dashboard refresh by dispatching a custom event
       window.dispatchEvent(new Event("vision_data_updated"));
-      // Also update a localStorage flag to trigger storage listeners
       localStorage.setItem("vision_last_updated", new Date().toISOString());
     } catch (error) {
       console.error("Error saving data:", error);
-      // Seedha backend ka error Toast me dikhega
       showToast(error.message || "Something went wrong!", "error");
     } finally {
       setIsSaving(false);
@@ -228,7 +206,7 @@ function Vision() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#faf9fc] flex items-center justify-center">
+      <div className="w-full h-64 flex items-center justify-center">
         <p className="text-gray-500 font-medium animate-pulse">
           Loading your Vision Board...
         </p>
@@ -237,20 +215,21 @@ function Vision() {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf9fc] p-4 md:p-8 font-sans text-gray-800 relative">
-      <div className="max-w-4xl mx-auto space-y-10">
+    // Yahan maine outer background aur padding hata di hai, taaki layers na banein
+    <div className="w-full font-sans text-gray-800 relative pb-10">
+      <div className="max-w-4xl mx-auto space-y-8">
         {/* ===== VISION BOARD SECTION ===== */}
-        <section className="space-y-4">
+        <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
           <div>
-            <h2 className="text-xl font-bold flex items-center gap-2 text-gray-900">
+            <h2 className="text-xl font-bold flex items-center gap-2 text-gray-900 border-b border-gray-50 pb-3">
               <span className="text-purple-600 text-2xl">👁️</span> Vision Board
             </h2>
-            <p className="text-gray-500 text-sm mt-1">
+            <p className="text-gray-500 text-sm mt-3">
               Upload images or add URLs (max 12 images)
             </p>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="bg-purple-50 border-l-4 border-purple-500 p-3 rounded-r-md">
               <p className="text-sm text-purple-900 leading-relaxed">
                 <span className="font-semibold">
@@ -304,7 +283,7 @@ function Vision() {
             )}
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 pt-2">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Upload Image File
@@ -319,9 +298,9 @@ function Vision() {
             </div>
 
             <div className="flex items-center text-gray-400 text-sm font-medium">
-              <div className="flex-1 border-t border-gray-200"></div>
+              <div className="flex-1 border-t border-gray-100"></div>
               <span className="px-4">OR</span>
-              <div className="flex-1 border-t border-gray-200"></div>
+              <div className="flex-1 border-t border-gray-100"></div>
             </div>
 
             <div>
@@ -347,21 +326,21 @@ function Vision() {
           </div>
         </section>
 
-        {/* ===== VISION STATEMENT ===== */}
-        <section className="space-y-4">
-          <div className="flex justify-between items-center">
+        {/* ===== VISION STATEMENT SECTION ===== */}
+        <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
+          <div className="flex justify-between items-center border-b border-gray-50 pb-3">
             <h2 className="text-xl font-bold flex items-center gap-2 text-gray-900">
               <span className="text-blue-400 text-2xl">✨</span> Your Vision
             </h2>
             <button
               onClick={handleCopyPrompt}
-              className="bg-red-100 hover:bg-red-200 text-red-700 text-sm font-medium py-2 px-4 rounded-md flex items-center gap-2 transition-colors"
+              className="bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium py-2 px-4 rounded-md flex items-center gap-2 transition-colors border border-blue-100"
             >
-              <Copy size={16} /> Copy Image Prompt
+              <Copy size={16} /> Copy Prompt
             </button>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <h3 className="font-semibold text-gray-800">Vision Statement</h3>
             <div className="bg-blue-50 border-l-4 border-blue-400 p-3 rounded-r-md">
               <p className="text-sm text-blue-900 leading-relaxed">
@@ -373,18 +352,21 @@ function Vision() {
               value={visionStatement}
               onChange={(e) => setVisionStatement(e.target.value)}
               placeholder="What is your vision? What does your ideal future look like?"
-              className="w-full min-h-[120px] p-3 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 text-sm"
+              className="w-full min-h-[140px] p-4 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 text-sm bg-gray-50/50"
             />
           </div>
         </section>
 
-        {/* ===== MISSION & LEGACY ===== */}
-        <section className="space-y-6">
-          <h2 className="text-xl font-bold flex items-center gap-2 text-gray-900">
-            <span className="text-teal-400 text-2xl">✨</span> Your Life Mission
-          </h2>
+        {/* ===== MISSION & LEGACY SECTION ===== */}
+        <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
+          <div className="border-b border-gray-50 pb-3">
+            <h2 className="text-xl font-bold flex items-center gap-2 text-gray-900">
+              <span className="text-teal-400 text-2xl">🧭</span> Your Life
+              Mission
+            </h2>
+          </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <h3 className="font-semibold text-gray-800">Mission Statement</h3>
             <div className="bg-teal-50/50 border-l-4 border-teal-400 p-3 rounded-r-md">
               <p className="text-sm text-teal-900 leading-relaxed">
@@ -396,11 +378,11 @@ function Vision() {
               value={missionStatement}
               onChange={(e) => setMissionStatement(e.target.value)}
               placeholder="What is your life's mission?"
-              className="w-full min-h-[100px] p-3 border border-teal-100 bg-[#f4faf9] rounded-md focus:outline-none focus:ring-1 focus:ring-teal-400 text-sm"
+              className="w-full min-h-[120px] p-4 border border-teal-100 bg-[#f4faf9] rounded-md focus:outline-none focus:ring-1 focus:ring-teal-400 text-sm"
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <h3 className="font-semibold text-gray-800">
               How do I want to be remembered as?
             </h3>
@@ -414,18 +396,18 @@ function Vision() {
               value={legacyStatement}
               onChange={(e) => setLegacyStatement(e.target.value)}
               placeholder="How do you want people to remember you?"
-              className="w-full min-h-[100px] p-3 border border-teal-100 bg-[#f4faf9] rounded-md focus:outline-none focus:ring-1 focus:ring-teal-400 text-sm"
+              className="w-full min-h-[120px] p-4 border border-teal-100 bg-[#f4faf9] rounded-md focus:outline-none focus:ring-1 focus:ring-teal-400 text-sm"
             />
           </div>
 
-          <div className="pt-2">
+          <div className="pt-4 flex justify-end">
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="bg-red-500 hover:bg-red-600 text-white px-6 py-2.5 rounded-md font-medium flex items-center gap-2 transition-colors shadow-sm disabled:opacity-70"
+              className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-md font-medium flex items-center gap-2 transition-colors shadow-sm disabled:opacity-70"
             >
               <Save size={18} />
-              {isSaving ? "Saving..." : "Save Vision & Mission"}
+              {isSaving ? "Saving..." : "Save Vision & Missi`on"}
             </button>
           </div>
         </section>

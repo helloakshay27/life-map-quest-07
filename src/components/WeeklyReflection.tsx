@@ -38,7 +38,6 @@ interface WeeklyReflectionProps {
 }
 
 // ── Life Balance categories config ────────────────────────────────────────────
-// Same order & emojis as wins dropdown: Career, Health, Relations, Personal Growth, Finance
 const LIFE_BALANCE_CATEGORIES = [
   { key: "Career", emoji: "💼", label: "Career" },
   { key: "Health", emoji: "❤️", label: "Health" },
@@ -47,13 +46,12 @@ const LIFE_BALANCE_CATEGORIES = [
   { key: "Finance", emoji: "💰", label: "Finance" },
 ];
 
-// Color for each category block when active
 const CATEGORY_COLORS: Record<string, string> = {
-  Career: "#a78bfa", // purple
-  Health: "#f472b6", // pink
-  Relations: "#fb923c", // orange
-  "Personal Growth": "#4ade80", // green
-  Finance: "#facc15", // yellow
+  Career: "#a78bfa",
+  Health: "#f472b6",
+  Relations: "#fb923c",
+  "Personal Growth": "#4ade80",
+  Finance: "#facc15",
 };
 
 export default function WeeklyReflection({
@@ -101,14 +99,12 @@ export default function WeeklyReflection({
   };
 
   // ── Auto-calculate life balance from wins ──────────────────────────────────
-  // Count wins per category (only completed ones)
   const categoryCounts = LIFE_BALANCE_CATEGORIES.map(({ key }) => ({
     key,
     count: wins.filter((w) => w.category === key && w.completed).length,
   }));
 
   const totalWins = categoryCounts.reduce((sum, c) => sum + c.count, 0);
-  // Score = categories that have at least 1 win out of 5 possible, scaled to 10
   const filledCategories = categoryCounts.filter((c) => c.count > 0).length;
   const autoScore =
     totalWins === 0 ? 0 : Math.round((filledCategories / 5) * 10);
@@ -138,7 +134,6 @@ export default function WeeklyReflection({
     return result.sort((a, b) => b.date.getTime() - a.date.getTime());
   };
 
-  // ─── IMPORT A SINGLE DAY ───────────────────────────────────────────────────
   const importDayToStory = (date: Date, entry: DailyEntry) => {
     const dateLabel = format(date, "EEEE, MMMM d");
     const lines: string[] = [`**${dateLabel}**`];
@@ -154,7 +149,6 @@ export default function WeeklyReflection({
     setIsPopoverOpen(false);
   };
 
-  // ─── IMPORT ALL DAYS ──────────────────────────────────────────────────────
   const importAllToStory = () => {
     const entries = getWeekEntriesFromLocalStorage();
     if (entries.length === 0) return;
@@ -181,6 +175,23 @@ export default function WeeklyReflection({
   };
 
   const localEntries = getWeekEntriesFromLocalStorage();
+
+  // ── Chevron SVG ────────────────────────────────────────────────────────────
+  const ChevronDown = () => (
+    <svg
+      className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        d="M19 9l-7 7-7-7"
+      />
+    </svg>
+  );
 
   return (
     <div className="font-sans bg-[#fffaf5]">
@@ -281,7 +292,8 @@ export default function WeeklyReflection({
         <textarea
           value={weeklyStory}
           onChange={(e) => setWeeklyStory(e.target.value)}
-          className="w-full h-[180px] p-4 text-[14px] text-gray-800 outline-none resize-none border border-gray-200 rounded-lg focus:border-orange-300 focus:ring-1 focus:ring-orange-300 bg-white shadow-sm leading-relaxed"
+          rows={3}
+          className="w-full min-h-[80px] p-4 text-[14px] text-gray-800 outline-none resize-y border border-gray-200 rounded-lg focus:border-orange-300 focus:ring-1 focus:ring-orange-300 bg-white shadow-sm leading-relaxed"
           placeholder="Reflect on your week - what happened each day, what you accomplished, what you learned, and how you felt..."
         />
       </div>
@@ -334,56 +346,75 @@ export default function WeeklyReflection({
                 {wins.map((win, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center gap-3 p-3 border border-gray-200 rounded-md bg-white shadow-sm transition-colors"
+                    className="flex items-start gap-3 p-3 border border-gray-200 rounded-md bg-white shadow-sm transition-colors"
                   >
+                    {/* Checkbox */}
                     <input
                       type="checkbox"
                       checked={win.completed}
                       onChange={(e) =>
                         updateWin(idx, "completed", e.target.checked)
                       }
-                      className="w-4 h-4 ml-1 rounded border-gray-300 text-gray-800 focus:ring-gray-800 cursor-pointer"
+                      className="w-4 h-4 ml-1 mt-1 rounded border-gray-300 text-gray-800 focus:ring-gray-800 cursor-pointer shrink-0"
                     />
-                    <input
-                      type="text"
+
+                    {/* Description textarea - expandable */}
+                    <textarea
                       value={win.description}
                       onChange={(e) =>
                         updateWin(idx, "description", e.target.value)
                       }
                       autoFocus
-                      className="flex-1 outline-none text-[14px] text-gray-800 bg-transparent px-2"
+                      rows={1}
+                      placeholder="Describe your win..."
+                      className={`flex-1 outline-none text-[14px] bg-transparent px-2 resize-y leading-relaxed min-h-[28px] ${
+                        win.completed
+                          ? "line-through text-gray-400"
+                          : "text-gray-800"
+                      }`}
                     />
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      <select
-                        value={win.day}
-                        onChange={(e) => updateWin(idx, "day", e.target.value)}
-                        className="text-[13px] border border-gray-200 rounded px-2 py-1.5 text-gray-600 outline-none bg-white cursor-pointer hover:border-gray-300 shadow-sm"
-                      >
-                        <option value="">Day?</option>
-                        <option value="Sun">Sun</option>
-                        <option value="Mon">Mon</option>
-                        <option value="Tue">Tue</option>
-                        <option value="Wed">Wed</option>
-                        <option value="Thu">Thu</option>
-                        <option value="Fri">Fri</option>
-                        <option value="Sat">Sat</option>
-                      </select>
+                    <div className="flex items-center gap-2 shrink-0 mt-0.5">
+                      {/* ── Day dropdown ── */}
+                      <div className="relative">
+                        <select
+                          value={win.day}
+                          onChange={(e) =>
+                            updateWin(idx, "day", e.target.value)
+                          }
+                          className="appearance-none text-[13px] font-medium border border-orange-200 rounded-md pl-3 pr-8 py-1.5 text-gray-700 outline-none bg-white cursor-pointer hover:border-orange-300 focus:ring-1 focus:ring-orange-200 shadow-sm"
+                        >
+                          <option value="">Day?</option>
+                          <option value="Sun">Sun</option>
+                          <option value="Mon">Mon</option>
+                          <option value="Tue">Tue</option>
+                          <option value="Wed">Wed</option>
+                          <option value="Thu">Thu</option>
+                          <option value="Fri">Fri</option>
+                          <option value="Sat">Sat</option>
+                        </select>
+                        <ChevronDown />
+                      </div>
 
-                      <select
-                        value={win.category}
-                        onChange={(e) =>
-                          updateWin(idx, "category", e.target.value)
-                        }
-                        className="text-[13px] border border-gray-200 rounded px-2 py-1.5 text-gray-600 outline-none bg-white cursor-pointer hover:border-gray-300 shadow-sm"
-                      >
-                        <option value="Career">💼 Career</option>
-                        <option value="Health">❤️ Health</option>
-                        <option value="Relations">🤝 Relations</option>
-                        <option value="Personal Growth">🌱 Growth</option>
-                        <option value="Finance">💰 Finance</option>
-                      </select>
+                      {/* ── Category dropdown ── */}
+                      <div className="relative">
+                        <select
+                          value={win.category}
+                          onChange={(e) =>
+                            updateWin(idx, "category", e.target.value)
+                          }
+                          className="appearance-none text-[13px] font-medium border border-orange-200 rounded-md pl-3 pr-8 py-1.5 text-gray-700 outline-none bg-white cursor-pointer hover:border-orange-300 focus:ring-1 focus:ring-orange-200 shadow-sm"
+                        >
+                          <option value="Career">💼 Career</option>
+                          <option value="Health">❤️ Health</option>
+                          <option value="Relations">🤝 Relations</option>
+                          <option value="Personal Growth">🌱 Growth</option>
+                          <option value="Finance">💰 Finance</option>
+                        </select>
+                        <ChevronDown />
+                      </div>
 
+                      {/* ── Remove button ── */}
                       <button
                         onClick={() => removeWin(idx)}
                         className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded ml-1 transition-colors"
@@ -409,7 +440,8 @@ export default function WeeklyReflection({
             <textarea
               value={challenge}
               onChange={(e) => setChallenge(e.target.value)}
-              className="w-full h-[88px] p-4 text-[14px] text-gray-800 outline-none resize-none placeholder-gray-400"
+              rows={3}
+              className="w-full min-h-[88px] p-4 text-[14px] text-gray-800 outline-none resize-y placeholder-gray-400"
               placeholder="What was your biggest challenge this week, perhaps a recurring behavior, and what caused it?"
             />
           </div>
@@ -426,7 +458,8 @@ export default function WeeklyReflection({
             <textarea
               value={gratitude}
               onChange={(e) => setGratitude(e.target.value)}
-              className="w-full h-[100px] p-4 text-[14px] text-gray-800 outline-none resize-none placeholder-gray-400"
+              rows={3}
+              className="w-full min-h-[100px] p-4 text-[14px] text-gray-800 outline-none resize-y placeholder-gray-400"
               placeholder="What are you grateful for?"
             />
           </div>
@@ -440,7 +473,8 @@ export default function WeeklyReflection({
             <textarea
               value={insight}
               onChange={(e) => setInsight(e.target.value)}
-              className="w-full h-[100px] p-4 text-[14px] text-gray-800 outline-none resize-none placeholder-gray-400"
+              rows={3}
+              className="w-full min-h-[100px] p-4 text-[14px] text-gray-800 outline-none resize-y placeholder-gray-400"
               placeholder="You are the ultimate creator for everything that manifests in your life. What were your insights this week?"
             />
           </div>
@@ -455,13 +489,11 @@ export default function WeeklyReflection({
               </h2>
               <Info className="w-4 h-4 text-gray-400 cursor-help" />
             </div>
-            {/* ✅ Score auto-calculated from wins */}
             <span className="text-2xl font-bold text-[#4ade80]">
               {autoScore}/10
             </span>
           </div>
 
-          {/* ✅ 5 blocks — each lights up based on whether that category has any completed wins */}
           <div className="flex gap-2 mb-3">
             {LIFE_BALANCE_CATEGORIES.map(({ key }) => {
               const count =
@@ -477,7 +509,6 @@ export default function WeeklyReflection({
                       : "#f3f4f6",
                   }}
                 >
-                  {/* show count badge if active */}
                   {isActive && (
                     <span className="absolute top-1.5 right-2 text-[11px] font-bold text-white/90">
                       {count}
@@ -488,7 +519,6 @@ export default function WeeklyReflection({
             })}
           </div>
 
-          {/* ✅ Icons row — active ones colored, inactive gray */}
           <div className="flex justify-around px-2 mb-10 text-[13px] font-semibold">
             {LIFE_BALANCE_CATEGORIES.map(({ key, emoji, label }) => {
               const count =
@@ -531,12 +561,6 @@ export default function WeeklyReflection({
                 background: `linear-gradient(to right, #1f2937 0%, #1f2937 ${(balanceRating / 10) * 100}%, #e5e7eb ${(balanceRating / 10) * 100}%, #e5e7eb 100%)`,
               }}
             />
-            <div className="absolute top-6 left-0 text-xs text-gray-500 font-medium">
-              0
-            </div>
-            <div className="absolute top-6 right-0 text-xs text-gray-500 font-medium">
-              10
-            </div>
           </div>
         </section>
       </div>

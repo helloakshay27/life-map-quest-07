@@ -21,7 +21,8 @@ const UpdatePassword = () => {
 
   // Auto-fill token from URL
   useEffect(() => {
-    const urlToken = searchParams.get("reset_password_token") || searchParams.get("token");
+    const urlToken =
+      searchParams.get("reset_password_token") || searchParams.get("token");
     if (urlToken) {
       setToken(urlToken);
     }
@@ -31,7 +32,10 @@ const UpdatePassword = () => {
     e.preventDefault();
 
     if (!token) {
-      toast({ title: "Invalid or missing reset token", variant: "destructive" });
+      toast({
+        title: "Invalid or missing reset token",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -48,7 +52,7 @@ const UpdatePassword = () => {
     setLoading(true);
     try {
       const response = await fetch("https://life-api.lockated.com/password", {
-        method: "POST",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           user: {
@@ -62,7 +66,9 @@ const UpdatePassword = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || "Failed to update password");
+        throw new Error(
+          data.message || data.error || "Failed to update password",
+        );
       }
 
       toast({
@@ -127,14 +133,21 @@ const UpdatePassword = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             </div>
 
             {/* Confirm Password */}
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-body-5 font-medium">
+              <Label
+                htmlFor="confirmPassword"
+                className="text-body-5 font-medium"
+              >
                 Confirm Password
               </Label>
               <div className="relative">
@@ -153,12 +166,21 @@ const UpdatePassword = () => {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             </div>
 
-            <Button type="submit" className="w-full mt-2" size="lg" disabled={loading}>
+            <Button
+              type="submit"
+              className="w-full mt-2"
+              size="lg"
+              disabled={loading}
+            >
               {loading ? "Updating Password..." : "Update Password"}
             </Button>
 
