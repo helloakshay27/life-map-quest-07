@@ -160,6 +160,7 @@ const GoalsHabits = () => {
   // Form states: Affirmation
   const [affirmationStatement, setAffirmationStatement] = useState("");
   const [affirmationPriority, setAffirmationPriority] = useState(5);
+  const [editingAffirmationId, setEditingAffirmationId] = useState<string | number | null>(null);
 
   // Form states: Habit
   const [habitName, setHabitName] = useState("");
@@ -170,6 +171,7 @@ const GoalsHabits = () => {
   const [habitPlace, setHabitPlace] = useState("");
   const [habitStartDate, setHabitStartDate] = useState("");
   const [habitLinkedGoals, setHabitLinkedGoals] = useState<string[]>([]);
+  const [editingHabitId, setEditingHabitId] = useState<string | number | null>(null);
 
   // Drag & Drop State
   const [dragState, setDragState] = useState<DragState | null>(null);
@@ -579,6 +581,45 @@ const GoalsHabits = () => {
     }
   };
 
+  const handleUpdateAffirmation = async () => {
+    if (!affirmationStatement.trim() || editingAffirmationId === null) return;
+    setAffirmationSaving(true);
+    const previous = [...affirmations];
+
+    setAffirmations((prev) => {
+      const u = prev.map(a => a.id === editingAffirmationId ? { ...a, statement: affirmationStatement, priority: affirmationPriority } : a);
+      save("user_affirmations", u); return u;
+    });
+
+    try {
+      const res = await fetchWithAuth(`/affirmations/${editingAffirmationId}`, {
+        method: "PUT",
+        body: JSON.stringify({ affirmation: { statement: affirmationStatement, priority: affirmationPriority } }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const updated = await res.json();
+      setAffirmations((prev) => {
+        const u = prev.map(a => a.id === editingAffirmationId ? { ...updated, id: updated.id ?? updated.affirmation?.id ?? editingAffirmationId } : a);
+        save("user_affirmations", u); return u;
+      });
+
+      setEditingAffirmationId(null); setAffirmationStatement(""); setAffirmationPriority(5);
+      setIsAffirmationDialogOpen(false);
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to update affirmation", variant: "destructive" });
+      setAffirmations(previous); save("user_affirmations", previous);
+    } finally {
+      setAffirmationSaving(false);
+    }
+  };
+
+  const openEditAffirmation = (affirmation: Affirmation) => {
+    setEditingAffirmationId(affirmation.id);
+    setAffirmationStatement(affirmation.statement || affirmation.text || "");
+    setAffirmationPriority(affirmation.priority || 5);
+    setIsAffirmationDialogOpen(true);
+  };
+
   // FIX 2: Affirmations delete — id can be string | number from API
   const handleDeleteAffirmation = async (id: string | number) => {
     if (String(id).startsWith("temp-")) return setAffirmations((p) => p.filter((a) => a.id !== id));
@@ -623,6 +664,51 @@ const GoalsHabits = () => {
     } finally {
       setHabitSaving(false);
     }
+  };
+
+  const handleUpdateHabit = async () => {
+    if (!habitName.trim() || editingHabitId === null) return;
+    setHabitSaving(true);
+    const previous = [...habits];
+
+    setHabits((prev) => {
+      const u = prev.map(h => h.id === editingHabitId ? { ...h, name: habitName, frequency: habitFrequency, description: habitDescription, category: habitCategory, time: habitTime, place: habitPlace, start_date: habitStartDate } : h);
+      save("user_habits", u); return u;
+    });
+
+    try {
+      const res = await fetchWithAuth(`/habits/${editingHabitId}`, {
+        method: "PUT",
+        body: JSON.stringify({ name: habitName, frequency: habitFrequency, description: habitDescription, category: habitCategory, time: habitTime, place: habitPlace, start_date: habitStartDate, linked_goals: habitLinkedGoals }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const updated = await res.json();
+      setHabits((prev) => {
+        const u = prev.map(h => h.id === editingHabitId ? { ...updated, id: updated.id ?? updated.habit?.id ?? editingHabitId } : h);
+        save("user_habits", u); return u;
+      });
+
+      setEditingHabitId(null); setHabitName(""); setHabitDescription(""); setHabitFrequency("daily"); setHabitCategory(""); setHabitTime(""); setHabitPlace(""); setHabitStartDate(""); setHabitLinkedGoals([]);
+      setIsHabitDialogOpen(false);
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to update habit", variant: "destructive" });
+      setHabits(previous); save("user_habits", previous);
+    } finally {
+      setHabitSaving(false);
+    }
+  };
+
+  const openEditHabit = (habit: Habit) => {
+    setEditingHabitId(habit.id);
+    setHabitName(habit.name);
+    setHabitDescription(habit.description || "");
+    setHabitFrequency(habit.frequency || "daily");
+    setHabitCategory(habit.category || "");
+    setHabitTime(habit.time || "");
+    setHabitPlace(habit.place || "");
+    setHabitStartDate(habit.start_date || habit.startDate || "");
+    setHabitLinkedGoals([]);
+    setIsHabitDialogOpen(true);
   };
 
   // FIX 3: Habits delete — id can be string | number from API
@@ -934,8 +1020,9 @@ const GoalsHabits = () => {
                   <div className="space-y-3">
                     {beliefs.map((b) => (
                       <Card key={b.id} className="p-3 sm:p-4 relative group cursor-pointer hover:border-pink-200 transition-colors" onClick={() => openEditBelief(b)}>
-                        <p className="font-semibold text-sm text-foreground pr-8">{b.belief || b.statement || b.limiting_belief}</p>
+                        <p className="font-semibold text-sm text-foreground pr-16">{b.belief || b.statement || b.limiting_belief}</p>
                         <p className="text-xs sm:text-sm text-green-600 mt-2">💚 {b.alternative || b.reflection_data?.reframe}</p>
+                        <EditBtn onClick={() => openEditBelief(b)} />
                         <DelBtn onClick={() => handleDeleteBelief(b.id)} />
                       </Card>
                     ))}
@@ -964,8 +1051,9 @@ const GoalsHabits = () => {
                   <div className="space-y-3">
                     {patterns.map((p) => (
                       <Card key={p.id} className="p-3 sm:p-4 relative group cursor-pointer hover:shadow-md transition-shadow" onClick={() => openPatternDetail(p.id)}>
-                        <p className="font-semibold text-sm text-foreground pr-12">{p.name || p.recurring_behavior}</p>
+                        <p className="font-semibold text-sm text-foreground pr-16">{p.name || p.recurring_behavior}</p>
                         <p className="text-xs sm:text-sm text-orange-600 mt-2">⚡ {p.alternative || p.pattern_data?.desired_behavior}</p>
+                        <EditBtn onClick={() => openEditPattern(p)} />
                         <DelBtn onClick={() => handleDeletePattern(p.id)} />
                       </Card>
                     ))}
@@ -1003,8 +1091,9 @@ const GoalsHabits = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {affirmations.map((a) => (
                     <Card key={a.id} className="p-3 sm:p-4 relative group bg-purple-50 border-purple-200">
-                      <p className="text-sm text-foreground pr-8 italic">"{a.statement || a.text}"</p>
+                      <p className="text-sm text-foreground pr-16 italic">"{a.statement || a.text}"</p>
                       {a.priority && <p className="text-xs text-purple-600 mt-2">⭐ Priority: {a.priority}</p>}
+                      <EditBtn onClick={() => openEditAffirmation(a)} />
                       <DelBtn onClick={() => handleDeleteAffirmation(a.id)} />
                     </Card>
                   ))}
@@ -1041,9 +1130,10 @@ const GoalsHabits = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {habits.map((h) => (
                     <Card key={h.id} className="p-3 sm:p-4 relative group bg-teal-50 border-teal-200">
-                      <p className="font-semibold text-sm text-foreground pr-8">{h.name}</p>
+                      <p className="font-semibold text-sm text-foreground pr-16">{h.name}</p>
                       <p className="text-xs text-teal-600 mt-1 capitalize">⚡ {h.frequency}</p>
                       {h.time && <p className="text-xs text-gray-600 mt-1">🕐 {h.time}</p>}
+                      <EditBtn onClick={() => openEditHabit(h)} />
                       <DelBtn onClick={() => handleDeleteHabit(h.id)} />
                     </Card>
                   ))}
@@ -1213,16 +1303,16 @@ const GoalsHabits = () => {
       </Dialog>
 
       {/* Affirmation Dialog */}
-      <Dialog open={isAffirmationDialogOpen} onOpenChange={setIsAffirmationDialogOpen}>
+      <Dialog open={isAffirmationDialogOpen} onOpenChange={(open) => { setIsAffirmationDialogOpen(open); if (!open) setEditingAffirmationId(null); }}>
         <DialogContent className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="text-xl sm:text-2xl">✨ Create Affirmation</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-xl sm:text-2xl">{editingAffirmationId !== null ? "✏️ Edit Affirmation" : "✨ Create Affirmation"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2"><Label>Statement *</Label><Textarea placeholder='"I am confident..."' rows={3} value={affirmationStatement} onChange={(e) => setAffirmationStatement(e.target.value)} /></div>
             <div className="space-y-2"><Label>Priority (1-10)</Label><Input type="number" min="1" max="10" value={affirmationPriority} onChange={(e) => setAffirmationPriority(parseInt(e.target.value) || 5)} /></div>
             <div className="flex justify-end gap-2 pt-4">
               <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" onClick={() => setIsAffirmationDialogOpen(false)} disabled={affirmationSaving}>Cancel</Button>
-              <Button className="bg-red-500 hover:bg-red-600 text-white" onClick={handleCreateAffirmation} disabled={affirmationSaving || !affirmationStatement.trim()}>
-                {affirmationSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : "Add Affirmation"}
+              <Button className="bg-red-500 hover:bg-red-600 text-white" onClick={editingAffirmationId !== null ? handleUpdateAffirmation : handleCreateAffirmation} disabled={affirmationSaving || !affirmationStatement.trim()}>
+                {affirmationSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : editingAffirmationId !== null ? "Update Affirmation" : "Add Affirmation"}
               </Button>
             </div>
           </div>
@@ -1230,9 +1320,9 @@ const GoalsHabits = () => {
       </Dialog>
 
       {/* Habit Dialog */}
-      <Dialog open={isHabitDialogOpen} onOpenChange={setIsHabitDialogOpen}>
+      <Dialog open={isHabitDialogOpen} onOpenChange={(open) => { setIsHabitDialogOpen(open); if (!open) setEditingHabitId(null); }}>
         <DialogContent className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="text-xl sm:text-2xl">✨ Create New Habit</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-xl sm:text-2xl">{editingHabitId !== null ? "✏️ Edit Habit" : "✨ Create New Habit"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2"><Label>Habit Name *</Label><Input placeholder="e.g., Morning meditation..." value={habitName} onChange={(e) => setHabitName(e.target.value)} /></div>
             <div className="space-y-2"><Label>Description</Label><Textarea placeholder="Details..." rows={3} value={habitDescription} onChange={(e) => setHabitDescription(e.target.value)} /></div>
@@ -1278,8 +1368,8 @@ const GoalsHabits = () => {
             </div>
             <div className="flex justify-end gap-2 pt-4">
               <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" onClick={() => { setIsHabitDialogOpen(false); setHabitLinkedGoals([]); }} disabled={habitSaving}>Cancel</Button>
-              <Button className="bg-red-500 hover:bg-red-600 text-white" onClick={handleCreateHabit} disabled={habitSaving || !habitName.trim()}>
-                {habitSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : "Create Habit"}
+              <Button className="bg-red-500 hover:bg-red-600 text-white" onClick={editingHabitId !== null ? handleUpdateHabit : handleCreateHabit} disabled={habitSaving || !habitName.trim()}>
+                {habitSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : editingHabitId !== null ? "Update Habit" : "Create Habit"}
               </Button>
             </div>
           </div>

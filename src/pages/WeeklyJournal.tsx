@@ -49,6 +49,7 @@ const WeeklyJournal = () => {
   const [insight, setInsight] = useState("");
   const [balanceRating, setBalanceRating] = useState(3);
   const [wins, setWins] = useState<Win[]>([]);
+  const [weeklyStory, setWeeklyStory] = useState("");
 
   // States lifted from MissionHabitsConnection
   const [coreValue, setCoreValue] = useState("");
@@ -167,7 +168,7 @@ const WeeklyJournal = () => {
           gratitude_note: gratitude,
           alignment_score: balanceRating,
           data: {
-            weekly_story: habitsText,
+            weekly_story: weeklyStory,
             wins: wins,
             biggest_challenge: challenge,
             challenge_cause: challengeCause,
@@ -242,6 +243,7 @@ const WeeklyJournal = () => {
               setWins(data.data?.wins || []);
               setMissionText(data.data?.mission_connection || "");
               setHabitsText(data.data?.weekly_story || "");
+              setWeeklyStory(data.data?.weekly_story || "");
               setWeeklyPlanData(data.data?.weekly_plan || generateEmptyWeekData(currentDate));
               setFocusData(data.data?.focus_and_boundaries || defaultFocusData);
               return;
@@ -258,6 +260,7 @@ const WeeklyJournal = () => {
           setWins([]);
           setMissionText("");
           setHabitsText("");
+          setWeeklyStory("");
           setWeeklyPlanData(generateEmptyWeekData(currentDate));
           setFocusData(defaultFocusData);
           
@@ -441,6 +444,7 @@ const WeeklyJournal = () => {
     // Mission & Habits
     setMissionText(selectedPastJournal.data?.mission_connection || "");
     setHabitsText(selectedPastJournal.data?.weekly_story || "");
+    setWeeklyStory(selectedPastJournal.data?.weekly_story || "");
     
     // Weekly Plan and Focus & Boundaries
     if (selectedPastJournal.data?.weekly_plan) {
@@ -571,6 +575,8 @@ const WeeklyJournal = () => {
                   setInsight={setInsight}
                   balanceRating={balanceRating}
                   setBalanceRating={setBalanceRating}
+                  weeklyStory={weeklyStory}
+                  setWeeklyStory={setWeeklyStory}
                 />
               </div>
 

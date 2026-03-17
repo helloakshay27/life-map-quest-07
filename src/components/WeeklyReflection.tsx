@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Info, Plus, Lightbulb, X } from "lucide-react";
+import { Info, Plus, Lightbulb, X, Home, Zap, Heart, Leaf, DollarSign } from "lucide-react";
 
 export interface Win {
   description: string;
@@ -23,6 +23,8 @@ interface WeeklyReflectionProps {
   currentDate?: Date;
   challengeCause?: string;
   setChallengeCause?: React.Dispatch<React.SetStateAction<string>>;
+  weeklyStory?: string;
+  setWeeklyStory?: React.Dispatch<React.SetStateAction<string>>;
 }
 
 export default function WeeklyReflection({
@@ -36,6 +38,8 @@ export default function WeeklyReflection({
   setInsight,
   balanceRating,
   setBalanceRating,
+  weeklyStory = "",
+  setWeeklyStory,
 }: WeeklyReflectionProps) {
   
   // Handlers for inline Win editing
@@ -60,7 +64,7 @@ export default function WeeklyReflection({
 
   return (
     <div className="font-sans">
-      {/* Orange Header */}
+      {/* Header */}
       <div className="px-6 pt-5 pb-4 border-b border-orange-100 bg-white">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -74,29 +78,33 @@ export default function WeeklyReflection({
               <p className="text-[13px] text-gray-500 mt-0.5">Wins, challenges, gratitude & life balance</p>
             </div>
           </div>
-          <h1 className="text-lg font-bold text-gray-800">Review of Past Week</h1>
           <Info className="w-4 h-4 text-gray-400 cursor-help" />
         </div>
-
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <span className="text-[13px] font-medium text-gray-700">
-              My Weekly Story for Mar 8 - Mar 14, 2026
-            </span>
-            <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
-          </div>
-          <button className="text-[13px] font-medium text-orange-600 border border-orange-200 bg-orange-50 px-3 py-1.5 rounded hover:bg-orange-100 transition-colors">
-            Import from Daily Journal
-          </button>
-        </div>
-
-        <p className="text-[13px] text-gray-500 pb-4 border-b border-gray-100">
-          Reflect on your week - what happened each day, what you accomplished, what you learned, and how you felt...
-        </p>
       </div>
 
       <div className="p-6 pt-2 space-y-8">
         
+        {/* MY WEEKLY STORY */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <h2 className="text-[15px] font-bold text-gray-800">My Weekly Story for Mar 8 - Mar 14, 2026</h2>
+              <Info className="w-4 h-4 text-gray-400 cursor-help" />
+            </div>
+            <button className="text-[13px] font-medium text-orange-600 border border-orange-200 bg-orange-50 px-3 py-1.5 rounded hover:bg-orange-100 transition-colors">
+              Import from Daily Journal
+            </button>
+          </div>
+          
+          <div className="border border-gray-200 rounded-md overflow-hidden bg-white">
+            <textarea
+              value={weeklyStory}
+              onChange={(e) => setWeeklyStory?.(e.target.value)}
+              className="w-full h-[120px] p-4 text-[13px] text-gray-800 outline-none resize-y placeholder-gray-400 border border-gray-200 rounded-md focus:border-orange-300 focus:ring-1 focus:ring-orange-200"
+              placeholder="Reflect on your week - what happened each day, what you accomplished, what you learned, and how you felt..."
+            />
+          </div>
+        </section>
         {/* 1. TOP WINS OF PAST WEEK */}
         <section>
           <div className="flex items-center justify-between mb-3">
@@ -197,7 +205,7 @@ export default function WeeklyReflection({
             <textarea
               value={challenge}
               onChange={(e) => setChallenge(e.target.value)}
-              className="w-full h-[88px] p-4 text-[13px] text-gray-800 outline-none resize-none placeholder-gray-400"
+              className="w-full h-[88px] p-4 text-[13px] text-gray-800 outline-none resize-y placeholder-gray-400"
               placeholder="What was your biggest challenge this week, perhaps a recurring behavior, and what caused it?"
             />
           </div>
@@ -212,7 +220,7 @@ export default function WeeklyReflection({
             <textarea
               value={gratitude}
               onChange={(e) => setGratitude(e.target.value)}
-              className="w-full h-[100px] p-4 text-[13px] text-gray-800 outline-none resize-none placeholder-gray-400"
+              className="w-full h-[100px] p-4 text-[13px] text-gray-800 outline-none resize-y placeholder-gray-400"
               placeholder="What are you grateful for?"
             />
           </div>
@@ -224,7 +232,7 @@ export default function WeeklyReflection({
             <textarea
               value={insight}
               onChange={(e) => setInsight(e.target.value)}
-              className="w-full h-[100px] p-4 text-[13px] text-gray-800 outline-none resize-none placeholder-gray-400"
+              className="w-full h-[100px] p-4 text-[13px] text-gray-800 outline-none resize-y placeholder-gray-400"
               placeholder="You are the ultimate creator for everything that manifests in your life. What were your insights this week?"
             />
           </div>
@@ -237,25 +245,50 @@ export default function WeeklyReflection({
               <h2 className="text-[15px] font-bold text-gray-800">Auto-Calculated Life Balance</h2>
               <Info className="w-4 h-4 text-gray-400 cursor-help" />
             </div>
-            <span className="text-2xl font-bold text-[#22c55e]">9/10</span>
+            <span className="text-2xl font-bold text-[#22c55e]">0/10</span>
           </div>
 
           {/* 5 Blocks representation */}
           <div className="flex gap-2 mb-2">
-            <div className="flex-1 h-[68px] bg-[#86efac] rounded-lg"></div>
-            <div className="flex-1 h-[68px] bg-[#e5e7eb] rounded-lg"></div>
-            <div className="flex-1 h-[68px] bg-[#e5e7eb] rounded-lg"></div>
-            <div className="flex-1 h-[68px] bg-[#e5e7eb] rounded-lg"></div>
-            <div className="flex-1 h-[68px] bg-[#e5e7eb] rounded-lg"></div>
+            <div className="flex-1 h-[68px] bg-[#e5e7eb] rounded-lg flex items-center justify-center">
+              <Home className="w-6 h-6 text-gray-400" />
+            </div>
+            <div className="flex-1 h-[68px] bg-[#e5e7eb] rounded-lg flex items-center justify-center">
+              <Zap className="w-6 h-6 text-gray-400" />
+            </div>
+            <div className="flex-1 h-[68px] bg-[#e5e7eb] rounded-lg flex items-center justify-center">
+              <Heart className="w-6 h-6 text-gray-400" />
+            </div>
+            <div className="flex-1 h-[68px] bg-[#e5e7eb] rounded-lg flex items-center justify-center">
+              <Leaf className="w-6 h-6 text-gray-400" />
+            </div>
+            <div className="flex-1 h-[68px] bg-[#e5e7eb] rounded-lg flex items-center justify-center">
+              <DollarSign className="w-6 h-6 text-gray-400" />
+            </div>
           </div>
 
-          {/* Icons row */}
+          {/* Icons row with counts */}
           <div className="flex justify-between px-10 mb-10 text-[13px] font-semibold text-gray-600">
-            <div className="flex flex-col items-center gap-1"><span className="text-lg">💧</span> 0</div>
-            <div className="flex flex-col items-center gap-1"><span className="text-lg">🔥</span> 0</div>
-            <div className="flex flex-col items-center gap-1"><span className="text-lg">❤️</span> 0</div>
-            <div className="flex flex-col items-center gap-1"><span className="text-lg">⚖️</span> 0</div>
-            <div className="flex flex-col items-center gap-1"><span className="text-lg">💼</span> 1</div>
+            <div className="flex flex-col items-center gap-1">
+              <Home className="w-5 h-5 text-gray-400" />
+              <span>0</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <Zap className="w-5 h-5 text-gray-400" />
+              <span>0</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <Heart className="w-5 h-5 text-gray-400" />
+              <span>0</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <Leaf className="w-5 h-5 text-gray-400" />
+              <span>0</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <DollarSign className="w-5 h-5 text-gray-400" />
+              <span>0</span>
+            </div>
           </div>
 
           {/* Slider */}
