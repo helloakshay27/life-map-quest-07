@@ -110,10 +110,21 @@ const WeeklyJournal = () => {
     progress?: number;
   }
 
+  interface Habit {
+    id: string;
+    title: string;
+    frequency?: string;
+    category?: string;
+    progress?: number;
+    streak?: number;
+  }
+
   const [pastJournals, setPastJournals] = useState<PastWeeklyJournal[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([]);
   const [isLoadingPast, setIsLoadingPast] = useState(false);
   const [isLoadingGoals, setIsLoadingGoals] = useState(false);
+  const [isLoadingHabits, setIsLoadingHabits] = useState(false);
   const [calendarDate, setCalendarDate] = useState<Date | undefined>(undefined);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
@@ -336,10 +347,10 @@ const WeeklyJournal = () => {
             ? data.data
             : [];
           
-          const normalized: Goal[] = raw.map((g) => ({
+          const normalized: Goal[] = raw.map((g: { id: number; title: string; status: string; area?: string; progress?: number }) => ({
             ...g,
             id: String(g.id),
-            status: (g.status === "in_progress" ? "progress" : g.status) || "planning",
+            status: ((g.status === "in_progress" ? "progress" : g.status) as any) || "planning",
           }));
           setGoals(normalized);
         }
@@ -349,7 +360,39 @@ const WeeklyJournal = () => {
         setIsLoadingGoals(false);
       }
     };
+
+    const fetchHabits = async () => {
+      setIsLoadingHabits(true);
+      try {
+        const res = await apiRequest("/habits");
+        if (res.ok) {
+          const data = await res.json();
+          const raw: any[] = Array.isArray(data)
+            ? data
+            : Array.isArray(data.habits)
+            ? data.habits
+            : Array.isArray(data.data)
+            ? data.data
+            : [];
+          
+          const normalized: Habit[] = raw.map((h: { id?: number; habit_id?: number; title?: string; name?: string; progress?: number; streak?: number }) => ({
+            ...h,
+            id: String(h.id || h.habit_id),
+            title: h.title || h.name || "Untitled Habit",
+            progress: h.progress || 0,
+            streak: h.streak || 0,
+          }));
+          setHabits(normalized);
+        }
+      } catch (e) {
+        console.error("Error loading habits", e);
+      } finally {
+        setIsLoadingHabits(false);
+      }
+    };
+
     fetchGoals();
+    fetchHabits();
   }, [token]);
 
   const fetchPastJournalById = async (id: number) => {
@@ -540,6 +583,7 @@ const WeeklyJournal = () => {
                   setMissionText={setMissionText}
                   habitsText={habitsText}
                   setHabitsText={setHabitsText}
+                  apiHabits={habits}
                 />
               </div>
 
