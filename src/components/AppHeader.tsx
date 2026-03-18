@@ -1,4 +1,4 @@
-import { LogOut, Menu } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -8,7 +8,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 
 export const GophygitalLogo = (props: React.SVGProps<SVGSVGElement>) => {
   return (
@@ -45,15 +44,14 @@ export const GophygitalLogo = (props: React.SVGProps<SVGSVGElement>) => {
 export function AppHeader() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  
-const handleLogout = async () => {
+
+  const handleLogout = async () => {
     try {
-      await fetch("https://life-api.lockated.com/logout", { 
+      await fetch("https://life-api.lockated.com/logout", {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
-          
-        }
+        },
       });
     } catch (error) {
       console.error("Failed to logout from server:", error);
@@ -74,7 +72,7 @@ const handleLogout = async () => {
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-card px-2 sm:px-3">
       <div className="flex items-center gap-3">
-        <SidebarTrigger className="text-foreground" />
+        {/* LOGO KE BAGAL SE SIDEBAR TRIGGER REMOVE KAR DIYA */}
         <div className="flex items-center gap-2">
           <div className="flex items-center justify-center overflow-visible w-32 h-8">
             <GophygitalLogo className="h-full w-full object-contain text-primary" />
@@ -94,7 +92,6 @@ const handleLogout = async () => {
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-72">
-          {/* User Info Section */}
           <div className="px-3 py-3 border-b">
             <div className="flex items-start gap-3 mb-2">
               <Avatar className="h-10 w-10 flex-shrink-0">
@@ -112,10 +109,9 @@ const handleLogout = async () => {
               </div>
             </div>
           </div>
-          
-          {/* Logout Button */}
-          <DropdownMenuItem 
-            onClick={handleLogout} 
+
+          <DropdownMenuItem
+            onClick={handleLogout}
             className="text-destructive cursor-pointer flex items-center gap-2 mt-2"
           >
             <LogOut className="h-4 w-4" />

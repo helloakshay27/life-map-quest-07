@@ -215,18 +215,27 @@ const Dashboard = () => {
         };
 
         const [dailyRes, weeklyRes] = await Promise.all([
-          fetch("https://life-api.lockated.com/user_journals", { headers: authHeader }),
-          fetch("https://life-api.lockated.com/user_journals?journal_type=weekly", { headers: authHeader })
+          fetch("https://life-api.lockated.com/user_journals", {
+            headers: authHeader,
+          }),
+          fetch(
+            "https://life-api.lockated.com/user_journals?journal_type=weekly",
+            { headers: authHeader },
+          ),
         ]);
 
         if (dailyRes.ok) {
           const data = await dailyRes.json();
-          setRecentJournals(Array.isArray(data) ? data : data?.user_journals || []);
+          setRecentJournals(
+            Array.isArray(data) ? data : data?.user_journals || [],
+          );
         }
 
         if (weeklyRes.ok) {
           const data = await weeklyRes.json();
-          setWeeklyJournals(Array.isArray(data) ? data : data?.user_journals || []);
+          setWeeklyJournals(
+            Array.isArray(data) ? data : data?.user_journals || [],
+          );
         }
       } catch (err) {
         console.error("Failed to fetch journals:", err);
@@ -238,25 +247,41 @@ const Dashboard = () => {
   // Calendar Logic
   const [calendarDate, setCalendarDate] = useState(new Date());
 
+  // Replace the existing weekData useMemo with this:
   const weekData = useMemo(() => {
     const start = new Date(calendarDate);
-    // Move to Sunday of current week
     start.setDate(calendarDate.getDate() - calendarDate.getDay());
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     return Array.from({ length: 7 }).map((_, i) => {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
-      const isToday = d.toDateString() === new Date().toDateString();
-      const isPast = d < new Date(new Date().setHours(0, 0, 0, 0));
+      d.setHours(0, 0, 0, 0);
+
+      const dateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const isToday = d.toDateString() === today.toDateString();
+      const isFuture = d > today;
+
+      // Check if journal exists for this date from real API data
+      const hasJournal = recentJournals.some((j) => {
+        const journalDate =
+          j.start_date || (j.created_at ? j.created_at.split("T")[0] : "");
+        return journalDate === dateString;
+      });
+
+      const state = isFuture ? "upcoming" : hasJournal ? "filled" : "missed";
 
       return {
         day: ["Su", "M", "Tu", "W", "Th", "F", "Sa"][i],
         date: d.getDate().toString(),
         fullDate: d,
         active: isToday,
-state: isPast ? "missed" : isToday ? "filled" : "upcoming",      };
+        state,
+      };
     });
-  }, [calendarDate]);
+  }, [calendarDate, recentJournals]); // <-- add recentJournals as dependency
 
   const handlePrevWeek = () => {
     const newDate = new Date(calendarDate);
@@ -375,17 +400,36 @@ state: isPast ? "missed" : isToday ? "filled" : "upcoming",      };
             Authorization: `Bearer ${authToken}`,
           },
         });
+
         if (res.ok) {
           const data = await res.json();
           const vision = Array.isArray(data) ? data[0] : data?.vision || data;
 
           if (vision) {
-            const images = vision.images || data.images || [];
+            // FIX: Extract URL from the images array of objects
+            let imageUrls: string[] = [];
+            if (Array.isArray(vision.images)) {
+              imageUrls = vision.images
+                .map((img: any) => (typeof img === "object" ? img.url : img))
+                .filter(Boolean);
+            } else if (vision.image) {
+              imageUrls =
+                typeof vision.image === "object"
+                  ? [vision.image.url]
+                  : [vision.image];
+            }
+
+            // Grab the mission statement
+            const missionText =
+              vision.mission_statement ||
+              vision.life_mission ||
+              vision.mission ||
+              null;
+
             setPreviewData((prev) => ({
               ...prev,
-              vision_images: images,
-              vision_statement: vision.vision_statement || null,
-              mission: vision.mission_statement || prev.mission,
+              vision_images: imageUrls,
+              mission: missionText,
             }));
           }
         }
@@ -397,18 +441,10 @@ state: isPast ? "missed" : isToday ? "filled" : "upcoming",      };
     fetchVision();
 
     const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        fetchVision();
-      }
+      if (!document.hidden) fetchVision();
     };
-
-    const handleStorageChange = () => {
-      fetchVision();
-    };
-
-    const handleVisionUpdated = () => {
-      fetchVision();
-    };
+    const handleStorageChange = () => fetchVision();
+    const handleVisionUpdated = () => fetchVision();
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("storage", handleStorageChange);
@@ -420,7 +456,6 @@ state: isPast ? "missed" : isToday ? "filled" : "upcoming",      };
       window.removeEventListener("vision_data_updated", handleVisionUpdated);
     };
   }, [token]);
-
   // Fetch actual dreams API to populate Bucket List Dreams directly from source
   useEffect(() => {
     const fetchDreams = async () => {
@@ -569,7 +604,7 @@ state: isPast ? "missed" : isToday ? "filled" : "upcoming",      };
         });
         if (res.ok) {
           const data = await res.json();
-          setPeople(Array.isArray(data) ? data : data.data ?? []);
+          setPeople(Array.isArray(data) ? data : (data.data ?? []));
         }
       } catch (err) {
         console.error("Failed to fetch people:", err);
@@ -587,12 +622,14 @@ state: isPast ? "missed" : isToday ? "filled" : "upcoming",      };
 
   // Add Habits Fetch Logic
   const [habitsData, setHabitsData] = useState<any[]>([]);
-  
+
   useEffect(() => {
     const fetchHabits = async () => {
       try {
         const res = await fetch("https://life-api.lockated.com/habits", {
-          headers: { Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}` }
+          headers: {
+            Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
+          },
         });
         if (res.ok) {
           const data = await res.json();
@@ -606,32 +643,40 @@ state: isPast ? "missed" : isToday ? "filled" : "upcoming",      };
   }, [token]);
 
   // Add Leaderboard Fetch Logic
-  const [leaderboardData, setLeaderboardData] = useState<{ top: any[], currentUser: any }>({ top: [], currentUser: null });
+  const [leaderboardData, setLeaderboardData] = useState<{
+    top: any[];
+    currentUser: any;
+  }>({ top: [], currentUser: null });
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const res = await fetch("https://life-api.lockated.com/leaderboard/rankings", {
-          headers: { Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}` }
-        });
+        const res = await fetch(
+          "https://life-api.lockated.com/leaderboard/rankings",
+          {
+            headers: {
+              Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
+            },
+          },
+        );
         if (res.ok) {
           const data = await res.json();
           let list = [];
           let cu = null;
 
           if (Array.isArray(data)) {
-             list = data;
+            list = data;
           } else if (data.data && Array.isArray(data.data)) {
-             list = data.data;
-             cu = data.current_user || null;
+            list = data.data;
+            cu = data.current_user || null;
           } else if (data.rankings && Array.isArray(data.rankings)) {
-             list = data.rankings;
-             cu = data.current_user || null;
+            list = data.rankings;
+            cu = data.current_user || null;
           }
 
           setLeaderboardData({
-             top: list.slice(0, 5),
-             currentUser: cu
+            top: list.slice(0, 5),
+            currentUser: cu,
           });
         }
       } catch (err) {
@@ -643,20 +688,26 @@ state: isPast ? "missed" : isToday ? "filled" : "upcoming",      };
 
   // --- Calculations for Habit Tracking ---
   const activeHabitsCount = habitsData.length;
-  const avgHabitCompletion = activeHabitsCount > 0
-    ? Math.round(habitsData.reduce((acc, h) => acc + (h.completion_percentage || h.completion_rate || 0), 0) / activeHabitsCount)
-    : 0;
+  const avgHabitCompletion =
+    activeHabitsCount > 0
+      ? Math.round(
+          habitsData.reduce(
+            (acc, h) =>
+              acc + (h.completion_percentage || h.completion_rate || 0),
+            0,
+          ) / activeHabitsCount,
+        )
+      : 0;
 
-  const dailyHabits = habitsData.filter(h => {
-    const freq = (h.repeat_type || h.frequency || '').toLowerCase();
-    return freq === 'daily' || !freq; 
-  });
-  
-  const weeklyHabits = habitsData.filter(h => {
-    const freq = (h.repeat_type || h.frequency || '').toLowerCase();
-    return freq === 'weekly';
+  const dailyHabits = habitsData.filter((h) => {
+    const freq = (h.repeat_type || h.frequency || "").toLowerCase();
+    return freq === "daily" || !freq;
   });
 
+  const weeklyHabits = habitsData.filter((h) => {
+    const freq = (h.repeat_type || h.frequency || "").toLowerCase();
+    return freq === "weekly";
+  });
 
   // --- Journaling Status Calculations ---
   const statusToday = new Date();
@@ -678,7 +729,7 @@ state: isPast ? "missed" : isToday ? "filled" : "upcoming",      };
       (j) =>
         (j.journal_type === "daily" || !j.journal_type) &&
         (j.start_date === dateString ||
-          (j.created_at && j.created_at.startsWith(dateString)))
+          (j.created_at && j.created_at.startsWith(dateString))),
     );
     return {
       dayLabel: date.toLocaleDateString("en-US", { weekday: "short" }),
@@ -706,7 +757,7 @@ state: isPast ? "missed" : isToday ? "filled" : "upcoming",      };
         ((date.getTime() - week1.getTime()) / 86400000 -
           3 +
           ((week1.getDay() + 6) % 7)) /
-          7
+          7,
       )
     );
   };
@@ -751,11 +802,17 @@ state: isPast ? "missed" : isToday ? "filled" : "upcoming",      };
     }).length;
   }, [insightsData.journaling_status.monthly_entries, recentJournals]);
 
-  const consistencyScore = Math.min(Math.round((last30DaysCount / 30) * 100), 100);
-  const longestStreak = summaryData?.longest_streak ?? summaryData?.current_streak ?? 0;
+  const consistencyScore = Math.min(
+    Math.round((last30DaysCount / 30) * 100),
+    100,
+  );
+  const longestStreak =
+    summaryData?.longest_streak ?? summaryData?.current_streak ?? 0;
 
-  const setupCompleted = parseInt(localStorage.getItem("setupCompletedCount") || "0");
-const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "5");
+  const setupCompleted = parseInt(
+    localStorage.getItem("setupCompletedCount") || "0",
+  );
+  const setupTotal = parseInt(localStorage.getItem("setupTotalCount") || "5");
 
   return (
     <div className="animate-fade-in space-y-6 w-full">
@@ -820,7 +877,7 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
               Score: {summaryData?.total_score || 10}
             </Button>
           </Link>
-      </div>
+        </div>
       </div>
 
       {/* Daily Focus & Inspiration */}
@@ -831,7 +888,7 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
             Daily Focus & Inspiration
           </h2>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Card 1: Daily Motivator */}
           <Card className="bg-[#FFF1F2] border-[#FECDD3] rounded-2xl overflow-hidden flex flex-col shadow-sm border-2">
@@ -845,7 +902,7 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
                   <Sparkles className="w-3 h-3 text-amber-400" />
                 </h3>
               </div>
-              
+
               <div className="flex-1 relative pl-6 mb-4 mt-2">
                 <span className="text-4xl text-[#FECDD3] absolute -top-4 left-0 font-serif opacity-80">
                   "
@@ -855,7 +912,9 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
                     ? previewData.daily_motivator
                     : "The end of education is character."}
                 </p>
-                <p className="text-[10px] text-[#E11D48] font-bold mt-2">— Sathya Sai Baba</p>
+                <p className="text-[10px] text-[#E11D48] font-bold mt-2">
+                  — Sathya Sai Baba
+                </p>
               </div>
 
               <div className="bg-[#FFE4E6] rounded-xl p-3 border border-[#FECDD3]">
@@ -866,7 +925,8 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
                   </h4>
                 </div>
                 <p className="text-[11px] text-[#9F1239] font-medium leading-snug">
-                  True education is about building strong values and character, not just academics.
+                  True education is about building strong values and character,
+                  not just academics.
                 </p>
               </div>
             </div>
@@ -886,7 +946,8 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
                 variant="secondary"
                 className="bg-[#E0E7FF] text-[#4338CA] hover:bg-[#E0E7FF] shadow-none font-semibold text-[12px] px-3 py-1 rounded-full pointer-events-none border-0"
               >
-                For: {new Date().toLocaleDateString("en-US", {
+                For:{" "}
+                {new Date().toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                 })}
@@ -1202,7 +1263,10 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
             </div>
             <div className="flex justify-between gap-1 sm:gap-1.5 w-full">
               {dailyCompletion.map((day, idx) => (
-                <div key={idx} className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                <div
+                  key={idx}
+                  className="flex flex-col items-center gap-1.5 flex-1 min-w-0"
+                >
                   <div
                     className={`w-full aspect-square max-w-[42px] rounded-[8px] sm:rounded-[10px] flex items-center justify-center transition-all ${
                       day.completed
@@ -1211,9 +1275,26 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
                     }`}
                   >
                     {day.completed ? (
-                      <svg width="50%" height="50%" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2" />
-                        <path d="M8 12L11 15L16 9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <svg
+                        width="50%"
+                        height="50%"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="9"
+                          stroke="white"
+                          strokeWidth="2"
+                        />
+                        <path
+                          d="M8 12L11 15L16 9"
+                          stroke="white"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
                       </svg>
                     ) : (
                       <div className="w-[50%] h-[50%] rounded-full border-[1.5px] border-[#99F6E4]"></div>
@@ -1239,7 +1320,10 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
             </div>
             <div className="flex justify-between gap-1 sm:gap-1.5 w-full">
               {weeklyBlocks.map((wk, idx) => (
-                <div key={idx} className="flex flex-col items-center gap-1 flex-1 min-w-0">
+                <div
+                  key={idx}
+                  className="flex flex-col items-center gap-1 flex-1 min-w-0"
+                >
                   <div
                     className={`w-full aspect-square max-w-[48px] rounded-[8px] sm:rounded-[10px] flex items-center justify-center transition-all ${
                       wk.completed
@@ -1248,12 +1332,32 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
                     }`}
                   >
                     {wk.completed ? (
-                      <svg width="50%" height="50%" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2" />
-                        <path d="M8 12L11 15L16 9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <svg
+                        width="50%"
+                        height="50%"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="9"
+                          stroke="white"
+                          strokeWidth="2"
+                        />
+                        <path
+                          d="M8 12L11 15L16 9"
+                          stroke="white"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
                       </svg>
                     ) : (
-                      <Calendar className="w-[45%] h-[45%] text-[#99F6E4]" strokeWidth={2} />
+                      <Calendar
+                        className="w-[45%] h-[45%] text-[#99F6E4]"
+                        strokeWidth={2}
+                      />
                     )}
                   </div>
                   <div className="text-center mt-1 w-full">
@@ -1291,49 +1395,72 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
         </div>
 
         <Card className="bg-[#FFF8F8] border border-[#E63946] rounded-[16px] shadow-sm transition-all hover:shadow-md p-4 sm:p-5">
+          {/* Top Header Row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <Sparkles className="w-[18px] h-[18px] text-slate-900" strokeWidth={2.5} />
-              <h3 className="font-bold text-[15px] text-slate-900 tracking-tight">
+              <Sparkles
+                className="w-[18px] h-[18px] text-slate-900"
+                strokeWidth={2.5}
+              />
+              <h3 className="font-bold text-[18px] text-slate-900 tracking-tight">
                 My Mission
               </h3>
             </div>
-            
+
             <div className="flex items-center gap-2">
-              <TrendingUp className="w-[14px] h-[14px] text-slate-900" strokeWidth={2.5} />
-              <span className="text-[12px] font-extrabold text-slate-900">
-                {summaryData?.alignment_average !== null && summaryData?.alignment_average !== undefined 
-                  ? Number(summaryData.alignment_average).toFixed(1) 
-                  : "5.0"}/10
+              <TrendingUp
+                className="w-[14px] h-[14px] text-slate-900"
+                strokeWidth={2.5}
+              />
+              <span className="text-[14px] font-extrabold text-slate-900">
+                {summaryData?.alignment_average !== null &&
+                summaryData?.alignment_average !== undefined
+                  ? Number(summaryData.alignment_average).toFixed(1)
+                  : "5.0"}
+                /10
               </span>
-              <div className="w-5 sm:w-8 h-[2px] bg-slate-900 rounded-full ml-1"></div>
+              <div className="w-6 sm:w-10 h-[2.5px] bg-slate-900 rounded-full ml-1"></div>
             </div>
           </div>
 
-          {/* Extra Content (Mission Statement & Vision Board) */}
-          {(previewData.mission || (previewData.vision_images && previewData.vision_images.length > 0)) && (
-            <div className="mt-5 pt-5 border-t border-red-100 flex flex-col gap-4">
-              {previewData.mission && (
-                <p className="text-lg md:text-xl font-black text-slate-900 tracking-tight uppercase leading-tight">
-                  {previewData.mission}
-                </p>
-              )}
+          {/* Content: Mission Text & Vision Board Image */}
+          <div className="mt-6 flex flex-col gap-6">
+            {/* Life Mission Text */}
+            {previewData.mission && (
+              <p className="text-xl font-bold text-slate-900">
+                {previewData.mission}
+              </p>
+            )}
 
-              {previewData.vision_images && previewData.vision_images.length > 0 && (
-                <div className="relative rounded-[12px] overflow-hidden aspect-[16/9] bg-slate-50 border border-slate-100 group">
-                  <img
-                    src={previewData.vision_images[0]}
-                    alt="My Vision"
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    onError={(e) => {
-                      console.error("Dashboard - Failed to load main vision image");
-                      e.currentTarget.style.display = "none";
-                    }}
-                  />
+            {/* Vision Board Card */}
+            {previewData.vision_images &&
+              previewData.vision_images.length > 0 && (
+                <div className="bg-white rounded-[16px] p-5 shadow-sm border border-[#FEE2E2]">
+                  <div className="flex items-center gap-2.5 mb-4">
+                    <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center">
+                      <Heart
+                        className="w-4 h-4 text-[#E63946]"
+                        strokeWidth={2.5}
+                      />
+                    </div>
+                    <h4 className="font-bold text-slate-900 text-[16px]">
+                      Vision Board
+                    </h4>
+                  </div>
+
+                  <div className="relative rounded-[8px] overflow-hidden bg-slate-50 border border-slate-200">
+                    <img
+                      src={previewData.vision_images[0]}
+                      alt="Vision Board"
+                      className="w-full h-auto object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  </div>
                 </div>
               )}
-            </div>
-          )}
+          </div>
         </Card>
       </div>
 
@@ -1346,7 +1473,6 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
           </h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          
           {/* UPDATED Journaling Consistency Block */}
           <Card className="p-5 bg-[#FFF9F5] border border-[#FDBA74] shadow-sm rounded-[20px] flex flex-col transition-all hover:shadow-md">
             <div className="flex items-center gap-3 mb-5">
@@ -1373,7 +1499,10 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
 
               <div className="bg-white rounded-xl p-4 flex flex-col items-center justify-center shadow-sm border border-slate-100">
                 <div className="flex items-center gap-2 mb-1 text-slate-800">
-                  <Calendar className="w-5 h-5 text-[#3B82F6]" strokeWidth={2.5} />
+                  <Calendar
+                    className="w-5 h-5 text-[#3B82F6]"
+                    strokeWidth={2.5}
+                  />
                   <span className="text-[22px] font-extrabold leading-none">
                     {last30DaysCount}
                   </span>
@@ -1470,7 +1599,7 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
 
           {/* REBUILT: This Week's Strategic Focus (formerly Focus Areas) */}
           <Card className="p-6 bg-red-50/50 border border-red-200 shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)] rounded-[20px] flex flex-col min-h-[400px]">
-             <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
                 <div className="w-[42px] h-[42px] rounded-[12px] bg-red-500 flex items-center justify-center text-white shadow-sm">
                   <Target className="w-[22px] h-[22px]" strokeWidth={2} />
@@ -1479,15 +1608,14 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
                   This Week's Strategic Focus
                 </h3>
               </div>
-              
             </div>
 
             {/* Note: I'm keeping the logic here empty state until the specific API implementation is complete as discussed previously, it acts as a placeholder based on your empty layout request. Let me know if you need to fetch list. */}
             <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <Target className="w-[100px] h-[100px] text-red-200 stroke-[0.8] mb-6" />
-                <p className="text-[14px] text-slate-500 font-medium max-w-[280px] leading-relaxed">
-                    Complete your weekly reflection to see your focus areas here
-                </p>
+              <Target className="w-[100px] h-[100px] text-red-200 stroke-[0.8] mb-6" />
+              <p className="text-[14px] text-slate-500 font-medium max-w-[280px] leading-relaxed">
+                Complete your weekly reflection to see your focus areas here
+              </p>
             </div>
           </Card>
         </div>
@@ -1502,9 +1630,16 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
               <div className="w-8 h-8 rounded-[8px] bg-[#14B8A6] flex items-center justify-center text-white shadow-sm">
                 <Zap className="w-4 h-4 fill-current" />
               </div>
-              <h3 className="font-bold text-slate-800 text-[16px]">Habit Tracking</h3>
+              <h3 className="font-bold text-slate-800 text-[16px]">
+                Habit Tracking
+              </h3>
             </div>
-            <Button variant="outline" size="sm" className="h-7 text-[11px] font-bold text-slate-700 bg-white border-slate-200 rounded-full px-4" asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-[11px] font-bold text-slate-700 bg-white border-slate-200 rounded-full px-4"
+              asChild
+            >
               <Link to="/goals-habits">View All</Link>
             </Button>
           </div>
@@ -1514,12 +1649,20 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
             {/* Top Stats */}
             <div className="grid grid-cols-2 gap-4 mb-6 border-b border-slate-100 pb-6">
               <div>
-                <p className="text-[11px] font-bold text-slate-500 mb-1 tracking-wide">Active Habits</p>
-                <p className="text-[26px] font-extrabold text-[#0F766E] leading-none">{activeHabitsCount}</p>
+                <p className="text-[11px] font-bold text-slate-500 mb-1 tracking-wide">
+                  Active Habits
+                </p>
+                <p className="text-[26px] font-extrabold text-[#0F766E] leading-none">
+                  {activeHabitsCount}
+                </p>
               </div>
               <div>
-                <p className="text-[11px] font-bold text-slate-500 mb-1 tracking-wide">Avg. Completion</p>
-                <p className="text-[26px] font-extrabold text-[#14B8A6] leading-none">{avgHabitCompletion}%</p>
+                <p className="text-[11px] font-bold text-slate-500 mb-1 tracking-wide">
+                  Avg. Completion
+                </p>
+                <p className="text-[26px] font-extrabold text-[#14B8A6] leading-none">
+                  {avgHabitCompletion}%
+                </p>
               </div>
             </div>
 
@@ -1527,59 +1670,93 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Daily Habits */}
               <div>
-                <h4 className="text-[13px] font-bold text-slate-800 mb-4">Daily Habits</h4>
+                <h4 className="text-[13px] font-bold text-slate-800 mb-4">
+                  Daily Habits
+                </h4>
                 {dailyHabits.length > 0 ? (
                   <div className="space-y-5">
                     {dailyHabits.map((habit, idx) => (
                       <div key={idx} className="flex flex-col gap-2.5">
                         <div className="flex justify-between items-center">
-                          <span className="text-[13px] font-extrabold text-slate-800">{habit.name || habit.title}</span>
-                          <Badge variant="outline" className="text-[10px] px-2.5 py-0 h-[18px] border-slate-200 text-slate-600 bg-white rounded-full">
-                            {habit.category || habit.habit_category || 'Other'}
+                          <span className="text-[13px] font-extrabold text-slate-800">
+                            {habit.name || habit.title}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-2.5 py-0 h-[18px] border-slate-200 text-slate-600 bg-white rounded-full"
+                          >
+                            {habit.category || habit.habit_category || "Other"}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-3">
                           <div className="flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                            <div className="bg-[#0F172A] h-full rounded-full transition-all duration-500" style={{ width: `${habit.completion_percentage || habit.completion_rate || 0}%` }}></div>
+                            <div
+                              className="bg-[#0F172A] h-full rounded-full transition-all duration-500"
+                              style={{
+                                width: `${habit.completion_percentage || habit.completion_rate || 0}%`,
+                              }}
+                            ></div>
                           </div>
                           <span className="text-[11px] font-bold text-[#14B8A6] min-w-[28px] text-right">
-                            {habit.completion_percentage || habit.completion_rate || 0}%
+                            {habit.completion_percentage ||
+                              habit.completion_rate ||
+                              0}
+                            %
                           </span>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[12px] text-slate-400 italic">No daily habits</p>
+                  <p className="text-[12px] text-slate-400 italic">
+                    No daily habits
+                  </p>
                 )}
               </div>
 
               {/* Weekly Habits */}
               <div>
-                <h4 className="text-[13px] font-bold text-slate-800 mb-4">Weekly Habits</h4>
+                <h4 className="text-[13px] font-bold text-slate-800 mb-4">
+                  Weekly Habits
+                </h4>
                 {weeklyHabits.length > 0 ? (
                   <div className="space-y-5">
                     {weeklyHabits.map((habit, idx) => (
                       <div key={idx} className="flex flex-col gap-2.5">
                         <div className="flex justify-between items-center">
-                          <span className="text-[13px] font-extrabold text-slate-800">{habit.name || habit.title}</span>
-                          <Badge variant="outline" className="text-[10px] px-2.5 py-0 h-[18px] border-slate-200 text-slate-600 bg-white rounded-full">
-                            {habit.category || habit.habit_category || 'Other'}
+                          <span className="text-[13px] font-extrabold text-slate-800">
+                            {habit.name || habit.title}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-2.5 py-0 h-[18px] border-slate-200 text-slate-600 bg-white rounded-full"
+                          >
+                            {habit.category || habit.habit_category || "Other"}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-3">
                           <div className="flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                            <div className="bg-[#0F172A] h-full rounded-full transition-all duration-500" style={{ width: `${habit.completion_percentage || habit.completion_rate || 0}%` }}></div>
+                            <div
+                              className="bg-[#0F172A] h-full rounded-full transition-all duration-500"
+                              style={{
+                                width: `${habit.completion_percentage || habit.completion_rate || 0}%`,
+                              }}
+                            ></div>
                           </div>
                           <span className="text-[11px] font-bold text-[#14B8A6] min-w-[28px] text-right">
-                            {habit.completion_percentage || habit.completion_rate || 0}%
+                            {habit.completion_percentage ||
+                              habit.completion_rate ||
+                              0}
+                            %
                           </span>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[12px] text-slate-400 italic">No weekly habits</p>
+                  <p className="text-[12px] text-slate-400 italic">
+                    No weekly habits
+                  </p>
                 )}
               </div>
             </div>
@@ -1662,7 +1839,8 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
                               variant="secondary"
                               className="bg-orange-50 text-[#EA580C] hover:bg-orange-50 border-0 px-2 py-0.5 text-[11px] gap-1 font-bold"
                             >
-                              <Zap className="w-3 h-3 fill-current" /> {energy}/10
+                              <Zap className="w-3 h-3 fill-current" /> {energy}
+                              /10
                             </Badge>
                             <Badge
                               variant="secondary"
@@ -1731,25 +1909,37 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
                 {insightsData.personalized_insights
                   .slice(0, 3)
                   .map((insight, idx) => {
-                    const insightText = insight.insight || insight.text || JSON.stringify(insight);
+                    const insightText =
+                      insight.insight ||
+                      insight.text ||
+                      JSON.stringify(insight);
                     // Determine if it's an alert based on content, else standard chart icon
-                    const isAlert = insightText.toLowerCase().includes("hasn't gotten much attention") || insightText.toLowerCase().includes("consider dedicating");
-                    
+                    const isAlert =
+                      insightText
+                        .toLowerCase()
+                        .includes("hasn't gotten much attention") ||
+                      insightText.toLowerCase().includes("consider dedicating");
+
                     return (
-                    <div
-                      key={insight.id ?? idx}
-                      className="text-[13px] text-slate-600 font-medium bg-white rounded-[12px] px-4 py-3.5 border border-[#F3E8FF] shadow-sm flex items-start gap-3"
-                    >
-                      {isAlert ? (
-                        <AlertCircle className="w-4 h-4 text-[#A855F7] shrink-0 mt-[2px]" strokeWidth={2.5} />
-                      ) : (
-                        <TrendingUp className="w-4 h-4 text-[#A855F7] shrink-0 mt-[2px]" strokeWidth={2.5} />
-                      )}
-                      <span className="leading-snug">
-                        {insightText}
-                      </span>
-                    </div>
-                  )})}
+                      <div
+                        key={insight.id ?? idx}
+                        className="text-[13px] text-slate-600 font-medium bg-white rounded-[12px] px-4 py-3.5 border border-[#F3E8FF] shadow-sm flex items-start gap-3"
+                      >
+                        {isAlert ? (
+                          <AlertCircle
+                            className="w-4 h-4 text-[#A855F7] shrink-0 mt-[2px]"
+                            strokeWidth={2.5}
+                          />
+                        ) : (
+                          <TrendingUp
+                            className="w-4 h-4 text-[#A855F7] shrink-0 mt-[2px]"
+                            strokeWidth={2.5}
+                          />
+                        )}
+                        <span className="leading-snug">{insightText}</span>
+                      </div>
+                    );
+                  })}
               </div>
             ) : (
               <div className="bg-white rounded-[12px] p-4 border border-[#F3E8FF] shadow-sm flex items-center gap-3 mt-auto">
@@ -1861,7 +2051,10 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
                   Your Rank
                 </p>
                 <p className="text-[13px] text-[#9333EA] font-semibold leading-tight">
-                  {leaderboardData.currentUser?.points ?? summaryData?.total_score ?? 10} pts
+                  {leaderboardData.currentUser?.points ??
+                    summaryData?.total_score ??
+                    10}{" "}
+                  pts
                 </p>
               </div>
             </div>
@@ -1886,7 +2079,13 @@ const setupTotal     = parseInt(localStorage.getItem("setupTotalCount")     || "
                               : "bg-slate-50 border border-slate-100 text-slate-500"
                       }`}
                     >
-                      {idx === 0 ? "👑" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : idx + 1}
+                      {idx === 0
+                        ? "👑"
+                        : idx === 1
+                          ? "🥈"
+                          : idx === 2
+                            ? "🥉"
+                            : idx + 1}
                     </div>
                     <span className="font-bold text-[14px] text-slate-700 truncate tracking-tight">
                       {person.name || person.user_name || "Unknown"}

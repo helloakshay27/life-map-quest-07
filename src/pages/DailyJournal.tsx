@@ -13,7 +13,8 @@ import {
   Calendar as CalendarIcon,
   AlertCircle,
   Loader2,
-  Target, // <-- Added Target icon
+  Target,
+  Heart, // <-- ADD THIS HERE
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -455,12 +456,14 @@ function Dailystrip({
   );
 }
 // ── GuidingPrinciples ─────────────────────────────────────────────────────────
+// ── GuidingPrinciples ─────────────────────────────────────────────────────────
 interface GuidingPrinciplesProps {
   coreValues: { id: number; name: string }[];
   selectedValues: string[];
   setSelectedValues: React.Dispatch<React.SetStateAction<string[]>>;
   selectedAreas: string[];
   setSelectedAreas: React.Dispatch<React.SetStateAction<string[]>>;
+  token?: string;
 }
 
 const GuidingPrinciples = ({
@@ -469,10 +472,45 @@ const GuidingPrinciples = ({
   setSelectedValues,
   selectedAreas,
   setSelectedAreas,
+  token,
 }: GuidingPrinciplesProps) => {
   const navigate = useNavigate();
   const valuesScrollRef = useRef<HTMLDivElement>(null);
   const areasScrollRef = useRef<HTMLDivElement>(null);
+  const [visionImages, setVisionImages] = useState<string[]>([]);
+
+  // Fetch Vision Board Image
+  useEffect(() => {
+    const fetchVision = async () => {
+      if (!token) return;
+      try {
+        const res = await fetch("https://life-api.lockated.com/vision.json", {
+          headers: { Authorization: `Bearer ${getToken(token)}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const vision = Array.isArray(data) ? data[0] : data?.vision || data;
+          if (vision) {
+            let imageUrls: string[] = [];
+            if (Array.isArray(vision.images)) {
+              imageUrls = vision.images
+                .map((img: any) => (typeof img === "object" ? img.url : img))
+                .filter(Boolean);
+            } else if (vision.image) {
+              imageUrls =
+                typeof vision.image === "object"
+                  ? [vision.image.url]
+                  : [vision.image];
+            }
+            setVisionImages(imageUrls);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch vision data:", err);
+      }
+    };
+    fetchVision();
+  }, [token]);
 
   const scroll = (ref: React.RefObject<HTMLDivElement>, dir: number) => {
     if (ref.current)
@@ -491,20 +529,59 @@ const GuidingPrinciples = ({
 
   return (
     <div className="bg-purple-50 rounded-2xl border border-purple-200 p-5 w-full font-sans">
+      {/* Header Matching Screenshot */}
       <div className="flex items-center gap-2.5 mb-5">
         <div className="w-10 h-10 rounded-xl bg-purple-500 flex items-center justify-center flex-shrink-0 shadow-sm">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M12 21C12 21 3 14.5 3 8.5a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 6-9 12.5-9 12.5z"
-              fill="white"
-            />
-          </svg>
+          <Heart className="w-5 h-5 text-white" strokeWidth={2.5} />
         </div>
-        <span className="font-bold text-[16px] text-gray-900">
+
+        <span className="font-bold text-[18px] text-gray-900 flex items-center gap-2">
           Guiding Principles
+          <span className="relative group">
+            <Info className="w-4 h-4 text-purple-400 cursor-help" />
+            <span
+              className="
+      absolute left-1/2 -translate-x-1/2 bottom-full mb-2
+      bg-gray-900 text-white text-xs font-medium
+      rounded-lg px-3 py-2 w-52 text-center leading-relaxed
+      opacity-0 group-hover:opacity-100 pointer-events-none
+      transition-opacity duration-200 z-50 shadow-lg
+    "
+            >
+              Reflect on which values guided your actions and which life areas
+              you focused on today
+              <span className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-4 border-transparent border-t-gray-900" />
+            </span>
+          </span>
         </span>
       </div>
 
+      {/* Vision Board Section */}
+      {visionImages.length > 0 && (
+        <div className="bg-white rounded-xl p-5 border border-purple-100 shadow-sm mb-6">
+          <div className="flex items-center gap-2 mb-1">
+            <Heart className="w-5 h-5 text-purple-500" strokeWidth={2.5} />
+            <h3 className="font-bold text-[16px] text-gray-900">
+              Vision Board
+            </h3>
+          </div>
+          <p className="text-sm text-gray-500 mb-4">
+            Your dreams and aspirations visualized
+          </p>
+          <div className="relative rounded-lg overflow-hidden bg-gray-50 border border-gray-200">
+            <img
+              src={visionImages[0]}
+              alt="Vision Board"
+              className="w-full h-auto object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Core Values (Existing UI) */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-semibold text-gray-800">
@@ -559,6 +636,7 @@ const GuidingPrinciples = ({
         </div>
       </div>
 
+      {/* Life Areas (Existing UI) */}
       <div>
         <span className="text-sm font-semibold text-gray-800 block mb-2">
           Life Areas Focused On
@@ -599,7 +677,6 @@ const GuidingPrinciples = ({
     </div>
   );
 };
-
 // ── TodaysReflection ──────────────────────────────────────────────────────────
 interface TodaysReflectionProps {
   accomplishments: any[];
@@ -683,8 +760,16 @@ const TodaysReflection = ({
             />
           </svg>
         </div>
-        <span className="font-bold text-[16px] text-gray-900">
+        <span className="font-bold text-[16px] text-gray-900 flex items-center gap-2">
           Today's Reflection
+          <span className="relative group">
+            <Info className="w-4 h-4 text-teal-400 cursor-help" />
+            <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-gray-900 text-white text-xs font-medium rounded-lg px-3 py-2 w-48 text-center leading-relaxed opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 shadow-lg">
+              Capture your wins, habits, gratitude, challenges, and key insights
+              from today
+              <span className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-4 border-transparent border-t-gray-900" />
+            </span>
+          </span>
         </span>
       </div>
 
@@ -1061,8 +1146,15 @@ const ShapingTomorrow = ({
             <div className="absolute w-[20%] h-[20%] rounded-full bg-white/90"></div>
           </div>
         </div>
-        <h2 className="text-[18px] font-bold text-[#1E293B]">
+        <h2 className="text-[18px] font-bold text-[#1E293B] flex items-center gap-2">
           Shaping Tomorrow
+          <span className="relative group">
+            <Info className="w-4 h-4 text-blue-400 cursor-help" />
+            <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-gray-900 text-white text-xs font-medium rounded-lg px-3 py-2 w-44 text-center leading-relaxed opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 shadow-lg">
+              Set your top priorities for tomorrow and plan ahead
+              <span className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-4 border-transparent border-t-gray-900" />
+            </span>
+          </span>
         </h2>
       </div>
 
@@ -1219,8 +1311,15 @@ const DailyAffirmation = ({
             />
           </svg>
         </div>
-        <span className="font-bold text-base text-gray-900">
+        <span className="font-bold text-base text-gray-900 flex items-center gap-2">
           Your Daily Affirmation
+          <span className="relative group">
+            <Info className="w-4 h-4 text-purple-400 cursor-help" />
+            <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-gray-900 text-white text-xs font-medium rounded-lg px-3 py-2 w-48 text-center leading-relaxed opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 shadow-lg">
+              Choose or create a positive statement to empower yourself today
+              <span className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-4 border-transparent border-t-gray-900" />
+            </span>
+          </span>
         </span>
       </div>
 
@@ -1579,8 +1678,15 @@ const BucketListProgress = ({ token }: { token?: string }) => {
                 />
               </svg>
             </div>
-            <span className="font-bold text-[15px] text-gray-900">
+            <span className="font-bold text-[15px] text-gray-900 flex items-center gap-2">
               Bucket List Progress
+              <span className="relative group">
+                <Info className="w-4 h-4 text-amber-400 cursor-help" />
+                <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-900 text-white text-xs font-medium rounded-lg px-3 py-2 w-48 text-center leading-relaxed opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 shadow-lg">
+                  Track progress on your dreams and long-term aspirations
+                  <span className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-4 border-transparent border-r-gray-900" />
+                </span>
+              </span>
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -2294,7 +2400,13 @@ const ReviewToDos = ({ goals }: { goals: Goal[] }) => {
         </div>
         <div className="flex items-center gap-1.5">
           <h2 className="text-[18px] font-bold text-gray-900">Review Goals</h2>
-          <Info className="w-4 h-4 text-indigo-500 cursor-help" />
+          <span className="relative group">
+            <Info className="w-4 h-4 text-indigo-500 cursor-help" />
+            <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-gray-900 text-white text-xs font-medium rounded-lg px-3 py-2 w-48 text-center leading-relaxed opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 shadow-lg">
+              Review your weekly goals and overdue goals to stay on track
+              <span className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-4 border-transparent border-t-gray-900" />
+            </span>
+          </span>
         </div>
       </div>
 
@@ -2906,6 +3018,7 @@ const DailyJournal = () => {
                   setSelectedValues={setSelectedValues}
                   selectedAreas={selectedAreas}
                   setSelectedAreas={setSelectedAreas}
+                  token={token} // <----- ADD THIS LINE
                 />
                 <TodaysReflection
                   accomplishments={achievements}

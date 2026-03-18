@@ -1134,8 +1134,8 @@ const WeeklyJournal = () => {
 
       {/* ✅ CHANGE 3: Save button — disabled + gray when future week */}
       {activeTab === "new" && (
-        <div className="z-30 bg-white border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
-          <div className="flex items-center gap-3 px-6 py-4">
+        <div className="z-30 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] p-4 flex justify-center">
+          <div className="w-full flex justify-end gap-3 px-4">
             <button
               onClick={() => navigate(-1)}
               className="px-6 py-2.5 rounded-lg border border-red-200 bg-white text-red-700 font-semibold text-sm hover:bg-red-50 transition-colors shadow-sm"
@@ -1144,8 +1144,8 @@ const WeeklyJournal = () => {
             </button>
             <button
               onClick={handleSavePlan}
-              disabled={isSaving}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-red-500 hover:bg-red-600 text-white font-bold text-sm transition-colors shadow-sm disabled:opacity-50"
+              disabled={isSaving || isFutureWeek}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-red-500 hover:bg-red-600 text-white font-bold text-sm transition-colors shadow-sm disabled:opacity-50 disabled:bg-gray-400"
             >
               {isSaving ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

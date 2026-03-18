@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { ArrowUpRight, Info, Check, X as XIcon, Loader2 } from "lucide-react";
+import {
+  ArrowUpRight,
+  Info,
+  Check,
+  X as XIcon,
+  Loader2,
+  Heart,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 
@@ -27,6 +34,7 @@ export default function MissionHabitsConnection({
     [],
   );
   const [habits, setHabits] = useState<any[]>([]);
+  const [visionImages, setVisionImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Calculate Date Ranges
@@ -39,7 +47,7 @@ export default function MissionHabitsConnection({
 
   const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-  // Fetch Core Values & Habits for the selected week
+  // Fetch Core Values, Habits, & Vision Data for the selected week
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -50,7 +58,7 @@ export default function MissionHabitsConnection({
           Authorization: `Bearer ${token}`,
         };
 
-        const [cvRes, habitsRes] = await Promise.all([
+        const [cvRes, habitsRes, visionRes] = await Promise.all([
           fetch("https://life-api.lockated.com/core_values", { headers }).catch(
             () => null,
           ),
@@ -58,6 +66,9 @@ export default function MissionHabitsConnection({
             `https://life-api.lockated.com/habits?date=${weekStartDateStr}`,
             { headers },
           ).catch(() => null),
+          fetch("https://life-api.lockated.com/vision.json", { headers }).catch(
+            () => null,
+          ),
         ]);
 
         if (cvRes && cvRes.ok) {
@@ -69,6 +80,26 @@ export default function MissionHabitsConnection({
           setHabits(
             Array.isArray(habitsData) ? habitsData : habitsData.data || [],
           );
+        }
+        if (visionRes && visionRes.ok) {
+          const vData = await visionRes.json();
+          const vision = Array.isArray(vData)
+            ? vData[0]
+            : vData?.vision || vData;
+          if (vision) {
+            let imageUrls: string[] = [];
+            if (Array.isArray(vision.images)) {
+              imageUrls = vision.images
+                .map((img: any) => (typeof img === "object" ? img.url : img))
+                .filter(Boolean);
+            } else if (vision.image) {
+              imageUrls =
+                typeof vision.image === "object"
+                  ? [vision.image.url]
+                  : [vision.image];
+            }
+            setVisionImages(imageUrls);
+          }
         }
       } catch (err) {
         console.error("Error fetching data", err);
@@ -83,7 +114,7 @@ export default function MissionHabitsConnection({
   return (
     <div className="font-sans bg-white flex flex-col h-full rounded-2xl">
       {/* 1. Header Area */}
-      <div className="px-6 py-4 border-b border-purple-100 flex items-center gap-3 bg-white">
+      <div className="px-6 py-4 border-b border-purple-100 flex items-center gap-3 bg-white rounded-t-2xl">
         <div className="w-8 h-8 rounded-md bg-[#a855f7] flex items-center justify-center shrink-0 shadow-sm">
           <ArrowUpRight className="w-5 h-5 text-white" strokeWidth={2.5} />
         </div>
@@ -93,7 +124,7 @@ export default function MissionHabitsConnection({
       </div>
 
       {/* 2. Core Value & Mission Setup */}
-      <div className="p-6 space-y-6 bg-white">
+      <div className="p-6 space-y-6 bg-[#FCFaff]">
         {/* Core Value Dropdown */}
         <div>
           <div className="flex items-center justify-between mb-2">
@@ -101,7 +132,14 @@ export default function MissionHabitsConnection({
               <label className="text-[14px] font-semibold text-gray-800">
                 Core Value Lived Most This Week
               </label>
-              <Info className="w-4 h-4 text-gray-400 cursor-help" />
+              <span className="relative group">
+                <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-gray-900 text-white text-xs font-medium rounded-lg px-3 py-2 w-72 text-center leading-relaxed opacity-0 group-hover:opacity-100 -translate-y-1 group-hover:translate-y-0 pointer-events-none transition-all duration-200 ease-out z-50 shadow-lg whitespace-normal">
+                  Which of your core values did you embody most strongly this
+                  week?
+                  <span className="absolute left-1/2 -translate-x-1/2 bottom-full w-0 h-0 border-4 border-transparent border-b-gray-900" />
+                </span>
+              </span>
             </div>
             <button
               onClick={() => navigate("/vision-values")}
@@ -126,6 +164,31 @@ export default function MissionHabitsConnection({
           </select>
         </div>
 
+        {/* Vision Board Image Segment */}
+        {visionImages.length > 0 && (
+          <div className="bg-white rounded-xl p-5 border border-purple-100 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <Heart className="w-5 h-5 text-purple-500" strokeWidth={2.5} />
+              <h3 className="font-bold text-[16px] text-gray-900">
+                Vision Board
+              </h3>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">
+              Keep your dreams visible as you reflect on your week
+            </p>
+            <div className="relative rounded-lg overflow-hidden bg-gray-50 border border-gray-200">
+              <img
+                src={visionImages[0]}
+                alt="Vision Board"
+                className="w-full h-auto object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Mission Connection Textarea */}
         <div>
           <label className="text-[14px] font-semibold text-gray-800 block mb-2">
@@ -148,7 +211,7 @@ export default function MissionHabitsConnection({
       </div>
 
       {/* 4. Habits Tracker & Reflection */}
-      <div className="p-6 space-y-6 bg-white flex-1">
+      <div className="p-6 space-y-6 bg-white flex-1 rounded-b-2xl">
         <div>
           <div className="flex items-center justify-between mb-4">
             <span className="text-[14px] font-semibold text-purple-600">

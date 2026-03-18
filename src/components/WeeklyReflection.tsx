@@ -205,7 +205,14 @@ export default function WeeklyReflection({
             <h1 className="text-lg font-bold text-gray-800">
               Review of Past Week
             </h1>
-            <Info className="w-4 h-4 text-gray-400 cursor-help" />
+            <span className="relative group">
+              <Info className="w-4 h-4 text-gray-400 cursor-help" />
+              <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-gray-900 text-white text-xs font-medium rounded-lg px-3 py-2 w-72 text-center leading-relaxed opacity-0 group-hover:opacity-100 -translate-y-1 group-hover:translate-y-0 pointer-events-none transition-all duration-200 ease-out z-50 shadow-lg whitespace-normal">
+                Review what happened in the past 7 days - your wins, challenges,
+                gratitude, insights, and life balance.
+                <span className="absolute left-1/2 -translate-x-1/2 bottom-full w-0 h-0 border-4 border-transparent border-b-gray-900" />
+              </span>
+            </span>
           </div>
         </div>
 
@@ -214,7 +221,15 @@ export default function WeeklyReflection({
             <span className="text-[14px] font-semibold text-gray-800">
               My Weekly Story
             </span>
-            <Info className="w-4 h-4 text-gray-400 cursor-help" />
+            <span className="relative group">
+              <Info className="w-4 h-4 text-gray-400 cursor-help" />
+              <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-gray-900 text-white text-xs font-medium rounded-lg px-3 py-2 w-80 text-center leading-relaxed opacity-0 group-hover:opacity-100 -translate-y-1 group-hover:translate-y-0 pointer-events-none transition-all duration-200 ease-out z-50 shadow-lg whitespace-normal">
+                Reflect on the past week - what happened each day,
+                accomplishments, learnings, and feelings. Use the import button
+                to bring in your daily journal entries automatically.
+                <span className="absolute left-1/2 -translate-x-1/2 bottom-full w-0 h-0 border-4 border-transparent border-b-gray-900" />
+              </span>
+            </span>
           </div>
 
           {/* ─── IMPORT POPOVER ─── */}
@@ -306,7 +321,15 @@ export default function WeeklyReflection({
               <h2 className="text-[15px] font-bold text-gray-800">
                 Top Wins of Past Week
               </h2>
-              <Info className="w-4 h-4 text-gray-400 cursor-help" />
+              <span className="relative group">
+                <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-gray-900 text-white text-xs font-medium rounded-lg px-3 py-2 w-80 text-center leading-relaxed opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 pointer-events-none transition-all duration-200 ease-out z-50 shadow-lg whitespace-normal">
+                  What did you achieve last week? Check off items as you
+                  accomplished them. These were your strategic priorities from
+                  the previous week.
+                  <span className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-4 border-transparent border-t-gray-900" />
+                </span>
+              </span>{" "}
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -487,7 +510,14 @@ export default function WeeklyReflection({
               <h2 className="text-[15px] font-bold text-gray-800">
                 Auto-Calculated Life Balance
               </h2>
-              <Info className="w-4 h-4 text-gray-400 cursor-help" />
+              <span className="relative group">
+                <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-gray-900 text-white text-xs font-medium rounded-lg px-3 py-2 w-80 text-center leading-relaxed opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 pointer-events-none transition-all duration-200 ease-out z-50 shadow-lg whitespace-normal">
+                  Automatically calculated based on how balanced your wins are
+                  across all 5 life areas. 10/10 means equal focus on all areas.
+                  <span className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-4 border-transparent border-t-gray-900" />
+                </span>
+              </span>{" "}
             </div>
             <span className="text-2xl font-bold text-[#4ade80]">
               {autoScore}/10

@@ -215,7 +215,14 @@ function FocusAndBoundaries({ data, setData }: FocusAndBoundariesProps) {
               <h2 className="text-[17px] font-bold text-gray-900">
                 Focus & Boundaries
               </h2>
-              <Info className="w-4 h-4 text-gray-400 cursor-help" />
+              <span className="relative group">
+                <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                <span className="absolute left-0 top-full mt-2 bg-gray-900 text-white text-xs font-medium rounded-lg px-3 py-2 w-96 text-center leading-relaxed opacity-0 group-hover:opacity-100 -translate-y-1 group-hover:translate-y-0 pointer-events-none transition-all duration-200 ease-out z-50 shadow-lg whitespace-normal">
+                  Prioritize what matters most this week and set boundaries to
+                  protect your focus time.
+                  <span className="absolute left-3 bottom-full w-0 h-0 border-4 border-transparent border-b-gray-900" />
+                </span>
+              </span>{" "}
             </div>
             <p className="text-[13px] text-gray-500 mt-0.5">
               Prioritize what matters and protect your focus
@@ -232,7 +239,15 @@ function FocusAndBoundaries({ data, setData }: FocusAndBoundariesProps) {
               <h3 className="text-[15px] font-bold text-gray-800">
                 Eisenhower Matrix
               </h3>
-              <Info className="w-4 h-4 text-gray-400 cursor-help" />
+              <span className="relative group">
+                <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                <span className="absolute left-0 top-full mt-2 bg-gray-900 text-white text-xs font-medium rounded-lg px-3 py-2 w-80 text-center leading-relaxed opacity-0 group-hover:opacity-100 -translate-y-1 group-hover:translate-y-0 pointer-events-none transition-all duration-200 ease-out z-50 shadow-lg whitespace-normal">
+                  Q1: Do immediately (urgent+important), Q2: Schedule it
+                  (important, not urgent - most impactful!), Q3: Delegate
+                  (urgent, not important), Q4: Eliminate (neither)
+                  <span className="absolute left-3 bottom-full w-0 h-0 border-4 border-transparent border-b-gray-900" />
+                </span>
+              </span>{" "}
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
@@ -265,7 +280,14 @@ function FocusAndBoundaries({ data, setData }: FocusAndBoundariesProps) {
               <h3 className="text-[15px] font-bold text-gray-800">
                 Life Balance Overview
               </h3>
-              <Info className="w-4 h-4 text-gray-400 cursor-help" />
+              <span className="relative group">
+                <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-gray-900 text-white text-xs font-medium rounded-lg px-3 py-2 w-96 text-center leading-relaxed opacity-0 group-hover:opacity-100 -translate-y-1 group-hover:translate-y-0 pointer-events-none transition-all duration-200 ease-out z-50 shadow-lg whitespace-normal">
+                  Shows how many priorities you've assigned to each life area.
+                  Aim for balance across all areas for holistic growth.
+                  <span className="absolute left-1/2 -translate-x-1/2 bottom-full w-0 h-0 border-4 border-transparent border-b-gray-900" />
+                </span>
+              </span>{" "}
             </div>
 
             <div className="space-y-3">
@@ -297,7 +319,15 @@ function FocusAndBoundaries({ data, setData }: FocusAndBoundariesProps) {
               <h3 className="text-[16px] font-bold text-gray-800">
                 Goals in Focus
               </h3>
-              <Info className="w-4 h-4 text-gray-400 cursor-help" />
+              <span className="relative group">
+                <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                <span className="absolute left-0 top-full mt-2 bg-gray-900 text-white text-xs font-medium rounded-lg px-3 py-2 w-96 text-center leading-relaxed opacity-0 group-hover:opacity-100 -translate-y-1 group-hover:translate-y-0 pointer-events-none transition-all duration-200 ease-out z-50 shadow-lg whitespace-normal">
+                  Select 2-3 goals to prioritize this week. Update progress
+                  using the sliders. Focusing on fewer goals increases
+                  completion rate.
+                  <span className="absolute left-3 bottom-full w-0 h-0 border-4 border-transparent border-b-gray-900" />
+                </span>
+              </span>{" "}
             </div>
             <button
               onClick={() => navigate("/goals-habits")}
@@ -425,7 +455,14 @@ function FocusAndBoundaries({ data, setData }: FocusAndBoundariesProps) {
             <h3 className="text-[16px] font-bold text-gray-800">
               What I'll Say NO To
             </h3>
-            <Info className="w-4 h-4 text-gray-400 cursor-help" />
+            <span className="relative group">
+              <Info className="w-4 h-4 text-gray-400 cursor-help" />
+              <span className="absolute left-0 top-full mt-2 bg-gray-900 text-white text-xs font-medium rounded-lg px-3 py-2 w-96 text-center leading-relaxed opacity-0 group-hover:opacity-100 -translate-y-1 group-hover:translate-y-0 pointer-events-none transition-all duration-200 ease-out z-50 shadow-lg whitespace-normal">
+                What distractions, commitments, or less important tasks will you
+                intentionally avoid or delegate?
+                <span className="absolute left-3 bottom-full w-0 h-0 border-4 border-transparent border-b-gray-900" />
+              </span>
+            </span>{" "}
           </div>
           <textarea
             value={data.sayNoText}

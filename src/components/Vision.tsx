@@ -4,6 +4,7 @@ import { Copy, Save, Plus, Trash2 } from "lucide-react";
 const API_BASE_URL = "https://life-api.lockated.com";
 
 function Vision() {
+  // Ab images state hamesha ek object rahegi: { id, url, isNew, data }
   const [images, setImages] = useState([]);
   const [imageUrl, setImageUrl] = useState("");
   const [visionStatement, setVisionStatement] = useState("");
@@ -26,6 +27,9 @@ function Vision() {
     setToast({ message, type });
   };
 
+  // =========================================
+  // FETCH VISION DATA (GET)
+  // =========================================
   const fetchVisionData = React.useCallback(async () => {
     try {
       const token = localStorage.getItem("auth_token");
@@ -55,10 +59,22 @@ function Vision() {
 
       if (visionData) {
         setVisionId(visionData.id || null);
-        setImages(visionData.images || []);
         setVisionStatement(visionData.vision_statement || "");
         setMissionStatement(visionData.mission_statement || "");
         setLegacyStatement(visionData.legacy_statement || "");
+
+        // API se aayi images ko object format me store karo
+        if (visionData.images && Array.isArray(visionData.images)) {
+          setImages(
+            visionData.images.map((img) => ({
+              id: img.id,
+              url: img.url,
+              isNew: false,
+            })),
+          );
+        } else {
+          setImages([]);
+        }
       }
     } catch (error) {
       console.error("Error fetching vision data:", error);
@@ -72,6 +88,9 @@ function Vision() {
     fetchVisionData();
   }, [fetchVisionData]);
 
+  // =========================================
+  // FILE HELPERS & UPLOAD
+  // =========================================
   const fileToBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -105,7 +124,8 @@ function Vision() {
 
     try {
       const base64 = await fileToBase64(file);
-      setImages([...images, base64]);
+      // Nayi image ko object format me add karo
+      setImages([...images, { url: base64, isNew: true, data: base64 }]);
       showToast("Image added successfully!", "success");
     } catch (error) {
       console.error("Error processing image:", error);
@@ -115,6 +135,9 @@ function Vision() {
     }
   };
 
+  // =========================================
+  // HANDLE ADD URL
+  // =========================================
   const handleAddUrl = () => {
     const trimmedUrl = imageUrl.trim();
     if (!trimmedUrl) {
@@ -133,14 +156,48 @@ function Vision() {
       return;
     }
 
-    setImages([...images, trimmedUrl]);
+    // URL ko bhi same object format me add karo
+    setImages([...images, { url: trimmedUrl, isNew: true, data: trimmedUrl }]);
     setImageUrl("");
     showToast("URL added successfully!", "success");
   };
 
-  const handleDeleteImage = (index) => {
+  // =========================================
+  // DELETE API INTEGRATION
+  // =========================================
+  const handleDeleteImage = async (index) => {
+    const imageToDelete = images[index];
+
+    // Agar image server se aayi hai (id mojood hai), toh API call karke delete karo
+    if (imageToDelete.id) {
+      try {
+        const token = localStorage.getItem("auth_token");
+        const response = await fetch(
+          `${API_BASE_URL}/vision/delete_image?image_id=${imageToDelete.id}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+            },
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to delete image from server");
+        }
+        showToast("Image deleted from server", "success");
+      } catch (error) {
+        console.error("Delete API Error:", error);
+        showToast("Could not delete image. Try again.", "error");
+        return; // API fail hui toh UI se delete mat karo
+      }
+    } else {
+      showToast("Image removed", "success");
+    }
+
+    // API success ho ya image naya ho, usko UI state se hata do
     setImages(images.filter((_, i) => i !== index));
-    showToast("Image removed", "success");
   };
 
   const handleCopyPrompt = () => {
@@ -152,17 +209,26 @@ function Vision() {
     showToast("Prompt copied to clipboard!", "success");
   };
 
+  // =========================================
+  // SAVE VISION DATA (POST)
+  // =========================================
   const handleSave = async () => {
     setIsSaving(true);
     try {
       const token = localStorage.getItem("auth_token");
+
+      // Sirf un images ko filter karo jo nayi upload/add ki gayi hain
+      const newImagesBase64 = images
+        .filter((img) => img.isNew && img.data)
+        .map((img) => img.data);
+
       const payload = {
         vision: {
           vision_statement: visionStatement,
           mission_statement: missionStatement,
           legacy_statement: legacyStatement,
         },
-        images: images,
+        images: newImagesBase64, // API ko sirf naye images bhejo
       };
 
       const response = await fetch(`${API_BASE_URL}/vision`, {
@@ -190,9 +256,10 @@ function Vision() {
         throw new Error(errorMessage);
       }
 
-      const data = await response.json();
-      setVisionId(data.id || null);
       showToast("Vision & Mission saved successfully! 🎉", "success");
+
+      // Save hone ke baad data wapas fetch kar lo taaki naye images ki IDs mil jayein
+      await fetchVisionData();
 
       window.dispatchEvent(new Event("vision_data_updated"));
       localStorage.setItem("vision_last_updated", new Date().toISOString());
@@ -215,7 +282,6 @@ function Vision() {
   }
 
   return (
-    // Yahan maine outer background aur padding hata di hai, taaki layers na banein
     <div className="w-full font-sans text-gray-800 relative pb-10">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* ===== VISION BOARD SECTION ===== */}
@@ -256,13 +322,14 @@ function Vision() {
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {images.map((img, idx) => (
+                {images.map((imgObj, idx) => (
                   <div
                     key={idx}
                     className="aspect-video bg-gray-200 rounded-md overflow-hidden relative group shadow-sm"
                   >
+                    {/* Yaha `img` ki jagah `imgObj.url` aayega */}
                     <img
-                      src={img}
+                      src={imgObj.url}
                       alt={`Vision ${idx + 1}`}
                       className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                       onError={(e) => {
@@ -407,7 +474,8 @@ function Vision() {
               className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-md font-medium flex items-center gap-2 transition-colors shadow-sm disabled:opacity-70"
             >
               <Save size={18} />
-              {isSaving ? "Saving..." : "Save Vision & Missi`on"}
+              {/* Typo theek kar di gayi hai */}
+              {isSaving ? "Saving..." : "Save Vision & Mission"}
             </button>
           </div>
         </section>
