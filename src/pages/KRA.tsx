@@ -14,6 +14,25 @@ import {
   TableCell,
 } from "../components/ui/table";
 
+interface KRAItemType {
+  id: number;
+  key: string;
+  icon: string;
+  title: string;
+  description: string;
+  kpi: string;
+  score: number;
+}
+
+interface KRAEvaluation {
+  id?: number | string;
+  evaluation_type: string;
+  evaluation_date: string;
+  notes: string;
+  scores: Record<string, number>;
+  date?: string; // fallback
+}
+
 // default question sets with score keys for API payload
 const defaultMD = [
   {
@@ -158,54 +177,78 @@ const defaultTeam = [
 ];
 
 // ─── ScoreCard ────────────────────────────────────────────────────────────────
-function ScoreCard({ data }) {
+function ScoreCard({ data, liveTotal = null, maxTotal = 35 }) {
   const {
-    score = { achieved: 0, total: 0 },
-    title = "No Data",
-    message = "Complete evaluation to see your score",
+    score: historyScore = { achieved: 0, total: 0 },
+    title: historyTitle = "No Data",
+    message: historyMessage = "Complete evaluation to see your score",
   } = data || {};
-  const pct =
-    Math.min(100, Math.round((score.achieved / score.total) * 100)) || 0;
+
+  const isLive = liveTotal !== null;
+  const achieved = isLive ? liveTotal : historyScore.achieved;
+  const total = isLive ? maxTotal : historyScore.total;
+  const title = isLive ? "Current Evaluation" : historyTitle;
+  const message = isLive ? "Slide to adjust your self-evaluation" : historyMessage;
+
+  const pct = Math.min(100, Math.round((achieved / total) * 100)) || 0;
+
+  // Determine theme based on score
+  const isLow = achieved <= 15;
+  const isHigh = achieved >= 25;
+  const isMid = !isLow && !isHigh;
 
   return (
-    <div className="relative w-full overflow-hidden bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700 rounded-2xl p-4 pb-4 shadow-xl">
-      {/* Decorative circles */}
-      <div className="absolute -top-10 -right-10 w-52 h-52 rounded-full bg-white/10" />
-      <div className="absolute top-4 right-4 w-32 h-32 rounded-full bg-white/10" />
-      <div className="absolute -bottom-8 -left-8 w-36 h-36 rounded-full bg-white/10" />
+    <div className="relative w-full overflow-hidden rounded-2xl p-4 pb-4 shadow-xl transition-all duration-500">
+      {/* Background Layers for smooth transition */}
+      <div 
+        className={`absolute inset-0 bg-gradient-to-br from-red-500 via-red-600 to-red-700 transition-opacity duration-700 ${isLow ? "opacity-100" : "opacity-0"}`} 
+      />
+      <div 
+        className={`absolute inset-0 bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700 transition-opacity duration-700 ${isMid ? "opacity-100" : "opacity-0"}`} 
+      />
+      <div 
+        className={`absolute inset-0 bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700 transition-opacity duration-700 ${isHigh ? "opacity-100" : "opacity-0"}`} 
+      />
 
-      <div className="absolute top-6 right-6 w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-        <TrendingUp className="text-white w-6 h-6" strokeWidth={2.2} />
-      </div>
+      {/* Decorative circles - layered on top of backgrounds */}
+      <div className="relative z-10">
+        <div className="absolute -top-10 -right-10 w-52 h-52 rounded-full bg-white/10" />
+        <div className="absolute top-4 right-4 w-32 h-32 rounded-full bg-white/10" />
+        <div className="absolute -bottom-8 -left-8 w-36 h-36 rounded-full bg-white/10" />
 
-      <p className="text-orange-100 text-sm font-semibold mb-1 tracking-widest uppercase">
-        Your Total Score
-      </p>
-      <div className="flex items-baseline gap-2 mb-2">
-        <span className="text-5xl font-black text-white leading-none">
-          {score.achieved}
-        </span>
-        <span className="text-2xl font-semibold text-orange-200 leading-none">
-          /{score.total}
-        </span>
-      </div>
+        <div className="absolute top-6 right-6 w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+          <TrendingUp className="text-white w-6 h-6" strokeWidth={2.2} />
+        </div>
 
-      <p className="text-xl font-extrabold text-white mb-1">{title}</p>
-      <p className="text-orange-100 text-sm mb-4 italic">{message}</p>
+        <p className="text-white/80 text-sm font-semibold mb-1 tracking-widest uppercase">
+          {isLive ? "Live Total Score" : "Your Latest Score"}
+        </p>
+        <div className="flex items-baseline gap-2 mb-2">
+          <span className="text-5xl font-black text-white leading-none">
+            {achieved}
+          </span>
+          <span className="text-2xl font-semibold text-white/50 leading-none">
+            /{total}
+          </span>
+        </div>
 
-      {/* Progress bar */}
-      <div className="bg-white/25 rounded-full h-2 overflow-hidden">
-        <div
-          className="h-full bg-white rounded-full transition-all duration-700 ease-out"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <div className="flex justify-between mt-1">
-        <span className="text-orange-100 text-xs font-medium">0</span>
-        <span className="text-orange-100 text-xs font-medium">{pct}%</span>
-        <span className="text-orange-100 text-xs font-medium">
-          {score.total}
-        </span>
+        <p className="text-xl font-extrabold text-white mb-1">{title}</p>
+        <p className="text-white/90 text-sm mb-4 italic leading-relaxed">{message}</p>
+
+        {/* Progress bar */}
+        <div className="bg-white/25 rounded-full h-2 overflow-hidden">
+          <div
+            className="h-full bg-white rounded-full transition-all duration-300 ease-out"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <div className="flex justify-between mt-1">
+          <span className="text-white/70 text-xs font-medium">0</span>
+          <span className="text-white/90 text-xs font-medium">{pct}%</span>
+          <span className="text-white/70 text-xs font-medium">
+            {total}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -217,7 +260,7 @@ function KraItem({
   index,
   onScoreChange,
 }: {
-  item: any;
+  item: KRAItemType;
   index: number;
   onScoreChange: (index: number, score: number) => void;
 }) {
@@ -244,8 +287,10 @@ function KraItem({
           </p>
         </div>
 
-        {/* Score badge */}
-        <div className="flex items-baseline gap-0.5 shrink-0 mr-2">
+        <div 
+          className="flex items-baseline gap-0.5 shrink-0 mr-2 cursor-pointer"
+          onClick={() => setOpen(!open)}
+        >
           <span
             style={{
               fontSize: 28,
@@ -300,13 +345,6 @@ function KraItem({
                 border-radius: 9999px;
                 outline: none;
                 cursor: pointer;
-                background: linear-gradient(
-                  to right,
-                  #111827 0%,
-                  #111827 ${sliderPct}%,
-                  #e5e7eb ${sliderPct}%,
-                  #e5e7eb 100%
-                );
               }
               .kra-slider::-webkit-slider-thumb {
                 -webkit-appearance: none;
@@ -341,6 +379,9 @@ function KraItem({
               max={5}
               step={1}
               value={item.score}
+              style={{
+                background: `linear-gradient(to right, #111827 0%, #111827 ${sliderPct}%, #e5e7eb ${sliderPct}%, #e5e7eb 100%)`
+              }}
               onChange={(e) => onScoreChange(index, Number(e.target.value))}
             />
 
@@ -431,6 +472,7 @@ function QuestionsAndAnswers({
           opacity: isSubmitting ? 0.7 : 1,
         }}
         onClick={onSubmit}
+        id="submit-kra-evaluation"
         disabled={isSubmitting}
         onMouseEnter={(e) =>
           !isSubmitting && (e.currentTarget.style.opacity = "0.88")
@@ -449,8 +491,8 @@ function QuestionsAndAnswers({
 export default function KraSelfEvaluation() {
   const [activeTab, setActiveTab] = useState("MD");
   const [notes, setNotes] = useState("");
-  const [questions, setQuestions] = useState(defaultMD);
-  const [evaluations, setEvaluations] = useState([]);
+  const [questions, setQuestions] = useState<KRAItemType[]>(defaultMD);
+  const [evaluations, setEvaluations] = useState<KRAEvaluation[]>([]);
   const [scoreData, setScoreData] = useState({});
   const [refresh, setRefresh] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -474,7 +516,7 @@ export default function KraSelfEvaluation() {
 
         if (res.ok) {
           const data = await res.json();
-          let evaluationsList = [];
+          let evaluationsList: KRAEvaluation[] = [];
           if (Array.isArray(data)) evaluationsList = data;
           else if (data.evaluations) evaluationsList = data.evaluations;
           else if (data.kra_evaluations) evaluationsList = data.kra_evaluations;
@@ -484,7 +526,7 @@ export default function KraSelfEvaluation() {
           if (evaluationsList.length > 0) {
             const latest = evaluationsList[evaluationsList.length - 1];
             const totalScore = Object.values(latest.scores || {}).reduce(
-              (a, b) => a + Number(b),
+              (a: number, b: unknown) => a + Number(b),
               0,
             );
             const maxTotal = questions.length * 5;
@@ -567,6 +609,7 @@ export default function KraSelfEvaluation() {
         description: "Your responses have been saved. 🎉",
       });
       setNotes("");
+      setQuestions(evaluationType === "md" ? defaultMD : defaultTeam);
       setRefresh((prev) => !prev);
     } catch (err) {
       console.error("failed to submit evaluation", err);
@@ -599,6 +642,7 @@ export default function KraSelfEvaluation() {
         {["MD", "Team"].map((tab) => (
           <button
             key={tab}
+            id={`kra-tab-${tab.toLowerCase()}`}
             onClick={() => setActiveTab(tab)}
             className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
               activeTab === tab
@@ -623,7 +667,11 @@ export default function KraSelfEvaluation() {
           gap: 16,
         }}
       >
-        <ScoreCard data={scoreData} />
+        <ScoreCard 
+          data={scoreData} 
+          liveTotal={questions.reduce((a: number, b: KRAItemType) => a + (b.score || 0), 0)}
+          maxTotal={questions.length * 5}
+        />
 
         <QuestionsAndAnswers
           header={
