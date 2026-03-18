@@ -44,7 +44,9 @@ const Login = () => {
 
       const text = await res.text();
       let data: any = {};
-      try { data = JSON.parse(text); } catch {}
+      try {
+        data = JSON.parse(text);
+      } catch {}
 
       if (res.ok) {
         toast({
@@ -101,12 +103,15 @@ const Login = () => {
           if (Array.isArray(data.errors)) {
             errorMessage = data.errors[0];
           } else if (typeof data.errors === "object") {
-            const messages = Object.entries(data.errors).map(([field, msgs]) => {
-              const fieldName =
-                field.charAt(0).toUpperCase() + field.slice(1).replace("_", " ");
-              const msg = Array.isArray(msgs) ? msgs[0] : msgs;
-              return `${fieldName} ${msg}`;
-            });
+            const messages = Object.entries(data.errors).map(
+              ([field, msgs]) => {
+                const fieldName =
+                  field.charAt(0).toUpperCase() +
+                  field.slice(1).replace("_", " ");
+                const msg = Array.isArray(msgs) ? msgs[0] : msgs;
+                return `${fieldName} ${msg}`;
+              },
+            );
             errorMessage = messages.join(". ");
           }
         } else if (data.status?.errors) {
@@ -162,9 +167,12 @@ const Login = () => {
       login(token, userObject);
 
       try {
-        const profileRes = await fetch("https://life-api.lockated.com/profile", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const profileRes = await fetch(
+          "https://life-api.lockated.com/profile",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         if (profileRes.ok) {
           const profileData = await profileRes.json();
           const bestProfileName =
@@ -247,7 +255,7 @@ const Login = () => {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-body-5 font-medium">
-                  Email or Mobile
+                  Email
                 </Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -300,7 +308,10 @@ const Login = () => {
               </Button>
 
               <div className="flex items-center justify-between text-body-6">
-                <Link to="/resetPasswordemail" className="text-primary hover:underline">
+                <Link
+                  to="/resetPasswordemail"
+                  className="text-primary hover:underline"
+                >
                   Forgot password?
                 </Link>
                 <span className="text-muted-foreground">

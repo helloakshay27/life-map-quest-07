@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -36,7 +36,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { API_CONFIG } from "@/config/api";
 
-// ─── API CONFIG ──────────────────────────────────────────────────────────────
 const API_BASE_URL = API_CONFIG.BASE_URL;
 
 const getAuthHeaders = (): Record<string, string> => {
@@ -47,11 +46,10 @@ const getAuthHeaders = (): Record<string, string> => {
 };
 
 const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  return fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers: { ...getAuthHeaders(), ...(options.headers ?? {}) },
   });
-  return response;
 };
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
@@ -60,23 +58,20 @@ interface Goal {
   title: string;
   status: "planning" | "started" | "progress" | "completed";
   area?: string;
+  category?: string;
   progress?: number;
   description?: string;
   start_date?: string;
   target_date?: string;
+  dream_id?: number | null;
+  core_value_ids?: number[];
 }
 interface Belief {
   id: string | number;
   belief: string;
   statement?: string;
   limiting_belief?: string;
-  goal_id?: number | null;
-  user_id?: number;
   affirmation_id?: number | null;
-  active?: number;
-  changed_by?: number;
-  created_at?: string;
-  updated_at?: string;
   reflection_data?: {
     origin?: string;
     supporting_evidence?: string;
@@ -103,14 +98,11 @@ interface Pattern {
     strategies?: string;
   };
   affirmation_id?: number | null;
-  created_at?: string;
 }
 interface Affirmation {
   id: string | number;
   text?: string;
   statement?: string;
-  category?: string;
-  linkedBelief?: string;
   priority?: number;
 }
 interface Habit {
@@ -122,11 +114,68 @@ interface Habit {
   time?: string;
   place?: string;
   start_date?: string;
-  target_date?: string;
   startDate?: string;
 }
+interface CoreValue {
+  id: number;
+  name: string;
+}
+interface BucketItem {
+  id: number;
+  title: string;
+}
 
-// ─── HELPER COMPONENTS ────────────────────────────────────────────────────────
+// ─── STATUS MAPPING ───────────────────────────────────────────────────────────
+const toApiStatus = (s: string): string => {
+  const map: Record<string, string> = {
+    planning: "planning",
+    started: "started",
+    progress: "in_progress",
+    completed: "completed",
+  };
+  return map[s] ?? "planning";
+};
+
+const fromApiStatus = (s: string | null | undefined): Goal["status"] => {
+  if (!s) return "planning";
+  const map: Record<string, Goal["status"]> = {
+    planning: "planning",
+    started: "started",
+    in_progress: "progress",
+    progress: "progress",
+    completed: "completed",
+  };
+  return map[s] ?? "planning";
+};
+
+// ─── PAYLOAD BUILDER ─────────────────────────────────────────────────────────
+const buildGoalPayload = (p: {
+  title: string;
+  description: string;
+  category: string;
+  status: string;
+  progress: number;
+  startDate: string;
+  targetDate: string;
+  dreamId?: string;
+  coreValueIds?: number[];
+}) => ({
+  goal: {
+    title: p.title,
+    description: p.description || "",
+    category: p.category && p.category.trim() !== "" ? p.category : "other",
+    status: toApiStatus(p.status),
+    priority: "high",
+    progress: p.progress || 0,
+    start_date: p.startDate || null,
+    target_date: p.targetDate || null,
+    end_date: p.targetDate || null,
+    core_value_ids: p.coreValueIds ?? [],
+    dream_id: p.dreamId && p.dreamId !== "none" ? Number(p.dreamId) : null,
+  },
+});
+
+// ─── HELPER BUTTONS ───────────────────────────────────────────────────────────
 const DelBtn = ({
   onClick,
   disabled,
@@ -204,28 +253,34 @@ const GoalsHabits = () => {
   const navigate = useNavigate();
   const [selectedArea, setSelectedArea] = useState("all-areas");
   const [viewMode, setViewMode] = useState<"kanban" | "grid">("kanban");
-  // Always start on Goals when you open this page
   const [activeTab, setActiveTab] = useState("goals");
 
-  // Data States
+  // Data
   const [goals, setGoals] = useState<Goal[]>([]);
   const [beliefs, setBeliefs] = useState<Belief[]>([]);
   const [patterns, setPatterns] = useState<Pattern[]>([]);
   const [affirmations, setAffirmations] = useState<Affirmation[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
+  const [coreValues, setCoreValues] = useState<CoreValue[]>([]);
+  const [bucketItems, setBucketItems] = useState<BucketItem[]>([]);
 
-  // Detail Modal States
+  // Loading states
+  const [goalsLoading, setGoalsLoading] = useState(true);
+  const [beliefsLoading, setBeliefsLoading] = useState(true);
+  const [patternsLoading, setPatternsLoading] = useState(true);
+  const [affirmationsLoading, setAffirmationsLoading] = useState(true);
+  const [habitsLoading, setHabitsLoading] = useState(true);
+
+  // Modals
   const [patternDetail, setPatternDetail] = useState<Pattern | null>(null);
   const [isPatternDetailOpen, setIsPatternDetailOpen] = useState(false);
-
-  // Dialog States
   const [isGoalDialogOpen, setIsGoalDialogOpen] = useState(false);
   const [isBeliefDialogOpen, setIsBeliefDialogOpen] = useState(false);
   const [isPatternDialogOpen, setIsPatternDialogOpen] = useState(false);
   const [isAffirmationDialogOpen, setIsAffirmationDialogOpen] = useState(false);
   const [isHabitDialogOpen, setIsHabitDialogOpen] = useState(false);
 
-  // Saving States
+  // Saving
   const [goalSaving, setGoalSaving] = useState(false);
   const [beliefSaving, setBeliefSaving] = useState(false);
   const [patternSaving, setPatternSaving] = useState(false);
@@ -233,7 +288,7 @@ const GoalsHabits = () => {
   const [habitSaving, setHabitSaving] = useState(false);
   const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
 
-  // Form states: Goal
+  // Goal form
   const [goalName, setGoalName] = useState("");
   const [goalDescription, setGoalDescription] = useState("");
   const [goalCategory, setGoalCategory] = useState("");
@@ -242,8 +297,10 @@ const GoalsHabits = () => {
   const [goalTargetDate, setGoalTargetDate] = useState("");
   const [goalProgress, setGoalProgress] = useState(0);
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+  const [goalLinkedBucket, setGoalLinkedBucket] = useState<string>("none");
+  const [goalLinkedValues, setGoalLinkedValues] = useState<number[]>([]);
 
-  // Form states: Belief
+  // Belief form
   const [beliefText, setBeliefText] = useState("");
   const [beliefOrigin, setBeliefOrigin] = useState("");
   const [beliefSupportingEvidence, setBeliefSupportingEvidence] = useState("");
@@ -256,7 +313,7 @@ const GoalsHabits = () => {
   const [beliefAffirmationId, setBeliefAffirmationId] =
     useState<string>("none");
 
-  // Form states: Pattern
+  // Pattern form
   const [patternName, setPatternName] = useState("");
   const [patternTrigger, setPatternTrigger] = useState("");
   const [patternUnderlyingReason, setPatternUnderlyingReason] = useState("");
@@ -268,14 +325,14 @@ const GoalsHabits = () => {
     string | number | null
   >(null);
 
-  // Form states: Affirmation
+  // Affirmation form
   const [affirmationStatement, setAffirmationStatement] = useState("");
   const [affirmationPriority, setAffirmationPriority] = useState(5);
   const [editingAffirmationId, setEditingAffirmationId] = useState<
     string | number | null
   >(null);
 
-  // Form states: Habit
+  // Habit form
   const [habitName, setHabitName] = useState("");
   const [habitDescription, setHabitDescription] = useState("");
   const [habitFrequency, setHabitFrequency] =
@@ -289,7 +346,6 @@ const GoalsHabits = () => {
     null,
   );
 
-  // Drag & Drop State
   const [hoveredStatus, setHoveredStatus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -300,67 +356,18 @@ const GoalsHabits = () => {
     }
   }, [location.pathname, location.state, navigate]);
 
-  // Always reset to the same "frame" when this page mounts
   useEffect(() => {
     setActiveTab("goals");
     setSelectedArea("all-areas");
     setViewMode("kanban");
   }, []);
 
-  const save = <T,>(key: string, items: T[]) =>
-    localStorage.setItem(key, JSON.stringify(items));
-
-  // UI uses "progress", API expects "in_progress"
-  const toApiStatus = (s: string) => (s === "progress" ? "in_progress" : s);
-  const fromApiStatus = (s: string | null | undefined): Goal["status"] => {
-    if (!s) return "planning";
-    if (s === "in_progress") return "progress";
-    if (["planning", "started", "progress", "completed"].includes(s))
-      return s as Goal["status"];
-    return "planning";
-  };
-
-  // ─── DATA LOADING ─────────────────────────────────────────────────────────
-  // FIX 1: Robust multi-shape API response parser
+  // ─── FETCH ALL DATA ON MOUNT ──────────────────────────────────────────────
   useEffect(() => {
-    const loadData = async (
-      endpoint: string,
-      key: string,
-      setter: any,
-      arrayKey?: string,
-    ) => {
+    // Goals
+    const fetchGoals = async () => {
+      setGoalsLoading(true);
       try {
-        const saved = localStorage.getItem(key);
-        if (saved) setter(JSON.parse(saved));
-        const res = await fetchWithAuth(endpoint);
-        if (res.ok) {
-          const data = await res.json();
-          let list: any[] = [];
-          if (Array.isArray(data)) {
-            list = data;
-          } else if (arrayKey && Array.isArray(data[arrayKey])) {
-            list = data[arrayKey];
-          } else if (Array.isArray(data.data)) {
-            list = data.data;
-          } else if (Array.isArray(data.items)) {
-            list = data.items;
-          } else if (Array.isArray(data.results)) {
-            list = data.results;
-          }
-          setter(list);
-          save(key, list);
-        }
-      } catch (e) {
-        console.error(`Error loading ${key}`, e);
-      }
-    };
-
-    // Goals: extra normalization — id→string, null status→"planning"
-    const loadGoals = async () => {
-      try {
-        const saved = localStorage.getItem("user_goals");
-        const savedGoals: Goal[] | null = saved ? JSON.parse(saved) : null;
-        if (savedGoals) setGoals(savedGoals);
         const res = await fetchWithAuth("/goals");
         if (res.ok) {
           const data = await res.json();
@@ -371,147 +378,220 @@ const GoalsHabits = () => {
               : Array.isArray(data.data)
                 ? data.data
                 : [];
-          const normalized: Goal[] = raw.map((g) => ({
-            ...g,
-            id: String(g.id),
-            status: fromApiStatus(g.status),
-          }));
-          // Prefer locally-saved status/progress/category so drag/drop "sticks"
-          // even if the API is eventually consistent or status update fails.
-          const localById = new Map<string, Goal>(
-            (savedGoals ?? []).map((g) => [String(g.id), g]),
+          setGoals(
+            raw.map((g) => ({
+              ...g,
+              id: String(g.id),
+              status: fromApiStatus(g.status),
+              area:
+                typeof g.category === "string" &&
+                g.category.trim() !== "" &&
+                g.category !== "0"
+                  ? g.category
+                  : (g.area ?? ""),
+              core_value_ids: Array.isArray(g.core_value_ids)
+                ? g.core_value_ids
+                : Array.isArray(g.core_values)
+                  ? g.core_values.map((cv: any) => cv.id ?? cv)
+                  : [],
+              dream_id: g.dream_id ?? null,
+            })),
           );
-          const merged: Goal[] = normalized.map((g) => {
-            const local = localById.get(String(g.id));
-            return local
-              ? {
-                  ...g,
-                  title: local.title ?? g.title,
-                  area: local.area ?? g.area,
-                  progress: g.progress ?? local.progress,
-                  status: local.status ?? g.status,
-                }
-              : g;
-          });
-
-          // Keep any local-only goals (temp/offline) that API didn't return yet
-          for (const lg of savedGoals ?? []) {
-            if (!normalized.some((g) => String(g.id) === String(lg.id))) {
-              merged.push(lg);
-            }
-          }
-
-          setGoals(merged);
-          save("user_goals", merged);
         }
       } catch (e) {
-        console.error("Error loading goals", e);
+        console.error("goals fetch error", e);
+      } finally {
+        setGoalsLoading(false);
       }
     };
-    loadGoals();
-    loadData(
-      "/limiting_beliefs",
-      "user_beliefs",
-      setBeliefs,
-      "limiting_beliefs",
-    );
-    loadData(
-      "/behavioral_patterns",
-      "user_patterns",
-      setPatterns,
-      "behavioral_patterns",
-    );
-    loadData(
-      "/affirmations",
-      "user_affirmations",
-      setAffirmations,
-      "affirmations",
-    );
-    // Habits: normalize id to string so updates always match
-    const loadHabits = async () => {
+
+    // Beliefs
+    const fetchBeliefs = async () => {
+      setBeliefsLoading(true);
       try {
-        const saved = localStorage.getItem("user_habits");
-        if (saved) setHabits(JSON.parse(saved));
+        const res = await fetchWithAuth("/limiting_beliefs");
+        if (res.ok) {
+          const data = await res.json();
+          const list: any[] = Array.isArray(data)
+            ? data
+            : (data.limiting_beliefs ?? data.data ?? []);
+          setBeliefs(list);
+        }
+      } catch (e) {
+        console.error("beliefs fetch error", e);
+      } finally {
+        setBeliefsLoading(false);
+      }
+    };
+
+    // Patterns
+    const fetchPatterns = async () => {
+      setPatternsLoading(true);
+      try {
+        const res = await fetchWithAuth("/behavioral_patterns");
+        if (res.ok) {
+          const data = await res.json();
+          const list: any[] = Array.isArray(data)
+            ? data
+            : (data.behavioral_patterns ?? data.data ?? []);
+          setPatterns(list);
+        }
+      } catch (e) {
+        console.error("patterns fetch error", e);
+      } finally {
+        setPatternsLoading(false);
+      }
+    };
+
+    // Affirmations
+    const fetchAffirmations = async () => {
+      setAffirmationsLoading(true);
+      try {
+        const res = await fetchWithAuth("/affirmations");
+        if (res.ok) {
+          const data = await res.json();
+          const list: any[] = Array.isArray(data)
+            ? data
+            : (data.affirmations ?? data.data ?? []);
+          setAffirmations(list);
+        }
+      } catch (e) {
+        console.error("affirmations fetch error", e);
+      } finally {
+        setAffirmationsLoading(false);
+      }
+    };
+
+    // Habits
+    const fetchHabits = async () => {
+      setHabitsLoading(true);
+      try {
         const res = await fetchWithAuth("/habits");
         if (res.ok) {
           const data = await res.json();
           const raw: any[] = Array.isArray(data)
             ? data
-            : Array.isArray(data.habits)
-              ? data.habits
-              : Array.isArray(data.data)
-                ? data.data
-                : [];
-          const normalized: Habit[] = raw.map((h) => ({
-            ...h,
-            id: String(h.id),
-          }));
-          setHabits(normalized);
-          save("user_habits", normalized);
+            : (data.habits ?? data.data ?? []);
+          setHabits(raw.map((h) => ({ ...h, id: String(h.id) })));
         }
       } catch (e) {
-        console.error("Error loading habits", e);
+        console.error("habits fetch error", e);
+      } finally {
+        setHabitsLoading(false);
       }
     };
-    loadHabits();
+
+    // Core Values
+    const fetchCoreValues = async () => {
+      try {
+        const res = await fetchWithAuth("/core_values");
+        if (res.ok) {
+          const data = await res.json();
+          const list: any[] = Array.isArray(data)
+            ? data
+            : (data.core_values ?? data.data ?? []);
+          setCoreValues(list.map((v: any) => ({ id: v.id, name: v.name })));
+        }
+      } catch (e) {
+        console.error("core values fetch error", e);
+      }
+    };
+
+    // Bucket Items (Dreams)
+    const fetchBucketItems = async () => {
+      try {
+        const res = await fetchWithAuth("/dreams");
+        if (res.ok) {
+          const data = await res.json();
+          let list: any[] = [];
+          if (Array.isArray(data)) list = data;
+          else
+            list = [
+              ...(data.dreaming ?? []),
+              ...(data.planning ?? []),
+              ...(data.in_progress ?? []),
+              ...(data.achieved ?? []),
+              ...(data.dreams ?? data.data ?? []),
+            ];
+          setBucketItems(list.map((d: any) => ({ id: d.id, title: d.title })));
+        }
+      } catch (e) {
+        console.error("bucket items fetch error", e);
+      }
+    };
+
+    fetchGoals();
+    fetchBeliefs();
+    fetchPatterns();
+    fetchAffirmations();
+    fetchHabits();
+    fetchCoreValues();
+    fetchBucketItems();
   }, []);
+
+  const resetGoalForm = () => {
+    setGoalName("");
+    setGoalDescription("");
+    setGoalCategory("");
+    setGoalStatus("planning");
+    setGoalStartDate("");
+    setGoalTargetDate("");
+    setGoalProgress(0);
+    setGoalLinkedBucket("none");
+    setGoalLinkedValues([]);
+  };
+
+  const toggleCoreValue = (id: number) => {
+    setGoalLinkedValues((prev) =>
+      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id],
+    );
+  };
 
   // ─── GOALS CRUD ───────────────────────────────────────────────────────────
   const handleCreateGoal = async () => {
     if (!goalName.trim()) return;
     setGoalSaving(true);
-    const tempId = `temp-${Date.now()}`;
-    const newGoal: Goal = {
-      id: tempId,
-      title: goalName,
-      status: goalStatus,
-      area: goalCategory,
-      progress: goalProgress,
-    };
-
-    setGoals((prev) => {
-      const u = [...prev, newGoal];
-      save("user_goals", u);
-      return u;
-    });
-
     try {
       const res = await fetchWithAuth("/goals", {
         method: "POST",
-        body: JSON.stringify({
-          goal: {
+        body: JSON.stringify(
+          buildGoalPayload({
             title: goalName,
             description: goalDescription,
-            category: goalCategory || "other",
-            status: toApiStatus(goalStatus),
-            priority: "high",
+            category: goalCategory,
+            status: goalStatus,
             progress: goalProgress,
-            start_date: goalStartDate || null,
-            target_date: goalTargetDate || null,
-            end_date: goalTargetDate || null,
-            core_value_ids: [],
-          },
-        }),
+            startDate: goalStartDate,
+            targetDate: goalTargetDate,
+            dreamId: goalLinkedBucket,
+            coreValueIds: goalLinkedValues,
+          }),
+        ),
       });
-      if (!res.ok) throw new Error("Failed");
-      const d = await res.json();
-      const createdId = d.goal?.id ?? d.data?.id ?? d.id ?? newGoal.id;
-      setGoals((prev) => {
-        const u = prev.map((g) =>
-          g.id === tempId ? { ...g, id: String(createdId) } : g,
-        );
-        save("user_goals", u);
-        return u;
-      });
-
-      setGoalName("");
-      setGoalDescription("");
-      setGoalCategory("");
-      setGoalStatus("planning");
-      setGoalStartDate("");
-      setGoalTargetDate("");
-      setGoalProgress(0);
-      setEditingGoalId(null);
+      if (!res.ok) {
+        const e = await res.text().catch(() => "");
+        throw new Error(e || `Server error (${res.status})`);
+      }
+      const d = await res.json().catch(() => ({}));
+      const created = d.goal ?? d.data ?? d;
+      // Add to state with our values (server may return null status)
+      setGoals((prev) => [
+        ...prev,
+        {
+          id: String(created?.id ?? Date.now()),
+          title: goalName,
+          status: goalStatus,
+          area: goalCategory && goalCategory.trim() !== "" ? goalCategory : "",
+          progress: goalProgress,
+          description: goalDescription,
+          start_date: goalStartDate,
+          target_date: goalTargetDate,
+          dream_id:
+            goalLinkedBucket !== "none" ? Number(goalLinkedBucket) : null,
+          core_value_ids: goalLinkedValues,
+        },
+      ]);
+      resetGoalForm();
       setIsGoalDialogOpen(false);
       toast({
         title: "Goal created",
@@ -520,13 +600,8 @@ const GoalsHabits = () => {
     } catch (err) {
       toast({
         title: "Error",
-        description: "Failed to save goal",
+        description: `Failed to save goal: ${(err as Error).message}`,
         variant: "destructive",
-      });
-      setGoals((prev) => {
-        const u = prev.filter((g) => g.id !== tempId);
-        save("user_goals", u);
-        return u;
       });
     } finally {
       setGoalSaving(false);
@@ -536,66 +611,52 @@ const GoalsHabits = () => {
   const handleUpdateGoal = async () => {
     if (!goalName.trim() || editingGoalId === null) return;
     setGoalSaving(true);
-    const previous = [...goals];
-
-    setGoals((prev) => {
-      const u = prev.map((g) =>
-        g.id === editingGoalId
-          ? {
-              ...g,
-              title: goalName,
-              status: goalStatus,
-              area: goalCategory,
-              progress: goalProgress,
-            }
-          : g,
-      );
-      save("user_goals", u);
-      return u;
-    });
-
     try {
       const res = await fetchWithAuth(`/goals/${editingGoalId}`, {
         method: "PUT",
-        body: JSON.stringify({
-          goal: {
+        body: JSON.stringify(
+          buildGoalPayload({
             title: goalName,
             description: goalDescription,
-            category: goalCategory || "other",
-            status: toApiStatus(goalStatus),
-            priority: "high",
+            category: goalCategory,
+            status: goalStatus,
             progress: goalProgress,
-            start_date: goalStartDate || null,
-            target_date: goalTargetDate || null,
-            end_date: goalTargetDate || null,
-            core_value_ids: [],
-          },
-        }),
+            startDate: goalStartDate,
+            targetDate: goalTargetDate,
+            dreamId: goalLinkedBucket,
+            coreValueIds: goalLinkedValues,
+          }),
+        ),
       });
-      if (!res.ok) throw new Error("Failed");
-      const updated = await res.json();
-      setGoals((prev) => {
-        const u = prev.map((g) =>
+      if (!res.ok) {
+        const e = await res.text().catch(() => "");
+        throw new Error(e || `Server error (${res.status})`);
+      }
+      // Update state with our values (server may return null status)
+      setGoals((prev) =>
+        prev.map((g) =>
           g.id === editingGoalId
             ? {
                 ...g,
-                ...updated.goal,
-                id: String(updated.goal?.id || updated.id || editingGoalId),
+                title: goalName,
+                status: goalStatus,
+                area:
+                  goalCategory && goalCategory.trim() !== ""
+                    ? goalCategory
+                    : g.area,
+                progress: goalProgress,
+                description: goalDescription,
+                start_date: goalStartDate || g.start_date,
+                target_date: goalTargetDate || g.target_date,
+                dream_id:
+                  goalLinkedBucket !== "none" ? Number(goalLinkedBucket) : null,
+                core_value_ids: goalLinkedValues,
               }
             : g,
-        );
-        save("user_goals", u);
-        return u;
-      });
-
+        ),
+      );
+      resetGoalForm();
       setEditingGoalId(null);
-      setGoalName("");
-      setGoalDescription("");
-      setGoalCategory("");
-      setGoalStatus("planning");
-      setGoalStartDate("");
-      setGoalTargetDate("");
-      setGoalProgress(0);
       setIsGoalDialogOpen(false);
       toast({
         title: "Goal updated",
@@ -604,11 +665,9 @@ const GoalsHabits = () => {
     } catch (err) {
       toast({
         title: "Error",
-        description: "Failed to update goal",
+        description: `Failed to update goal: ${(err as Error).message}`,
         variant: "destructive",
       });
-      setGoals(previous);
-      save("user_goals", previous);
     } finally {
       setGoalSaving(false);
     }
@@ -618,48 +677,52 @@ const GoalsHabits = () => {
     setEditingGoalId(goal.id);
     setGoalName(goal.title);
     setGoalDescription(goal.description || "");
-    setGoalCategory(goal.area || "");
+    setGoalCategory(goal.area || goal.category || "");
     setGoalStatus(goal.status);
     setGoalStartDate(goal.start_date || "");
     setGoalTargetDate(goal.target_date || "");
     setGoalProgress(goal.progress || 0);
+    setGoalLinkedBucket(goal.dream_id ? String(goal.dream_id) : "none");
+    setGoalLinkedValues(
+      Array.isArray(goal.core_value_ids) ? goal.core_value_ids : [],
+    );
     setIsGoalDialogOpen(true);
   };
 
   const handleDeleteGoal = async (id: string) => {
-    if (String(id).startsWith("temp-"))
-      return setGoals((p) => p.filter((g) => g.id !== id));
-
     setDeletingGoalId(id);
-    const previous = [...goals];
-    setGoals((prev) => {
-      const u = prev.filter((g) => g.id !== id);
-      save("user_goals", u);
-      return u;
-    });
-
+    setGoals((prev) => prev.filter((g) => g.id !== id));
     try {
-      const res = await fetchWithAuth(`/goals/${id}`, {
-        method: "DELETE",
-        signal: AbortSignal.timeout(10000), // 10 second timeout
-      });
-      if (!res.ok) throw new Error(`Failed to delete: ${res.status}`);
+      const res = await fetchWithAuth(`/goals/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const e = await res.text().catch(() => "");
+        throw new Error(e || `Server error (${res.status})`);
+      }
       toast({
         title: "Goal deleted",
         description: "Goal removed successfully.",
       });
-    } catch (error) {
-      console.error("Delete error:", error);
+    } catch (err) {
       toast({
         title: "Error",
-        description:
-          error.name === "TimeoutError"
-            ? "Delete request timed out. Please try again."
-            : "Could not delete goal",
+        description: `Could not delete goal: ${(err as Error).message}`,
         variant: "destructive",
       });
-      setGoals(previous);
-      save("user_goals", previous);
+      // Refetch to restore
+      const res = await fetchWithAuth("/goals").catch(() => null);
+      if (res?.ok) {
+        const data = await res.json();
+        const raw: any[] = Array.isArray(data)
+          ? data
+          : (data.goals ?? data.data ?? []);
+        setGoals(
+          raw.map((g) => ({
+            ...g,
+            id: String(g.id),
+            status: fromApiStatus(g.status),
+          })),
+        );
+      }
     } finally {
       setDeletingGoalId(null);
     }
@@ -667,42 +730,39 @@ const GoalsHabits = () => {
 
   const handleUpdateGoalStatus = useCallback(
     async (id: string, newStatus: string) => {
-      const previous = [...goals];
-      setGoals((prev) => {
-        const u = prev.map((g) =>
+      // Optimistic update
+      setGoals((prev) =>
+        prev.map((g) =>
           g.id === id ? { ...g, status: newStatus as Goal["status"] } : g,
-        );
-        save("user_goals", u);
-        return u;
-      });
+        ),
+      );
       try {
-        const payload = JSON.stringify({
-          goal: { status: toApiStatus(newStatus) },
-        });
-
-        // Some backends expect PATCH for partial updates; try PUT then PATCH fallback.
-        let res = await fetchWithAuth(`/goals/${id}`, {
+        const goal = goals.find((g) => g.id === id);
+        if (!goal) throw new Error("Goal not found");
+        const res = await fetchWithAuth(`/goals/${id}`, {
           method: "PUT",
-          body: payload,
+          body: JSON.stringify(
+            buildGoalPayload({
+              title: goal.title,
+              description: goal.description || "",
+              category: goal.area || goal.category || "",
+              status: newStatus,
+              progress: goal.progress || 0,
+              startDate: goal.start_date || "",
+              targetDate: goal.target_date || "",
+              dreamId: goal.dream_id ? String(goal.dream_id) : "none",
+              coreValueIds: goal.core_value_ids ?? [],
+            }),
+          ),
         });
         if (!res.ok) {
-          res = await fetchWithAuth(`/goals/${id}`, {
-            method: "PATCH",
-            body: payload,
-          });
+          const e = await res.text().catch(() => "");
+          throw new Error(e || `Server error (${res.status})`);
         }
-        if (!res.ok) {
-          let msg = "";
-          try {
-            msg = await res.text();
-          } catch {
-            /* ignore */
-          }
-          throw new Error(msg || `Failed (${res.status})`);
-        }
+        await res.json().catch(() => {});
         toast({
           title: "Goal moved",
-          description: `Updated status to ${newStatus}.`,
+          description: `Status updated to ${newStatus}.`,
         });
       } catch (err) {
         toast({
@@ -710,37 +770,26 @@ const GoalsHabits = () => {
           description: "Could not update goal status",
           variant: "destructive",
         });
-        setGoals(previous);
-        save("user_goals", previous);
+        // Revert
+        setGoals((prev) =>
+          prev.map((g) =>
+            g.id === id
+              ? {
+                  ...g,
+                  status: goals.find((og) => og.id === id)?.status ?? g.status,
+                }
+              : g,
+          ),
+        );
       }
     },
     [goals, toast],
   );
 
-  // ─── BELIEF HANDLERS ───────────────────────────────────────────────────
+  // ─── BELIEF HANDLERS ──────────────────────────────────────────────────────
   const handleCreateBelief = async () => {
     if (!beliefText.trim()) return;
     setBeliefSaving(true);
-    const tempId = `temp-${Date.now()}`;
-    const optimistic: Belief = {
-      id: tempId,
-      belief: beliefText,
-      alternative: beliefAlternative,
-      reflection_data: {
-        origin: beliefOrigin,
-        supporting_evidence: beliefSupportingEvidence,
-        contradicting_evidence: beliefEvidence,
-        impact: beliefImpact,
-        reframe: beliefAlternative,
-      },
-    };
-
-    setBeliefs((prev) => {
-      const u = [...prev, optimistic];
-      save("user_beliefs", u);
-      return u;
-    });
-
     try {
       const res = await fetchWithAuth("/limiting_beliefs", {
         method: "POST",
@@ -761,22 +810,14 @@ const GoalsHabits = () => {
       });
       if (!res.ok) throw new Error("Failed");
       const created = await res.json();
-      setBeliefs((prev) => {
-        const u = prev.map((b) =>
-          b.id === tempId
-            ? {
-                ...created,
-                belief:
-                  created.statement ?? created.limiting_belief ?? beliefText,
-                alternative:
-                  created.reflection_data?.reframe ?? beliefAlternative,
-              }
-            : b,
-        );
-        save("user_beliefs", u);
-        return u;
-      });
-
+      setBeliefs((prev) => [
+        ...prev,
+        {
+          ...created,
+          belief: created.statement ?? created.limiting_belief ?? beliefText,
+          alternative: created.reflection_data?.reframe ?? beliefAlternative,
+        },
+      ]);
       setBeliefText("");
       setBeliefOrigin("");
       setBeliefSupportingEvidence("");
@@ -785,16 +826,11 @@ const GoalsHabits = () => {
       setBeliefAlternative("");
       setBeliefAffirmationId("none");
       setIsBeliefDialogOpen(false);
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to save belief",
         variant: "destructive",
-      });
-      setBeliefs((prev) => {
-        const u = prev.filter((b) => b.id !== tempId);
-        save("user_beliefs", u);
-        return u;
       });
     } finally {
       setBeliefSaving(false);
@@ -804,30 +840,6 @@ const GoalsHabits = () => {
   const handleUpdateBelief = async () => {
     if (!beliefText.trim() || editingBeliefId === null) return;
     setBeliefSaving(true);
-    const previous = [...beliefs];
-
-    setBeliefs((prev) => {
-      const u = prev.map((b) =>
-        b.id === editingBeliefId
-          ? {
-              ...b,
-              belief: beliefText,
-              statement: beliefText,
-              alternative: beliefAlternative,
-              reflection_data: {
-                origin: beliefOrigin,
-                supporting_evidence: beliefSupportingEvidence,
-                contradicting_evidence: beliefEvidence,
-                impact: beliefImpact,
-                reframe: beliefAlternative,
-              },
-            }
-          : b,
-      );
-      save("user_beliefs", u);
-      return u;
-    });
-
     try {
       const res = await fetchWithAuth(`/limiting_beliefs/${editingBeliefId}`, {
         method: "PUT",
@@ -848,8 +860,8 @@ const GoalsHabits = () => {
       });
       if (!res.ok) throw new Error("Failed");
       const updated: Belief = await res.json();
-      setBeliefs((prev) => {
-        const u = prev.map((b) =>
+      setBeliefs((prev) =>
+        prev.map((b) =>
           b.id === editingBeliefId
             ? {
                 ...updated,
@@ -859,11 +871,8 @@ const GoalsHabits = () => {
                   updated.reflection_data?.reframe ?? beliefAlternative,
               }
             : b,
-        );
-        save("user_beliefs", u);
-        return u;
-      });
-
+        ),
+      );
       setEditingBeliefId(null);
       setBeliefText("");
       setBeliefOrigin("");
@@ -873,41 +882,30 @@ const GoalsHabits = () => {
       setBeliefAlternative("");
       setBeliefAffirmationId("none");
       setIsBeliefDialogOpen(false);
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to update belief",
         variant: "destructive",
       });
-      setBeliefs(previous);
-      save("user_beliefs", previous);
     } finally {
       setBeliefSaving(false);
     }
   };
 
   const handleDeleteBelief = async (id: string | number) => {
-    if (String(id).startsWith("temp-"))
-      return setBeliefs((p) => p.filter((b) => b.id !== id));
-    const previous = [...beliefs];
-    setBeliefs((prev) => {
-      const u = prev.filter((b) => b.id !== id);
-      save("user_beliefs", u);
-      return u;
-    });
+    setBeliefs((prev) => prev.filter((b) => b.id !== id));
     try {
       const res = await fetchWithAuth(`/limiting_beliefs/${id}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed");
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to delete belief",
         variant: "destructive",
       });
-      setBeliefs(previous);
-      save("user_beliefs", previous);
     }
   };
 
@@ -935,32 +933,6 @@ const GoalsHabits = () => {
   const handleCreatePattern = async () => {
     if (!patternName.trim()) return;
     setPatternSaving(true);
-    const tempId = `temp-${Date.now()}`;
-    const optimistic: Pattern = {
-      id: tempId,
-      name: patternName,
-      trigger: patternTrigger,
-      consequence: patternConsequence,
-      alternative: patternAlternative,
-      pattern_data: {
-        triggers: patternTrigger,
-        underlying_reason: patternUnderlyingReason,
-        impact: patternConsequence,
-        desired_behavior: patternAlternative,
-        strategies: patternStrategies,
-      },
-      affirmation_id:
-        patternAffirmationId && patternAffirmationId !== "none"
-          ? Number(patternAffirmationId)
-          : null,
-    };
-
-    setPatterns((prev) => {
-      const u = [...prev, optimistic];
-      save("user_patterns", u);
-      return u;
-    });
-
     try {
       const res = await fetchWithAuth("/behavioral_patterns", {
         method: "POST",
@@ -981,22 +953,15 @@ const GoalsHabits = () => {
       });
       if (!res.ok) throw new Error("Failed");
       const created: Pattern = await res.json();
-      setPatterns((prev) => {
-        const u = prev.map((p) =>
-          p.id === tempId
-            ? {
-                ...created,
-                name: created.recurring_behavior ?? created.name ?? patternName,
-                alternative:
-                  created.pattern_data?.desired_behavior ?? patternAlternative,
-                affirmation_id: created.affirmation_id,
-              }
-            : p,
-        );
-        save("user_patterns", u);
-        return u;
-      });
-
+      setPatterns((prev) => [
+        ...prev,
+        {
+          ...created,
+          name: created.recurring_behavior ?? created.name ?? patternName,
+          alternative:
+            created.pattern_data?.desired_behavior ?? patternAlternative,
+        },
+      ]);
       setPatternName("");
       setPatternTrigger("");
       setPatternUnderlyingReason("");
@@ -1005,16 +970,11 @@ const GoalsHabits = () => {
       setPatternStrategies("");
       setPatternAffirmationId("");
       setIsPatternDialogOpen(false);
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to save pattern",
         variant: "destructive",
-      });
-      setPatterns((prev) => {
-        const u = prev.filter((p) => p.id !== tempId);
-        save("user_patterns", u);
-        return u;
       });
     } finally {
       setPatternSaving(false);
@@ -1024,36 +984,6 @@ const GoalsHabits = () => {
   const handleUpdatePattern = async () => {
     if (!patternName.trim() || editingPatternId === null) return;
     setPatternSaving(true);
-    const previous = [...patterns];
-
-    setPatterns((prev) => {
-      const u = prev.map((p) =>
-        p.id === editingPatternId
-          ? {
-              ...p,
-              name: patternName,
-              recurring_behavior: patternName,
-              alternative: patternAlternative,
-              trigger: patternTrigger,
-              consequence: patternConsequence,
-              affirmation_id:
-                patternAffirmationId && patternAffirmationId !== "none"
-                  ? Number(patternAffirmationId)
-                  : null,
-              pattern_data: {
-                triggers: patternTrigger,
-                underlying_reason: patternUnderlyingReason,
-                impact: patternConsequence,
-                desired_behavior: patternAlternative,
-                strategies: patternStrategies,
-              },
-            }
-          : p,
-      );
-      save("user_patterns", u);
-      return u;
-    });
-
     try {
       const res = await fetchWithAuth(
         `/behavioral_patterns/${editingPatternId}`,
@@ -1077,24 +1007,18 @@ const GoalsHabits = () => {
       );
       if (!res.ok) throw new Error("Failed");
       const updated: Pattern = await res.json();
-      setPatterns((prev) => {
-        const u = prev.map((p) =>
+      setPatterns((prev) =>
+        prev.map((p) =>
           p.id === editingPatternId
             ? {
                 ...updated,
                 name: updated.recurring_behavior ?? updated.name ?? patternName,
                 alternative:
                   updated.pattern_data?.desired_behavior ?? patternAlternative,
-                trigger: updated.pattern_data?.triggers ?? patternTrigger,
-                consequence: updated.pattern_data?.impact ?? patternConsequence,
-                affirmation_id: updated.affirmation_id,
               }
             : p,
-        );
-        save("user_patterns", u);
-        return u;
-      });
-
+        ),
+      );
       setEditingPatternId(null);
       setPatternName("");
       setPatternTrigger("");
@@ -1104,41 +1028,30 @@ const GoalsHabits = () => {
       setPatternStrategies("");
       setPatternAffirmationId("");
       setIsPatternDialogOpen(false);
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to update pattern",
         variant: "destructive",
       });
-      setPatterns(previous);
-      save("user_patterns", previous);
     } finally {
       setPatternSaving(false);
     }
   };
 
   const handleDeletePattern = async (id: string | number) => {
-    if (String(id).startsWith("temp-"))
-      return setPatterns((p) => p.filter((pt) => pt.id !== id));
-    const previous = [...patterns];
-    setPatterns((prev) => {
-      const u = prev.filter((p) => p.id !== id);
-      save("user_patterns", u);
-      return u;
-    });
+    setPatterns((prev) => prev.filter((p) => p.id !== id));
     try {
       const res = await fetchWithAuth(`/behavioral_patterns/${id}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed");
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to delete pattern",
         variant: "destructive",
       });
-      setPatterns(previous);
-      save("user_patterns", previous);
     }
   };
 
@@ -1169,23 +1082,10 @@ const GoalsHabits = () => {
     }
   };
 
-  // ─── AFFIRMATIONS CRUD ────────────────────────────────────────────────────
+  // ─── AFFIRMATION HANDLERS ─────────────────────────────────────────────────
   const handleCreateAffirmation = async () => {
     if (!affirmationStatement.trim()) return;
     setAffirmationSaving(true);
-    const tempId = `temp-${Date.now()}`;
-    const optimistic: Affirmation = {
-      id: tempId,
-      statement: affirmationStatement,
-      priority: affirmationPriority,
-    };
-
-    setAffirmations((prev) => {
-      const u = [...prev, optimistic];
-      save("user_affirmations", u);
-      return u;
-    });
-
     try {
       const res = await fetchWithAuth("/affirmations", {
         method: "POST",
@@ -1198,28 +1098,18 @@ const GoalsHabits = () => {
       });
       if (!res.ok) throw new Error("Failed");
       const created = await res.json();
-      const createdId = created.id ?? created.affirmation?.id ?? tempId;
-      setAffirmations((prev) => {
-        const u = prev.map((a) =>
-          a.id === tempId ? { ...a, id: createdId } : a,
-        );
-        save("user_affirmations", u);
-        return u;
-      });
-
+      setAffirmations((prev) => [
+        ...prev,
+        { ...created, id: created.id ?? created.affirmation?.id },
+      ]);
       setAffirmationStatement("");
       setAffirmationPriority(5);
       setIsAffirmationDialogOpen(false);
-    } catch (err) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to create affirmation",
         variant: "destructive",
-      });
-      setAffirmations((prev) => {
-        const u = prev.filter((a) => a.id !== tempId);
-        save("user_affirmations", u);
-        return u;
       });
     } finally {
       setAffirmationSaving(false);
@@ -1229,22 +1119,6 @@ const GoalsHabits = () => {
   const handleUpdateAffirmation = async () => {
     if (!affirmationStatement.trim() || editingAffirmationId === null) return;
     setAffirmationSaving(true);
-    const previous = [...affirmations];
-
-    setAffirmations((prev) => {
-      const u = prev.map((a) =>
-        a.id === editingAffirmationId
-          ? {
-              ...a,
-              statement: affirmationStatement,
-              priority: affirmationPriority,
-            }
-          : a,
-      );
-      save("user_affirmations", u);
-      return u;
-    });
-
     try {
       const res = await fetchWithAuth(`/affirmations/${editingAffirmationId}`, {
         method: "PUT",
@@ -1257,8 +1131,8 @@ const GoalsHabits = () => {
       });
       if (!res.ok) throw new Error("Failed");
       const updated = await res.json();
-      setAffirmations((prev) => {
-        const u = prev.map((a) =>
+      setAffirmations((prev) =>
+        prev.map((a) =>
           a.id === editingAffirmationId
             ? {
                 ...updated,
@@ -1266,83 +1140,50 @@ const GoalsHabits = () => {
                   updated.id ?? updated.affirmation?.id ?? editingAffirmationId,
               }
             : a,
-        );
-        save("user_affirmations", u);
-        return u;
-      });
-
+        ),
+      );
       setEditingAffirmationId(null);
       setAffirmationStatement("");
       setAffirmationPriority(5);
       setIsAffirmationDialogOpen(false);
-    } catch (err) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to update affirmation",
         variant: "destructive",
       });
-      setAffirmations(previous);
-      save("user_affirmations", previous);
     } finally {
       setAffirmationSaving(false);
     }
   };
 
-  const openEditAffirmation = (affirmation: Affirmation) => {
-    setEditingAffirmationId(affirmation.id);
-    setAffirmationStatement(affirmation.statement || affirmation.text || "");
-    setAffirmationPriority(affirmation.priority || 5);
+  const openEditAffirmation = (a: Affirmation) => {
+    setEditingAffirmationId(a.id);
+    setAffirmationStatement(a.statement || a.text || "");
+    setAffirmationPriority(a.priority || 5);
     setIsAffirmationDialogOpen(true);
   };
 
-  // FIX 2: Affirmations delete — id can be string | number from API
   const handleDeleteAffirmation = async (id: string | number) => {
-    if (String(id).startsWith("temp-"))
-      return setAffirmations((p) => p.filter((a) => a.id !== id));
-    const previous = [...affirmations];
-    setAffirmations((prev) => {
-      const u = prev.filter((a) => a.id !== id);
-      save("user_affirmations", u);
-      return u;
-    });
+    setAffirmations((prev) => prev.filter((a) => a.id !== id));
     try {
       const res = await fetchWithAuth(`/affirmations/${id}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed");
-    } catch (err) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to delete affirmation",
         variant: "destructive",
       });
-      setAffirmations(previous);
-      save("user_affirmations", previous);
     }
   };
 
-  // ─── HABITS CRUD ──────────────────────────────────────────────────────────
+  // ─── HABIT HANDLERS ───────────────────────────────────────────────────────
   const handleCreateHabit = async () => {
     if (!habitName.trim()) return;
     setHabitSaving(true);
-    const tempId = `temp-${Date.now()}`;
-    const optimistic: Habit = {
-      id: tempId,
-      name: habitName,
-      frequency: habitFrequency || "daily",
-      description: habitDescription,
-      category: habitCategory,
-      time: habitTime,
-      place: habitPlace,
-      start_date: habitStartDate,
-    };
-
-    setHabits((prev) => {
-      const u = [...prev, optimistic];
-      save("user_habits", u);
-      return u;
-    });
-
     try {
       const res = await fetchWithAuth("/habits", {
         method: "POST",
@@ -1359,15 +1200,10 @@ const GoalsHabits = () => {
       });
       if (!res.ok) throw new Error("Failed");
       const created = await res.json();
-      const createdId = created.id ?? created.habit?.id ?? tempId;
-      setHabits((prev) => {
-        const u = prev.map((h) =>
-          h.id === tempId ? { ...h, id: createdId } : h,
-        );
-        save("user_habits", u);
-        return u;
-      });
-
+      setHabits((prev) => [
+        ...prev,
+        { ...created, id: String(created.id ?? created.habit?.id) },
+      ]);
       setHabitName("");
       setHabitDescription("");
       setHabitFrequency("daily");
@@ -1377,20 +1213,12 @@ const GoalsHabits = () => {
       setHabitStartDate("");
       setHabitLinkedGoals([]);
       setIsHabitDialogOpen(false);
-      toast({
-        title: "Habit created",
-        description: "Your habit has been saved.",
-      });
-    } catch (err) {
+      toast({ title: "Habit created" });
+    } catch {
       toast({
         title: "Error",
         description: "Failed to create habit",
         variant: "destructive",
-      });
-      setHabits((prev) => {
-        const u = prev.filter((h) => h.id !== tempId);
-        save("user_habits", u);
-        return u;
       });
     } finally {
       setHabitSaving(false);
@@ -1398,155 +1226,40 @@ const GoalsHabits = () => {
   };
 
   const handleUpdateHabit = async () => {
-    if (!habitName.trim()) {
-      toast({
-        title: "Missing habit name",
-        description: "Please enter a habit name.",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (editingHabitId === null) {
-      toast({
-        title: "Nothing to update",
-        description: "No habit selected for update.",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!habitName.trim() || editingHabitId === null) return;
     setHabitSaving(true);
-    const previous = [...habits];
-
-    setHabits((prev) => {
-      const u = prev.map((h) =>
-        String(h.id) === String(editingHabitId)
-          ? {
-              ...h,
-              name: habitName,
-              frequency: habitFrequency,
-              description: habitDescription,
-              category: habitCategory,
-              time: habitTime,
-              place: habitPlace,
-              start_date: habitStartDate,
-            }
-          : h,
-      );
-      save("user_habits", u);
-      return u;
-    });
-
     try {
-      const token = localStorage.getItem("auth_token");
-      if (!token) {
-        toast({
-          title: "Not logged in",
-          description: "Missing auth token. Please log in again.",
-          variant: "destructive",
-        });
-        console.debug("Habit update blocked: missing auth_token", {
-          editingHabitId,
-        });
-        setHabits(previous);
-        save("user_habits", previous);
-        return;
-      }
-
-      // If it's a local-only habit, we can't sync it yet.
-      if (String(editingHabitId).startsWith("temp-")) {
-        toast({ title: "Habit updated", description: "Saved locally." });
-        console.debug("Habit update local-only (temp id)", { editingHabitId });
-        setEditingHabitId(null);
-        setHabitName("");
-        setHabitDescription("");
-        setHabitFrequency("daily");
-        setHabitCategory("");
-        setHabitTime("");
-        setHabitPlace("");
-        setHabitStartDate("");
-        setHabitLinkedGoals([]);
-        setIsHabitDialogOpen(false);
-        return;
-      }
-
-      const payloadFlat = {
-        name: habitName,
-        frequency: habitFrequency,
-        description: habitDescription,
-        category: habitCategory,
-        time: habitTime,
-        place: habitPlace,
-        start_date: habitStartDate,
-        linked_goals: habitLinkedGoals,
+      const payload = {
+        habit: {
+          name: habitName,
+          frequency: habitFrequency,
+          description: habitDescription,
+          category: habitCategory,
+          time: habitTime,
+          place: habitPlace,
+          start_date: habitStartDate,
+          linked_goals: habitLinkedGoals,
+        },
       };
-      const payloadWrapped = { habit: payloadFlat };
-
-      // Try common API shapes/methods (PUT then PATCH fallback)
-      toast({
-        title: "Updating habit...",
-        description: "Syncing with server.",
-      });
-      console.debug("Updating habit", {
-        id: editingHabitId,
-        payloadWrapped,
-        payloadFlat,
-      });
       let res = await fetchWithAuth(`/habits/${editingHabitId}`, {
         method: "PUT",
-        body: JSON.stringify(payloadWrapped),
+        body: JSON.stringify(payload),
       });
-      if (!res.ok) {
+      if (!res.ok)
         res = await fetchWithAuth(`/habits/${editingHabitId}`, {
           method: "PATCH",
-          body: JSON.stringify(payloadWrapped),
+          body: JSON.stringify(payload),
         });
-      }
-      if (!res.ok) {
-        res = await fetchWithAuth(`/habits/${editingHabitId}`, {
-          method: "PUT",
-          body: JSON.stringify(payloadFlat),
-        });
-        if (!res.ok) {
-          res = await fetchWithAuth(`/habits/${editingHabitId}`, {
-            method: "PATCH",
-            body: JSON.stringify(payloadFlat),
-          });
-        }
-      }
-
-      if (!res.ok) {
-        let msg = "";
-        try {
-          msg = await res.text();
-        } catch {
-          /* ignore */
-        }
-        throw new Error(msg || `Failed (${res.status})`);
-      }
-
+      if (!res.ok) throw new Error(`Failed (${res.status})`);
       const updated = await res.json().catch(() => ({}));
-      const updatedHabit = (updated?.habit ?? updated?.data ?? updated) as any;
-      setHabits((prev) => {
-        const u = prev.map((h) =>
-          String(h.id) === String(editingHabitId)
-            ? {
-                ...h,
-                ...updatedHabit,
-                id: String(updatedHabit?.id ?? updated?.id ?? editingHabitId),
-                name: updatedHabit?.name ?? h.name,
-                frequency: updatedHabit?.frequency ?? h.frequency,
-                description: updatedHabit?.description ?? h.description,
-                category: updatedHabit?.category ?? h.category,
-                time: updatedHabit?.time ?? h.time,
-                place: updatedHabit?.place ?? h.place,
-                start_date: updatedHabit?.start_date ?? h.start_date,
-              }
-            : h,
-        );
-        save("user_habits", u);
-        return u;
-      });
-
+      const h = updated?.habit ?? updated?.data ?? updated;
+      setHabits((prev) =>
+        prev.map((habit) =>
+          String(habit.id) === String(editingHabitId)
+            ? { ...habit, ...h, id: String(h?.id ?? editingHabitId) }
+            : habit,
+        ),
+      );
       setEditingHabitId(null);
       setHabitName("");
       setHabitDescription("");
@@ -1557,18 +1270,13 @@ const GoalsHabits = () => {
       setHabitStartDate("");
       setHabitLinkedGoals([]);
       setIsHabitDialogOpen(false);
-      toast({
-        title: "Habit updated",
-        description: "Your changes have been saved.",
-      });
+      toast({ title: "Habit updated" });
     } catch (err) {
-      const msg =
-        typeof (err as any)?.message === "string" && (err as any).message.trim()
-          ? (err as any).message
-          : "Failed to update habit";
-      toast({ title: "Error", description: msg, variant: "destructive" });
-      setHabits(previous);
-      save("user_habits", previous);
+      toast({
+        title: "Error",
+        description: `Failed to update habit: ${(err as Error).message}`,
+        variant: "destructive",
+      });
     } finally {
       setHabitSaving(false);
     }
@@ -1587,87 +1295,31 @@ const GoalsHabits = () => {
     setIsHabitDialogOpen(true);
   };
 
-  // FIX 3: Habits delete — id can be string | number from API
   const handleDeleteHabit = async (id: string | number) => {
     const idStr = String(id);
-    // Local-only habit: delete locally only
-    if (idStr.startsWith("temp-")) {
-      toast({ title: "Habit deleted", description: "Removed locally." });
-      return setHabits((p) => {
-        const u = p.filter((h) => String(h.id) !== idStr);
-        save("user_habits", u);
-        return u;
-      });
-    }
-
-    const token = localStorage.getItem("auth_token");
-    if (!token) {
-      toast({
-        title: "Not logged in",
-        description: "Missing auth token. Please log in again.",
-        variant: "destructive",
-      });
-      console.debug("Habit delete blocked: missing auth_token", { id: idStr });
-      return;
-    }
-
-    const previous = [...habits];
-    setHabits((prev) => {
-      const u = prev.filter((h) => String(h.id) !== idStr);
-      save("user_habits", u);
-      return u;
-    });
+    setHabits((prev) => prev.filter((h) => String(h.id) !== idStr));
     try {
-      toast({
-        title: "Deleting habit...",
-        description: "Syncing with server.",
-      });
-      console.debug("Deleting habit", { id: idStr });
-      // Try common delete patterns
       let res = await fetchWithAuth(`/habits/${idStr}`, { method: "DELETE" });
-      if (!res.ok) {
-        // Some APIs expose a custom delete endpoint
+      if (!res.ok)
         res = await fetchWithAuth(`/habits/${idStr}/delete`, {
           method: "POST",
         });
-      }
-      if (!res.ok) {
-        // Rails-style method override
-        res = await fetchWithAuth(`/habits/${idStr}`, {
-          method: "POST",
-          body: JSON.stringify({ _method: "delete" }),
-        });
-      }
-      if (!res.ok) {
-        let msg = "";
-        try {
-          msg = await res.text();
-        } catch {
-          /* ignore */
-        }
-        throw new Error(msg || `Failed (${res.status})`);
-      }
-      toast({
-        title: "Habit deleted",
-        description: "Habit removed successfully.",
-      });
+      if (!res.ok) throw new Error(`Failed (${res.status})`);
+      toast({ title: "Habit deleted" });
     } catch (err) {
-      const msg =
-        typeof (err as any)?.message === "string" && (err as any).message.trim()
-          ? (err as any).message
-          : "Failed to delete habit";
-      toast({ title: "Error", description: msg, variant: "destructive" });
-      setHabits(previous);
-      save("user_habits", previous);
+      toast({
+        title: "Error",
+        description: `Failed to delete habit: ${(err as Error).message}`,
+        variant: "destructive",
+      });
     }
   };
 
-  // ─── DRAG AND DROP ────────────────────────────────────────────────────────
+  // ─── DRAG & DROP ──────────────────────────────────────────────────────────
   const handleGoalDragStart = (e: React.DragEvent, goalId: string) => {
     e.dataTransfer.setData("text/plain", goalId);
     e.dataTransfer.effectAllowed = "move";
   };
-
   const handleGoalDrop = (e: React.DragEvent, statusKey: Goal["status"]) => {
     e.preventDefault();
     const goalId = e.dataTransfer.getData("text/plain");
@@ -1717,14 +1369,12 @@ const GoalsHabits = () => {
       hoverBorder: "border-teal-500",
     },
   ];
-
   const getGoalsByStatus = (s: Goal["status"]) =>
     goals.filter(
       (g) =>
         g.status === s &&
         (selectedArea === "all-areas" || g.area === selectedArea),
     );
-
   const areaLabels: Record<string, string> = {
     "all-areas": "Create Your First Goal",
     health: "Create Your Health & Fitness Goal",
@@ -1733,55 +1383,50 @@ const GoalsHabits = () => {
     relationships: "Create Your Relationships Goal",
     financial: "Create Your Financial Goal",
   };
-
   const footerConfig = {
     goals: {
       onClick: () => setIsGoalDialogOpen(true),
       label: areaLabels[selectedArea] || "Create Your First Goal",
       className: "bg-red-500 hover:bg-red-600 text-white",
-      icon: <Target className="h-4 w-4 mr-2 shrink-0" />,
     },
     beliefs: {
       onClick: () => setIsBeliefDialogOpen(true),
       label: "Identify Your First Belief",
       className: "bg-red-500 hover:bg-red-600 text-white",
-      icon: <Heart className="h-4 w-4 mr-2 shrink-0" />,
     },
     affirmations: {
       onClick: () => setIsAffirmationDialogOpen(true),
       label: "Add Your First Affirmation",
       className: "bg-red-500 hover:bg-red-600 text-white",
-      icon: <Sparkles className="h-4 w-4 mr-2 shrink-0" />,
     },
     habits: {
       onClick: () => setIsHabitDialogOpen(true),
       label: "Create Your First Habit",
       className: "bg-red-500 hover:bg-red-600 text-white",
-      icon: <Zap className="h-4 w-4 mr-2 shrink-0" />,
     },
   };
-
   const currentFooter = footerConfig[activeTab as keyof typeof footerConfig];
-
-  // Only show footer for affirmations and habits when there are no items
   const shouldShowFooter = () => {
-    // Hide footer CTA while any dialog is open (prevents duplicate CTAs)
     if (
       isGoalDialogOpen ||
       isBeliefDialogOpen ||
       isPatternDialogOpen ||
       isAffirmationDialogOpen ||
       isHabitDialogOpen
-    ) {
+    )
       return false;
-    }
-    if (activeTab === "goals") return goals.length === 0;
-    // In Beliefs tab, only show footer when both lists are empty
+    if (activeTab === "goals") return goals.length === 0 && !goalsLoading;
     if (activeTab === "beliefs")
-      return beliefs.length === 0 && patterns.length === 0;
-    if (activeTab === "affirmations") return affirmations.length === 0;
-    if (activeTab === "habits") return habits.length === 0;
-    return true; // Always show for beliefs
+      return (
+        beliefs.length === 0 &&
+        patterns.length === 0 &&
+        !beliefsLoading &&
+        !patternsLoading
+      );
+    if (activeTab === "affirmations")
+      return affirmations.length === 0 && !affirmationsLoading;
+    if (activeTab === "habits") return habits.length === 0 && !habitsLoading;
+    return true;
   };
 
   // ─── RENDER ───────────────────────────────────────────────────────────────
@@ -1805,9 +1450,7 @@ const GoalsHabits = () => {
       <Tabs
         value={activeTab}
         className="space-y-5"
-        onValueChange={(v) => {
-          setActiveTab(v);
-        }}
+        onValueChange={setActiveTab}
       >
         <div className="overflow-x-auto">
           <TabsList className="grid w-full max-w-md min-w-[280px] grid-cols-4">
@@ -1838,15 +1481,10 @@ const GoalsHabits = () => {
           </TabsList>
         </div>
 
-        {/* ── GOALS ── */}
+        {/* ── GOALS TAB ── */}
         <TabsContent value="goals" className="space-y-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <Select
-              value={selectedArea}
-              onValueChange={(v) => {
-                setSelectedArea(v);
-              }}
-            >
+            <Select value={selectedArea} onValueChange={setSelectedArea}>
               <SelectTrigger className="w-full sm:w-48 text-sm">
                 <SelectValue placeholder="Select area" />
               </SelectTrigger>
@@ -1864,9 +1502,7 @@ const GoalsHabits = () => {
                 variant="outline"
                 size="sm"
                 className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "kanban" ? "bg-red-500 text-white border-red-500 hover:bg-red-600 hover:text-white" : "text-red-600 border-red-200 hover:bg-red-50"}`}
-                onClick={() => {
-                  setViewMode("kanban");
-                }}
+                onClick={() => setViewMode("kanban")}
               >
                 <Columns3 className="h-3.5 w-3.5 mr-1.5" /> Kanban
               </Button>
@@ -1874,9 +1510,7 @@ const GoalsHabits = () => {
                 variant="outline"
                 size="sm"
                 className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "grid" ? "bg-red-500 text-white border-red-500 hover:bg-red-600 hover:text-white" : "text-red-600 border-red-200 hover:bg-red-50"}`}
-                onClick={() => {
-                  setViewMode("grid");
-                }}
+                onClick={() => setViewMode("grid")}
               >
                 <LayoutGrid className="h-3.5 w-3.5 mr-1.5" /> Grid
               </Button>
@@ -1890,7 +1524,11 @@ const GoalsHabits = () => {
             </div>
           </div>
 
-          {viewMode === "kanban" && (
+          {goalsLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-red-500" />
+            </div>
+          ) : viewMode === "kanban" ? (
             <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {goalStatuses.map((status) => {
                 const cols = getGoalsByStatus(status.key as Goal["status"]);
@@ -1915,11 +1553,11 @@ const GoalsHabits = () => {
                         e.preventDefault();
                         setHoveredStatus(status.key);
                       }}
-                      onDragLeave={() => {
+                      onDragLeave={() =>
                         setHoveredStatus((prev) =>
                           prev === status.key ? null : prev,
-                        );
-                      }}
+                        )
+                      }
                       onDrop={(e) =>
                         handleGoalDrop(e, status.key as Goal["status"])
                       }
@@ -1963,6 +1601,11 @@ const GoalsHabits = () => {
                             <p className="font-semibold text-sm sm:text-base text-foreground pr-16">
                               {goal.title}
                             </p>
+                            {goal.area && (
+                              <p className="text-xs text-muted-foreground mt-0.5 capitalize">
+                                {goal.area}
+                              </p>
+                            )}
                             <div className="mt-3">
                               <div className="flex items-center justify-between mb-1">
                                 <span className="text-xs text-muted-foreground">
@@ -1992,53 +1635,55 @@ const GoalsHabits = () => {
                 );
               })}
             </div>
-          )}
-
-          {viewMode === "grid" &&
-            (goals.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 py-12 px-4">
-                <p className="text-sm text-muted-foreground">
-                  No goals yet. Create your first goal!
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {goals.map((goal) => (
-                  <Card key={goal.id} className="p-3 sm:p-4 relative group">
-                    <p className="font-semibold text-sm sm:text-base text-foreground pr-16">
-                      {goal.title}
+          ) : goals.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 py-12 px-4">
+              <p className="text-sm text-muted-foreground">
+                No goals yet. Create your first goal!
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {goals.map((goal) => (
+                <Card key={goal.id} className="p-3 sm:p-4 relative group">
+                  <p className="font-semibold text-sm sm:text-base text-foreground pr-16">
+                    {goal.title}
+                  </p>
+                  <p className="text-xs sm:text-sm text-muted-foreground capitalize mt-1">
+                    {goal.status}
+                  </p>
+                  {goal.area && (
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {goal.area}
                     </p>
-                    <p className="text-xs sm:text-sm text-muted-foreground capitalize mt-1">
-                      {goal.status}
-                    </p>
-                    <div className="mt-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-muted-foreground">
-                          Progress
-                        </span>
-                        <span className="text-xs font-semibold text-primary">
-                          {goal.progress || 0}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div
-                          className="bg-gradient-to-r from-blue-500 to-teal-500 h-2.5 rounded-full"
-                          style={{ width: `${goal.progress || 0}%` }}
-                        />
-                      </div>
+                  )}
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-muted-foreground">
+                        Progress
+                      </span>
+                      <span className="text-xs font-semibold text-primary">
+                        {goal.progress || 0}%
+                      </span>
                     </div>
-                    <EditBtn onClick={() => openEditGoal(goal)} />
-                    <DelBtn
-                      onClick={() => handleDeleteGoal(goal.id)}
-                      loading={deletingGoalId === goal.id}
-                    />
-                  </Card>
-                ))}
-              </div>
-            ))}
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div
+                        className="bg-gradient-to-r from-blue-500 to-teal-500 h-2.5 rounded-full"
+                        style={{ width: `${goal.progress || 0}%` }}
+                      />
+                    </div>
+                  </div>
+                  <EditBtn onClick={() => openEditGoal(goal)} />
+                  <DelBtn
+                    onClick={() => handleDeleteGoal(goal.id)}
+                    loading={deletingGoalId === goal.id}
+                  />
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
-        {/* ── BELIEFS ── */}
+        {/* ── BELIEFS TAB ── */}
         <TabsContent value="beliefs" className="space-y-4">
           <Card className="border-l-4 border-red-400 bg-red-50 p-3 sm:p-4">
             <p className="text-xs sm:text-sm text-foreground">
@@ -2068,7 +1713,11 @@ const GoalsHabits = () => {
               <div
                 className={`rounded-lg border-2 border-dashed border-gray-300 p-4 ${beliefs.length === 0 ? "flex flex-col items-center justify-center py-12" : ""}`}
               >
-                {beliefs.length === 0 ? (
+                {beliefsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                  </div>
+                ) : beliefs.length === 0 ? (
                   <>
                     <Heart className="mb-3 h-12 w-12 text-muted-foreground/30" />
                     <p className="text-sm text-muted-foreground text-center">
@@ -2097,7 +1746,6 @@ const GoalsHabits = () => {
                 )}
               </div>
             </div>
-
             <div className="space-y-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -2118,7 +1766,11 @@ const GoalsHabits = () => {
               <div
                 className={`rounded-lg border-2 border-dashed border-gray-300 p-4 ${patterns.length === 0 ? "flex flex-col items-center justify-center py-12" : ""}`}
               >
-                {patterns.length === 0 ? (
+                {patternsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                  </div>
+                ) : patterns.length === 0 ? (
                   <>
                     <Zap className="mb-3 h-12 w-12 text-muted-foreground/30" />
                     <p className="text-sm text-muted-foreground text-center">
@@ -2150,7 +1802,7 @@ const GoalsHabits = () => {
           </div>
         </TabsContent>
 
-        {/* ── AFFIRMATIONS ── */}
+        {/* ── AFFIRMATIONS TAB ── */}
         <TabsContent value="affirmations" className="space-y-4">
           <Card className="border-l-4 border-purple-400 bg-purple-50 p-3 sm:p-4">
             <p className="text-xs sm:text-sm text-foreground">
@@ -2178,7 +1830,11 @@ const GoalsHabits = () => {
             <div
               className={`rounded-lg border-2 border-dashed border-gray-300 p-4 ${affirmations.length === 0 ? "flex flex-col items-center justify-center py-16" : ""}`}
             >
-              {affirmations.length === 0 ? (
+              {affirmationsLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                </div>
+              ) : affirmations.length === 0 ? (
                 <>
                   <Sparkles className="mb-3 h-12 w-12 text-muted-foreground/30" />
                   <p className="text-sm text-muted-foreground text-center">
@@ -2210,7 +1866,7 @@ const GoalsHabits = () => {
           </div>
         </TabsContent>
 
-        {/* ── HABITS ── */}
+        {/* ── HABITS TAB ── */}
         <TabsContent value="habits" className="space-y-4">
           <Card className="border-l-4 border-teal-400 bg-teal-50 p-3 sm:p-4">
             <p className="text-xs sm:text-sm text-foreground">
@@ -2238,7 +1894,11 @@ const GoalsHabits = () => {
             <div
               className={`rounded-lg border-2 border-dashed border-gray-300 p-4 ${habits.length === 0 ? "flex flex-col items-center justify-center py-16" : ""}`}
             >
-              {habits.length === 0 ? (
+              {habitsLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                </div>
+              ) : habits.length === 0 ? (
                 <>
                   <Zap className="mb-3 h-12 w-12 text-muted-foreground/30" />
                   <p className="text-sm text-muted-foreground text-center">
@@ -2274,7 +1934,6 @@ const GoalsHabits = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Footer Action */}
       {currentFooter && shouldShowFooter() && (
         <div className="flex items-center justify-center pt-2 pb-1">
           <Button
@@ -2287,14 +1946,15 @@ const GoalsHabits = () => {
         </div>
       )}
 
-      {/* ── DIALOGS ── */}
-
-      {/* Goal Dialog */}
+      {/* ── GOAL DIALOG ── */}
       <Dialog
         open={isGoalDialogOpen}
         onOpenChange={(open) => {
           setIsGoalDialogOpen(open);
-          if (!open) setEditingGoalId(null);
+          if (!open) {
+            setEditingGoalId(null);
+            resetGoalForm();
+          }
         }}
       >
         <DialogContent className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -2392,6 +2052,75 @@ const GoalsHabits = () => {
                 />
               </div>
             </div>
+
+            {/* ── Linked Bucket List Item ── */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-gray-700">
+                Linked Bucket List Item
+              </Label>
+              <Select
+                value={goalLinkedBucket}
+                onValueChange={setGoalLinkedBucket}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="— None —" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— None —</SelectItem>
+                  {bucketItems.map((item) => (
+                    <SelectItem key={item.id} value={String(item.id)}>
+                      {item.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* ── Linked Values ── */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-gray-700">
+                Linked Values
+              </Label>
+              {coreValues.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">
+                  No core values found. Add them in Vision & Values.
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-x-5 gap-y-2.5 pt-1">
+                  {coreValues.map((cv) => (
+                    <label
+                      key={cv.id}
+                      className="flex items-center gap-2 cursor-pointer group"
+                      onClick={() => toggleCoreValue(cv.id)}
+                    >
+                      <div
+                        className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all shrink-0 ${goalLinkedValues.includes(cv.id) ? "bg-red-500 border-red-500" : "border-gray-300 group-hover:border-red-400"}`}
+                      >
+                        {goalLinkedValues.includes(cv.id) && (
+                          <svg
+                            className="w-2.5 h-2.5 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="3"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        )}
+                      </div>
+                      <span className="text-sm text-gray-700 select-none">
+                        {cv.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="flex justify-end gap-2 pt-4">
               <Button
                 variant="outline"
@@ -2423,7 +2152,7 @@ const GoalsHabits = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Belief Dialog */}
+      {/* ── BELIEF DIALOG ── */}
       <Dialog
         open={isBeliefDialogOpen}
         onOpenChange={(open) => {
@@ -2532,7 +2261,7 @@ const GoalsHabits = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Pattern Dialog */}
+      {/* ── PATTERN DIALOG ── */}
       <Dialog
         open={isPatternDialogOpen}
         onOpenChange={(open) => {
@@ -2658,7 +2387,7 @@ const GoalsHabits = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Pattern Detail Modal */}
+      {/* ── PATTERN DETAIL ── */}
       <Dialog open={isPatternDetailOpen} onOpenChange={setIsPatternDetailOpen}>
         <DialogContent className="w-[95vw] max-w-[560px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -2743,7 +2472,7 @@ const GoalsHabits = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Affirmation Dialog */}
+      {/* ── AFFIRMATION DIALOG ── */}
       <Dialog
         open={isAffirmationDialogOpen}
         onOpenChange={(open) => {
@@ -2770,16 +2499,22 @@ const GoalsHabits = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label>Priority (1-10)</Label>
-              <Input
-                type="number"
+              <Label>Priority: {affirmationPriority}/10</Label>
+              <input
+                type="range"
                 min="1"
                 max="10"
+                step="1"
                 value={affirmationPriority}
-                onChange={(e) =>
-                  setAffirmationPriority(parseInt(e.target.value) || 5)
-                }
+                onChange={(e) => setAffirmationPriority(Number(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
               />
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all"
+                  style={{ width: `${((affirmationPriority - 1) / 9) * 100}%` }}
+                />
+              </div>
             </div>
             <div className="flex justify-end gap-2 pt-4">
               <Button
@@ -2814,7 +2549,7 @@ const GoalsHabits = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Habit Dialog */}
+      {/* ── HABIT DIALOG ── */}
       <Dialog
         open={isHabitDialogOpen}
         onOpenChange={(open) => {
