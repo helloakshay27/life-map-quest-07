@@ -88,26 +88,26 @@ const COLUMNS: {
   {
     id: "Dreaming & Ideas",
     title: "Dreaming & Ideas",
-    borderColor: "border-blue-200",
-    bgColor: "bg-blue-50/50",
+    borderColor: "border-[#E8E4D9]",
+    bgColor: "bg-[#FAF9F6]",
   },
   {
     id: "Planning & Research",
     title: "Planning & Research",
-    borderColor: "border-purple-200",
-    bgColor: "bg-purple-50/50",
+    borderColor: "border-[#E8E4D9]",
+    bgColor: "bg-[#FAF9F6]",
   },
   {
     id: "In Progress",
     title: "In Progress",
-    borderColor: "border-orange-200",
-    bgColor: "bg-orange-50/50",
+    borderColor: "border-[#E8E4D9]",
+    bgColor: "bg-[#FAF9F6]",
   },
   {
     id: "Achieved",
     title: "Achieved",
-    borderColor: "border-teal-200",
-    bgColor: "bg-teal-50/50",
+    borderColor: "border-[#E8E4D9]",
+    bgColor: "bg-[#FAF9F6]",
   },
 ];
 
@@ -351,38 +351,38 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
   );
 
   return (
-    <div className="w-full mx-auto flex flex-col h-full bg-white font-sans max-w-[1400px] p-4 sm:p-8">
+    <div className="w-full mx-auto flex flex-col h-full bg-[#FDFCF9] font-sans max-w-[1400px] p-4 sm:p-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+          <h1 className="text-2xl sm:text-[31px] font-bold text-[#111111] tracking-tight">
             Bucket List
           </h1>
-          <p className="text-[#e11d48] font-medium mt-1 text-sm sm:text-base">
+          <p className="text-[#BBA48B] font-bold mt-1 text-sm sm:text-base uppercase tracking-widest opacity-80">
             What you Seek, is Seeking You !
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <div className="flex items-center border border-gray-200 rounded-md p-1 bg-white">
+          <div className="flex items-center border border-[#E8E4D9] rounded-md p-1 bg-white">
             <button
               onClick={() => setViewMode("list")}
-              className={`p-1.5 rounded-sm ${viewMode === "list" ? "bg-red-100 text-red-700" : "text-red-400 hover:text-red-700 hover:bg-red-50"}`}
+              className={`p-1.5 rounded-sm transition-colors ${viewMode === "list" ? "bg-[#FAF9F6] text-[#BBA48B]" : "text-[#CCCCCC] hover:text-[#BBA48B] hover:bg-[#FAF9F6]"}`}
             >
-              <List className="w-[18px] h-[18px]" strokeWidth={2} />
+              <List className="w-[18px] h-[18px]" strokeWidth={2.5} />
             </button>
             <button
               onClick={() => setViewMode("board")}
-              className={`p-1.5 rounded-sm ${viewMode === "board" ? "bg-red-100 text-red-700" : "text-red-400 hover:text-red-700 hover:bg-red-50"}`}
+              className={`p-1.5 rounded-sm transition-colors ${viewMode === "board" ? "bg-[#FAF9F6] text-[#BBA48B]" : "text-[#CCCCCC] hover:text-[#BBA48B] hover:bg-[#FAF9F6]"}`}
             >
-              <LayoutGrid className="w-[18px] h-[18px]" strokeWidth={2} />
+              <LayoutGrid className="w-[18px] h-[18px]" strokeWidth={2.5} />
             </button>
           </div>
 
           {!samplesLoaded && (
             <button
               onClick={loadSamples}
-              className="flex items-center gap-1.5 px-4 py-2 bg-red-50 border border-red-200 rounded-md text-sm font-semibold text-red-700 hover:bg-red-100 transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#FAF9F6] border border-[#E8E4D9] rounded-md text-sm font-bold text-[#BBA48B] hover:bg-white transition-colors shadow-none"
             >
               <Sparkles className="w-4 h-4" />
               Load Samples
@@ -390,7 +390,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
           )}
 
           <AddDreamDialog onSave={handleSave}>
-            <button className="flex items-center gap-1.5 px-4 py-2 bg-red-500 text-white rounded-md text-sm font-semibold hover:bg-red-600 transition-colors shadow-sm">
+            <button className="flex items-center gap-1.5 px-4 py-2 bg-[#BBA48B] text-white rounded-md text-sm font-bold hover:bg-[#A68F76] transition-colors shadow-none">
               <Plus className="w-4 h-4 stroke-[2.5]" />
               Add Dream
             </button>
@@ -399,9 +399,9 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
       </div>
 
       {/* Info Banner */}
-      <div className="bg-[#eff6ff] border-l-[3px] border-[#3b82f6] p-4 rounded-r-md mb-8">
-        <p className="text-[13px] text-[#475569] leading-relaxed">
-          <span className="font-semibold text-[#1e293b]">
+      <div className="bg-[#FAF9F6] border-l-[3px] border-[#BBA48B] p-5 rounded-r-xl mb-8 border border-y-[#E8E4D9] border-r-[#E8E4D9]">
+        <p className="text-[14px] text-[#555555] leading-relaxed font-medium">
+          <span className="font-bold text-[#333333]">
             💡 What is a Bucket List?
           </span>{" "}
           A collection of experiences, achievements, and goals you want to
@@ -419,7 +419,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value as Category)}
-            className="w-full appearance-none bg-white border border-gray-200 rounded-md py-1.5 pl-3 pr-8 text-sm text-gray-700 outline-none hover:border-gray-300 focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6] cursor-pointer shadow-sm"
+            className="w-full appearance-none bg-white border border-[#E8E4D9] rounded-md py-1.5 pl-3 pr-8 text-sm text-[#333333] font-bold outline-none hover:border-[#BBA48B] focus:border-[#BBA48B] cursor-pointer shadow-none"
           >
             <option value="All Categories">All Categories</option>
             <option value="Travel">Travel</option>
@@ -457,14 +457,14 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
                 key={col.id}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => handleDrop(e, col.id)}
-                className={`flex flex-col flex-1 min-w-[280px] sm:min-w-[250px] shrink-0 snap-center sm:snap-align-none rounded-xl border-2 ${col.borderColor} ${col.bgColor} p-4`}
+                className={`flex flex-col flex-1 min-w-[300px] shrink-0 snap-center sm:snap-align-none rounded-2xl border-2 ${col.borderColor} ${col.bgColor} p-6`}
               >
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="font-bold text-gray-900 text-[15px]">
+                <div className="flex justify-between items-center mb-8">
+                  <h3 className="font-extrabold text-[#333333] text-[16px] uppercase tracking-wider opacity-90">
                     {col.title}
                   </h3>
                   <span
-                    className={`text-xs font-bold px-2 py-0.5 rounded border border-gray-200 shadow-[0_1px_2px_rgba(0,0,0,0.05)] bg-white text-gray-700`}
+                    className={`text-[12px] font-bold px-2.5 py-0.5 rounded-full border border-[#E8E4D9] bg-white text-[#BBA48B] shadow-none`}
                   >
                     {colItems.length}
                   </span>
@@ -483,23 +483,23 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
                           <div
                             draggable
                             onDragStart={(e) => handleDragStart(e, item.id)}
-                            className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col cursor-pointer hover:shadow-md hover:-translate-y-0.5 hover:border-orange-200 transition-all text-left grab sm:active:cursor-grabbing"
+                            className="bg-white p-5 rounded-xl shadow-none border border-[#E8E4D9] flex flex-col cursor-pointer hover:shadow-md hover:-translate-y-1 hover:border-[#BBA48B] transition-all text-left grab"
                           >
                             <div
-                              className={`w-9 h-9 rounded-md flex items-center justify-center text-white mb-3 shadow-[inset_0_-2px_4px_rgba(0,0,0,0.1)] ${CATEGORY_COLORS[item.category] || "bg-gray-400"}`}
+                              className={`w-10 h-10 rounded-lg flex items-center justify-center text-white mb-4 shadow-sm ${CATEGORY_COLORS[item.category] || "bg-[#BBA48B]"}`}
                             >
                               <Star className="w-5 h-5 fill-current" />
                             </div>
-                            <h4 className="font-bold text-[14px] text-gray-900 leading-snug">
+                            <h4 className="font-bold text-[15px] text-[#111111] leading-tight mb-2">
                               {item.title}
                             </h4>
-                            <div className="mt-2 mb-4">
-                              <span className="inline-block border border-gray-200 text-gray-600 bg-white px-2 py-0.5 rounded text-[11px] font-bold">
+                            <div className="mb-4">
+                              <span className="inline-block border border-[#E8E4D9] text-[#777777] bg-[#FAF9F6] px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider">
                                 {item.category}
                               </span>
                             </div>
                             {item.description && (
-                              <p className="text-[12px] text-gray-500 leading-relaxed max-w-full">
+                              <p className="text-[13px] text-[#6B7280] leading-relaxed max-w-full font-medium">
                                 {item.description}
                               </p>
                             )}
@@ -523,72 +523,68 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
       {viewMode === "list" && (
         <div className="flex-1 flex flex-col">
           {filteredItems.length > 0 ? (
-            <div className="overflow-x-auto border border-gray-200 rounded-lg">
+            <div className="overflow-x-auto border border-[#E8E4D9] rounded-xl bg-white shadow-none">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  <tr className="bg-[#FAF9F6] border-b border-[#E8E4D9]">
+                    <th className="px-6 py-4 text-left text-[11px] font-bold text-[#777777] uppercase tracking-widest">
                       Dream Title
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-[11px] font-bold text-[#777777] uppercase tracking-widest">
                       Category
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-[11px] font-bold text-[#777777] uppercase tracking-widest">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-[11px] font-bold text-[#777777] uppercase tracking-widest">
                       Description
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-center text-[11px] font-bold text-[#777777] uppercase tracking-widest">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-[#EFEDE7]">
                   {filteredItems.map((item) => (
                     <tr
                       key={item.id}
-                      className="hover:bg-gray-50 transition-colors"
+                      className="hover:bg-[#FAF9F6]/50 transition-colors"
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-8 h-8 rounded-md flex items-center justify-center text-white shadow-sm ${CATEGORY_COLORS[item.category] || "bg-gray-400"}`}
+                            className={`w-9 h-9 rounded-lg flex items-center justify-center text-white shadow-sm ${CATEGORY_COLORS[item.category] || "bg-[#BBA48B]"}`}
                           >
-                            <Star className="w-4 h-4 fill-current" />
+                            <Star className="w-4.5 h-4.5 fill-current" />
                           </div>
-                          <p className="font-semibold text-gray-900 text-sm">
+                          <p className="font-bold text-[#111111] text-[15px]">
                             {item.title}
                           </p>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-block px-3 py-1 text-xs font-bold text-white rounded-full bg-gray-400"
-                          style={{
-                            backgroundColor:
-                              CATEGORY_COLORS[item.category] || "#9ca3af",
-                          }}
+                        <span className="inline-block px-2.5 py-0.5 text-[11px] font-bold text-[#777777] rounded border border-[#E8E4D9] bg-[#FAF9F6] uppercase tracking-wider"
                         >
                           {item.category}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`inline-block px-3 py-1 text-xs font-bold rounded-full ${
+                          className={`inline-block px-3 py-1 text-[11px] font-bold rounded-full uppercase tracking-wider ${
                             item.progress === "Dreaming & Ideas"
-                              ? "bg-blue-100 text-blue-800"
+                              ? "bg-blue-50 text-blue-600 border border-blue-100"
                               : item.progress === "Planning & Research"
-                                ? "bg-purple-100 text-purple-800"
+                                ? "bg-purple-50 text-purple-600 border border-purple-100"
                                 : item.progress === "In Progress"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : "bg-teal-100 text-teal-800"
+                                  ? "bg-orange-50 text-orange-600 border border-orange-100"
+                                  : "bg-green-50 text-green-600 border border-green-100"
                           }`}
                         >
                           {item.progress}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <p className="text-sm text-gray-600 truncate max-w-xs">
+                        <p className="text-[13px] text-[#6B7280] font-medium truncate max-w-xs leading-relaxed">
                           {item.description || "—"}
                         </p>
                       </td>
@@ -601,17 +597,17 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
                           >
                             <button
                               title="Edit dream"
-                              className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                              className="p-2 rounded-lg text-[#BBA48B] hover:bg-[#FAF9F6] transition-colors"
                             >
-                              <Edit className="w-4 h-4" />
+                              <Edit className="w-4.5 h-4.5" />
                             </button>
                           </AddDreamDialog>
                           <button
                             onClick={() => handleDelete(item.id)}
                             title="Delete dream"
-                            className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                            className="p-2 rounded-lg text-[#BBA48B] hover:bg-[#FAF9F6] transition-colors"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-4.5 h-4.5" />
                           </button>
                         </div>
                       </td>

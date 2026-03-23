@@ -815,1293 +815,850 @@ const Dashboard = () => {
   const setupTotal = parseInt(localStorage.getItem("setupTotalCount") || "5");
 
   return (
-    <div className="animate-fade-in space-y-6 w-full">
+    <div className="animate-fade-in w-full min-h-screen bg-white -m-6 p-8">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground tracking-tight">
-            Welcome Back, {user?.name || "Guest"}
+      <div className="flex flex-row items-center justify-between gap-6 mb-8 overflow-x-hidden">
+        <div className="flex-shrink-0">
+          <h1 className="text-[28px] font-bold text-[#111111] leading-tight tracking-tight">
+            Welcome Back, {user?.name || "User"}
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-[#6B7280] text-[13px] mt-1">
             Let's align your day with your purpose
           </p>
         </div>
 
-        {/* Top Actions */}
-        <div className="flex gap-2 items-center flex-wrap">
-          <Link to="/setup">
-            <Button
-              variant="outline"
-              className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 gap-1.5 h-9 px-3 text-xs"
-            >
-              <Settings className="w-3.5 h-3.5" />
-              Setup
-              <Badge className="bg-blue-600 hover:bg-blue-700 text-white ml-1 h-5 px-1.5 rounded-sm">
-                {setupCount.completed}/{setupCount.total}
-              </Badge>
-            </Button>
-          </Link>
-          <Link to="/daily-journal">
-            <Button
-              variant="outline"
-              className="bg-red-200 text-red-800 border-red-300 hover:bg-red-300 gap-1.5 h-9 px-3 text-xs font-medium"
-            >
-              <BookOpen className="w-3.5 h-3.5 text-red-700" />
-              Daily
-            </Button>
-          </Link>
-          <Link to="/weekly-journal">
-            <Button
-              variant="outline"
-              className="bg-red-400 text-white border-red-500 hover:bg-red-500 gap-1.5 h-9 px-3 text-xs shadow-sm shadow-red-200"
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              Weekly
-            </Button>
-          </Link>
-          <Link to="/calendar">
-            <Button
-              variant="outline"
-              className="bg-blue-400 text-white border-blue-500 hover:bg-blue-500 gap-1.5 h-9 px-3 text-xs shadow-sm shadow-blue-200"
-            >
-              <CalendarDays className="w-3.5 h-3.5" />
-              Cal
-            </Button>
-          </Link>
-          <Link to="/leaderboard">
-            <Button
-              variant="outline"
-              className="bg-amber-400 text-amber-900 border-amber-500 hover:bg-amber-500 gap-1.5 h-9 px-3 text-xs font-semibold shadow-sm shadow-amber-200"
-            >
-              <Trophy className="w-3.5 h-3.5" />
-              Score: {summaryData?.total_score || 10}
-            </Button>
-          </Link>
+        <div className="flex flex-row items-center gap-2 flex-nowrap overflow-x-auto no-scrollbar pb-1">
+          <Button
+            onClick={() => navigate("/setup")}
+            variant="outline"
+            className="h-10 bg-[#F3F4F6] hover:bg-[#B91C1C] text-[#555555] hover:text-white border-[#E5E7EB] hover:border-[#B91C1C] rounded-lg px-4 gap-2 font-bold shadow-none transition-all duration-200"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Setup</span>
+            <span className="bg-[#555555] group-hover:bg-white text-white text-[10px] w-5 h-4 rounded-md flex items-center justify-center ml-0.5">
+              {setupCount.total - setupCount.completed}
+            </span>
+          </Button>
+
+          <Button
+            onClick={() => navigate("/daily-journal")}
+            variant="outline"
+            className="h-10 bg-[#F3F4F6] hover:bg-[#B91C1C] text-[#555555] hover:text-white border-[#E5E7EB] hover:border-[#B91C1C] rounded-lg px-4 gap-2 font-bold shadow-none transition-all duration-200"
+          >
+            <BookOpen className="w-4 h-4" />
+            <span>Daily</span>
+          </Button>
+
+          <Button
+            onClick={() => navigate("/weekly-journal")}
+            variant="outline"
+            className="h-10 bg-[#F3F4F6] hover:bg-[#B91C1C] text-[#555555] hover:text-white border-[#E5E7EB] hover:border-[#B91C1C] rounded-lg px-4 gap-2 font-bold shadow-none transition-all duration-200"
+          >
+            <CalendarDays className="w-4 h-4" />
+            <span>Weekly</span>
+          </Button>
+
+          <Button
+            onClick={() => navigate("/calendar")}
+            variant="outline"
+            className="h-10 bg-[#F3F4F6] hover:bg-[#B91C1C] text-[#555555] hover:text-white border-[#E5E7EB] hover:border-[#B91C1C] rounded-lg px-4 gap-2 font-bold shadow-none transition-all duration-200"
+          >
+            <CalendarIcon className="w-4 h-4" />
+            <span>Cal</span>
+          </Button>
+
+          <Button
+            onClick={() => navigate("/leaderboard")}
+            variant="outline"
+            className="h-10 bg-[#F3F4F6] hover:bg-[#B91C1C] text-[#555555] hover:text-white border-[#E5E7EB] hover:border-[#B91C1C] rounded-lg px-4 gap-2 font-bold shadow-none transition-all duration-200"
+          >
+            <Trophy className="w-4 h-4" />
+            <span>Score: {summaryData?.total_score || 0}</span>
+          </Button>
         </div>
       </div>
 
-      {/* Daily Focus & Inspiration */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="w-5 h-5 text-[#E11D48]" />
-          <h2 className="text-lg font-semibold text-[#1E293B]">
-            Daily Focus & Inspiration
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Card 1: Daily Motivator */}
-          <Card className="bg-[#FFF1F2] border-[#FECDD3] rounded-2xl overflow-hidden flex flex-col shadow-sm border-2">
-            <div className="p-4 flex-1 flex flex-col">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="bg-[#E11D48] p-1.5 rounded-lg text-white shadow-sm">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <h3 className="font-bold text-[10px] text-[#881337] tracking-wider uppercase flex items-center gap-1.5">
-                  DAILY MOTIVATOR
-                  <Sparkles className="w-3 h-3 text-amber-400" />
-                </h3>
-              </div>
-
-              <div className="flex-1 relative pl-6 mb-4 mt-2">
-                <span className="text-4xl text-[#FECDD3] absolute -top-4 left-0 font-serif opacity-80">
-                  "
-                </span>
-                <p className="text-sm font-bold text-[#881337] leading-relaxed z-10 relative">
-                  {previewData.daily_motivator
-                    ? previewData.daily_motivator
-                    : "The end of education is character."}
-                </p>
-                <p className="text-[10px] text-[#E11D48] font-bold mt-2">
-                  — Sathya Sai Baba
-                </p>
-              </div>
-
-              <div className="bg-[#FFE4E6] rounded-xl p-3 border border-[#FECDD3]">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Target className="w-3 h-3 text-[#E11D48]" />
-                  <h4 className="font-black text-[9px] uppercase text-[#881337] tracking-widest">
-                    ACTION
-                  </h4>
-                </div>
-                <p className="text-[11px] text-[#9F1239] font-medium leading-snug">
-                  True education is about building strong values and character,
-                  not just academics.
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          {/* Priorities (now mapped to accomplishments) */}
-          <Card className="bg-[#F4F8FF] border-[#D1DBFF] p-5 flex flex-col shadow-sm rounded-2xl min-h-[180px]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-[17px] text-[#0F172A] flex items-center gap-2.5 tracking-tight">
-                <ListTodo
-                  className="w-5 h-5 text-[#4F46E5]"
-                  strokeWidth={2.5}
-                />{" "}
-                Priorities
-              </h3>
-              <Badge
-                variant="secondary"
-                className="bg-[#E0E7FF] text-[#4338CA] hover:bg-[#E0E7FF] shadow-none font-semibold text-[12px] px-3 py-1 rounded-full pointer-events-none border-0"
-              >
-                For:{" "}
-                {new Date().toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })}
-              </Badge>
-            </div>
-
-            {previewData.priorities.length > 0 ? (
-              <div className="flex-1 flex flex-col gap-3 mt-2">
-                {previewData.priorities.map(
-                  (
-                    todo: {
-                      id?: string | number;
-                      title?: string;
-                    },
-                    idx,
-                  ) => (
-                    <div
-                      key={todo.id || idx}
-                      className="flex items-start gap-3"
-                    >
-                      <div className="mt-0.5 flex-shrink-0 text-[#4F46E5]">
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                          <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                        </svg>
-                      </div>
-                      <p className="text-[15px] font-medium text-[#475569] leading-snug">
-                        {todo.title}
-                      </p>
-                    </div>
-                  ),
-                )}
-              </div>
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-center mt-2">
-                <p className="text-sm text-slate-500 mb-1.5 font-medium">
-                  No accomplishments recorded yet today.
-                </p>
-                <Link
-                  to="/daily-journal"
-                  className="text-xs text-blue-600 font-bold hover:underline flex items-center gap-1 mt-1"
-                >
-                  Go to Daily Journal <ArrowRight className="w-3 h-3" />
-                </Link>
-              </div>
-            )}
-          </Card>
-
-          {/* People / Upcoming Dates Conditional Block */}
-          {isLoadingPeople ? (
-            <Card className="bg-pink-50/30 border-pink-200 p-4 flex flex-col items-center justify-center min-h-[180px] shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)] animate-pulse">
-              <CalendarIcon
-                className="w-10 h-10 text-pink-200 mb-3"
-                strokeWidth={1.5}
-              />
-            </Card>
-          ) : people.length === 0 ? (
-            <Card className="bg-pink-50/30 border-pink-200 p-4 flex flex-col items-center justify-center min-h-[180px] shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
-              <CalendarIcon
-                className="w-10 h-10 text-pink-300 mb-3"
-                strokeWidth={1.5}
-              />
-              <p className="text-sm text-slate-500 text-center">
-                No people added yet
-              </p>
-            </Card>
-          ) : (
-            <Card className="bg-[#FFF0F5]/50 border-[#F48FB1] p-5 flex flex-col min-h-[180px] shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)] rounded-[16px]">
-              <div className="flex items-center justify-between mb-auto">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-[30px] h-[30px] rounded-[8px] bg-[#F06292] flex items-center justify-center shadow-sm">
-                    <CalendarIcon
-                      className="w-[18px] h-[18px] text-white"
-                      strokeWidth={2}
-                    />
-                  </div>
-                  <span className="font-bold text-[#0F172A] text-[15px]">
-                    Upcoming Dates
-                  </span>
-                </div>
-                <button
-                  onClick={peopleHandler}
-                  className="text-[13px] font-medium text-[#1E293B] hover:text-[#0F172A] transition-colors"
-                >
-                  View All
-                </button>
-              </div>
-              <div className="flex-1 flex items-center justify-center text-center mt-4">
-                <p className="text-[14px] text-[#64748B]">
-                  No upcoming dates in the next 30 days
-                </p>
-              </div>
-            </Card>
-          )}
-        </div>
-      </div>
-
-      <Card className="bg-orange-50 border-orange-200 overflow-hidden flex flex-col mb-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
-        <div className="p-4 flex items-center justify-between border-b border-orange-100/50">
-          <div className="flex gap-3 items-center">
-            <div className="bg-[#E86438] p-2 rounded-lg text-white">
-              <Play className="w-5 h-5 fill-current ml-0.5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h3 className="font-bold text-sm text-[#B45309]">
-                  Story of the Day
-                </h3>
-                <Sparkles className="w-3.5 h-3.5 text-orange-400" />
-              </div>
-              <p className="text-xs text-slate-600 mt-0.5">
-                {previewData.story_of_the_day ||
-                  "Story # 127: How can she be so calm ? वह इतनी शांत कैसे हो सकती है?"}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <button className="p-1.5 hover:bg-orange-100/80 rounded-md text-orange-800 transition-colors">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button className="p-1.5 hover:bg-orange-100/80 rounded-md text-orange-800 transition-colors">
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Video Embed */}
-        <div
-          className="relative w-full aspect-video md:aspect-[28/9] bg-black group overflow-hidden bg-cover bg-center cursor-pointer"
-          style={{
-            backgroundImage:
-              "url('https://images.unsplash.com/photo-1510915228340-29c85a43dcfe?auto=format&fit=crop&q=80')",
-          }}
-        >
-          {/* Faux Play Button for UI matching */}
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/30 transition-all">
-            <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center">
-              <Play className="w-8 h-8 text-white fill-current ml-1" />
-            </div>
-          </div>
-
-          <div className="absolute bottom-4 right-4 flex gap-4 text-white">
-            <div className="flex flex-col items-center">
-              <CalendarIcon className="w-5 h-5 mb-1" />
-              <span className="text-[10px] font-bold">Watch later</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <ArrowRight className="w-5 h-5 mb-1 -rotate-45" />
-              <span className="text-[10px] font-bold">Share</span>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Progress & Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Avg Energy & Alignment & Calendar block */}
-        <Card className="bg-gradient-to-br from-[#FCF7FF] to-[#FFF5FB] p-5 rounded-2xl border-0 flex flex-col justify-between shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex gap-3 items-center">
-              <div className="bg-[#FF6B2C] w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-sm shadow-[#FF6B2C]/20">
-                <Zap className="w-6 h-6 fill-current" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-slate-500 mb-0.5">
-                  Avg Energy
-                </p>
-                <p className="text-xl font-extrabold text-slate-800 tracking-tight">
-                  {summaryData?.energy_average !== null &&
-                  summaryData?.energy_average !== undefined
-                    ? Number(summaryData.energy_average).toFixed(1)
-                    : "-"}
-                </p>
-              </div>
-            </div>
-
-            <div className="h-10 w-px bg-slate-200"></div>
-
-            <div className="flex gap-3 items-center">
-              <div className="bg-[#8B5CF6] w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-sm shadow-[#8B5CF6]/20">
-                <Heart className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-slate-500 mb-0.5">
-                  Alignment
-                </p>
-                <p className="text-xl font-extrabold text-slate-800 tracking-tight">
-                  {summaryData?.alignment_average !== null &&
-                  summaryData?.alignment_average !== undefined
-                    ? Number(summaryData.alignment_average).toFixed(1)
-                    : "-"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-slate-100 shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
-            <div className="flex justify-between items-center mb-4 px-2">
-              <ChevronLeft
-                className="w-4 h-4 text-[#FF6B2C] cursor-pointer hover:scale-110 transition-transform"
-                onClick={handlePrevWeek}
-              />
-              <h4 className="font-bold text-sm text-slate-700">
-                {getWeekLabel()}
-              </h4>
-              <ChevronRight
-                className="w-4 h-4 text-[#FF6B2C] cursor-pointer hover:scale-110 transition-transform"
-                onClick={handleNextWeek}
-              />
-            </div>
-
-            <div className="flex justify-between gap-1 mb-4">
-              {weekData.map((d) => (
-                <div
-                  key={d.day + d.date}
-                  className={`flex flex-col items-center justify-center py-2 px-1 w-9 rounded-xl transition-all ${d.active ? "border-[1.5px] border-[#FF6B2C] shadow-sm bg-white" : ""}`}
-                >
-                  <span className="text-[10px] text-slate-500 font-bold mb-1">
-                    {d.day}
-                  </span>
-                  <span
-                    className={`text-sm font-extrabold ${d.active ? "text-[#FF6B2C]" : "text-slate-700"}`}
-                  >
-                    {d.date}
-                  </span>
-                  <div
-                    className={`w-1.5 h-1.5 rounded-full mt-1.5 ${d.state === "missed" ? "bg-[#EF4444]" : d.state === "filled" ? "bg-[#22C55E]" : "bg-slate-200"}`}
-                  ></div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex justify-center gap-5 text-[10px] font-bold text-slate-500 mt-2">
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#22C55E]"></div>{" "}
-                Filled
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#EF4444]"></div>{" "}
-                Missed
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-slate-200"></div>{" "}
-                Upcoming
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Highest Rank */}
-        <Card className="bg-[#FFFBF2] p-5 rounded-2xl border border-orange-100/60 flex flex-col justify-between shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)]">
-          <div className="flex justify-between items-center mb-10">
-            <h3 className="font-bold text-[#C2410C] flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-[#C2410C]" /> Highest Rank
+      {/* Top Row: Daily Motivator, Priorities, Journaling Status */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        {/* Daily Motivator */}
+        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-6 rounded-xl flex flex-col min-h-[220px] shadow-none">
+          <div className="flex items-center gap-2 mb-6">
+            <Sparkles className="w-5 h-5 text-[#BBA48B]" />
+            <h3 className="font-bold text-[#333333] text-[17px]">
+              Daily Motivator
             </h3>
-            <Link
-              to="/achievements"
-              className="text-xs font-bold text-[#EA580C] hover:underline transition-colors"
-            >
-              View All
-            </Link>
           </div>
-
-          <div className="flex flex-col items-center justify-center flex-1">
-            <div className="w-16 h-16 bg-[#FFEDD5] rounded-full flex items-center justify-center mb-4">
-              <Lock className="w-6 h-6 text-[#F97316]" strokeWidth={2.5} />
-            </div>
-            <h4 className="font-bold text-slate-700 mb-1.5 text-base">
-              No badges yet
-            </h4>
-            <p className="text-xs text-slate-400 font-medium">
-              Start journaling to earn titles!
+          <div className="flex-1 flex flex-col justify-center px-4">
+            <p className="text-[17px] italic text-[#444444] font-medium leading-relaxed mb-3">
+              "
+              {previewData.daily_motivator ||
+                "The only way to do great work is to love what you do."}
+              "
+            </p>
+            <p className="text-sm text-[#777777] font-medium">
+              — {previewData.daily_motivator ? "Source" : "Steve Jobs"}
             </p>
           </div>
+          <p className="text-[13px] text-[#888888] mt-6 leading-relaxed">
+            Take a moment to reflect on what this means for your journey today.
+          </p>
+        </Card>
 
-          <div className="flex justify-between items-center mt-10 pt-4 border-t border-orange-100/60">
-            <span className="text-xs font-bold text-slate-500">
-              Total Unlocked
-            </span>
-            <span className="text-sm font-extrabold text-slate-800">
-              {summaryData?.highest_badge ? "1 / 19" : "0 / 19"}
-            </span>
+        {/* Priorities */}
+        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-6 rounded-xl flex flex-col min-h-[220px] shadow-none relative overflow-hidden">
+          <div className="w-full flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <ListTodo className="w-5 h-5 text-[#BBA48B]" />
+              <h3 className="font-bold text-[#333333] text-[18px]">
+                Priorities
+              </h3>
+            </div>
+            <div className="bg-[#e8e4d9] text-[#BBA48B] px-3 py-1 rounded-full text-[12px] font-bold border border-[#E8E4D9]/50">
+              For:{" "}
+              {new Date().toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
+            </div>
+          </div>
+
+          <div className="flex-1 flex flex-col items-center justify-center -mt-4">
+            <p className="text-[#6B7280] font-medium text-[15px] mb-2">
+              No priorities or todos.
+            </p>
+            <Link
+              to="/daily-journal"
+              className="text-[#BBA48B] font-bold text-[14px] flex items-center gap-1 hover:underline transition-all"
+            >
+              Set in Daily Journal →
+            </Link>
           </div>
         </Card>
 
-        {/* EXACT Journaling Status UI Match */}
-        <Card className="p-5 bg-[#F2FBF9] border-[1.5px] border-[#5EEAD4] shadow-sm flex flex-col justify-between rounded-[20px] transition-all hover:shadow-md">
-          <div className="flex justify-between items-center mb-5">
-            <h3 className="font-bold text-[#0F766E] flex items-center gap-2.5 text-[17px]">
-              <BookOpen className="w-5 h-5 text-[#0F766E]" strokeWidth={2.5} />{" "}
-              Journaling Status
-            </h3>
+        {/* Journaling Status */}
+        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-6 rounded-xl flex flex-col min-h-[220px] shadow-none">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-[#BBA48B]" />
+              <h3 className="font-bold text-[#333333] text-[17px]">
+                Journaling Status
+              </h3>
+            </div>
           </div>
 
-          {/* Daily Track */}
-          <div className="mb-5">
+          <div className="mb-6">
             <div className="flex justify-between items-center mb-3">
-              <span className="text-[14px] font-bold text-[#0F766E]">
+              <span className="text-[13px] font-bold text-[#444444]">
                 Daily ({dailyDateRangeStr})
               </span>
-              <span className="text-[14px] font-bold text-slate-800">
+              <span className="text-[13px] font-bold text-[#777777]">
                 {dailyCompletedCount}/7
               </span>
             </div>
-            <div className="flex justify-between gap-1 sm:gap-1.5 w-full">
+            <div className="grid grid-cols-7 gap-1">
               {dailyCompletion.map((day, idx) => (
                 <div
                   key={idx}
-                  className="flex flex-col items-center gap-1.5 flex-1 min-w-0"
+                  className={`aspect-square rounded-full flex items-center justify-center ${day.completed ? "bg-[#D2B48C]" : "bg-[#EFEDE7]"}`}
                 >
-                  <div
-                    className={`w-full aspect-square max-w-[42px] rounded-[8px] sm:rounded-[10px] flex items-center justify-center transition-all ${
-                      day.completed
-                        ? "bg-[#14B8A6] shadow-sm"
-                        : "bg-white border-[1.5px] border-[#99F6E4]"
-                    }`}
-                  >
-                    {day.completed ? (
-                      <svg
-                        width="50%"
-                        height="50%"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <circle
-                          cx="12"
-                          cy="12"
-                          r="9"
-                          stroke="white"
-                          strokeWidth="2"
-                        />
-                        <path
-                          d="M8 12L11 15L16 9"
-                          stroke="white"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    ) : (
-                      <div className="w-[50%] h-[50%] rounded-full border-[1.5px] border-[#99F6E4]"></div>
-                    )}
-                  </div>
-                  <span className="text-[10px] sm:text-[11px] font-semibold text-[#0F766E] truncate w-full text-center">
-                    {day.dayLabel}
+                  {day.completed && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-[13px] font-bold text-[#444444]">
+                Weekly ({monthNameStatus} {currentYearStatus})
+              </span>
+              <span className="text-[13px] font-bold text-[#777777]">
+                {weeklyCompletedCount}/4
+              </span>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {weeklyBlocks.slice(0, 4).map((wk, idx) => (
+                <div
+                  key={idx}
+                  className={`aspect-square rounded-md p-1.5 flex flex-col items-center justify-center text-center ${wk.completed ? "bg-[#D2B48C] text-white" : "bg-[#EFEDE7] text-[#AAAAAA]"}`}
+                >
+                  <BookOpen
+                    className={`w-3.5 h-3.5 mb-1 ${wk.completed ? "text-white" : "text-[#CCCCCC]"}`}
+                  />
+                  <span className="text-[9px] font-bold">{wk.label}</span>
+                  <span className="text-[7px] opacity-70">
+                    (
+                    {wk.label === "WK#06"
+                      ? "Feb 1-7"
+                      : wk.label === "WK#07"
+                        ? "Feb 8-14"
+                        : wk.label === "WK#08"
+                          ? "Feb 15-21"
+                          : "Feb 22-28"}
+                    )
                   </span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Weekly Track */}
-          <div className="mb-4">
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-[14px] font-bold text-[#0F766E]">
-                Weekly ({monthNameStatus} {currentYearStatus})
-              </span>
-              <span className="text-[14px] font-bold text-slate-800">
-                {weeklyCompletedCount}/5
-              </span>
-            </div>
-            <div className="flex justify-between gap-1 sm:gap-1.5 w-full">
-              {weeklyBlocks.map((wk, idx) => (
-                <div
-                  key={idx}
-                  className="flex flex-col items-center gap-1 flex-1 min-w-0"
-                >
-                  <div
-                    className={`w-full aspect-square max-w-[48px] rounded-[8px] sm:rounded-[10px] flex items-center justify-center transition-all ${
-                      wk.completed
-                        ? "bg-[#14B8A6] shadow-sm"
-                        : "bg-white border-[1.5px] border-[#99F6E4]"
-                    }`}
-                  >
-                    {wk.completed ? (
-                      <svg
-                        width="50%"
-                        height="50%"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <circle
-                          cx="12"
-                          cy="12"
-                          r="9"
-                          stroke="white"
-                          strokeWidth="2"
-                        />
-                        <path
-                          d="M8 12L11 15L16 9"
-                          stroke="white"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    ) : (
-                      <Calendar
-                        className="w-[45%] h-[45%] text-[#99F6E4]"
-                        strokeWidth={2}
-                      />
-                    )}
-                  </div>
-                  <div className="text-center mt-1 w-full">
-                    <div className="text-[9px] sm:text-[10px] font-bold text-[#0F766E] leading-tight mb-0.5 truncate">
-                      {wk.label}
-                    </div>
-                    <div className="text-[8px] sm:text-[9px] font-medium text-[#0F766E] opacity-90 leading-tight truncate">
-                      {wk.datesLabel}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="flex justify-between items-center mt-auto pt-4 border-t border-[#A7F3D0]/60">
-            <span className="text-[14px] font-bold text-[#0F766E]">
-              Keep up the momentum!
+          <div className="mt-auto pt-6 flex justify-between items-center border-t border-[#E8E4D9]/50">
+            <span className="font-bold text-[#333333] uppercase tracking-wider text-[10px]">
+              Keep Up The Momentum!
             </span>
-            <span className="text-[15px] font-extrabold text-slate-800">
+            <span className="text-[11px] font-bold text-[#333333]">
               {percentComplete}% Complete
             </span>
           </div>
         </Card>
       </div>
 
-      {/* Purpose & Direction Section */}
-      <div className="mt-8 mb-8">
-        <div className="flex items-center gap-2 mb-3">
-          <Heart className="w-[18px] h-[18px] text-[#E63946]" strokeWidth={2} />
-          <h2 className="text-[15px] font-bold text-slate-700">
-            Purpose & Direction
-          </h2>
-        </div>
+      {/* Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-8 rounded-xl flex flex-col min-h-[380px] shadow-none">
+          {/* Header Stats Block */}
+          <div className="flex items-center justify-between mb-8 pb-6 border-b border-[#EFEDE7]">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-[#D32F2F] rounded-xl flex items-center justify-center text-white shadow-sm">
+                <Zap className="w-6 h-6 fill-current" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[12px] font-bold text-[#6B7280] uppercase tracking-wider">
+                  Avg Energy
+                </span>
+                <span className="text-2xl font-bold text-[#111111]">
+                  {summaryData?.energy_average !== null &&
+                  summaryData?.energy_average !== undefined
+                    ? ` ${Number(summaryData.energy_average).toFixed(1)}`
+                    : " - "}
+                </span>
+              </div>
+            </div>
 
-        <Card className="bg-[#FFF8F8] border border-[#E63946] rounded-[16px] shadow-sm transition-all hover:shadow-md p-4 sm:p-5">
-          {/* Top Header Row */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <Sparkles
-                className="w-[18px] h-[18px] text-slate-900"
-                strokeWidth={2.5}
-              />
-              <h3 className="font-bold text-[18px] text-slate-900 tracking-tight">
-                My Mission
+            <div className="w-px h-10 bg-[#EFEDE7]" />
+
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-[#D32F2F] rounded-xl flex items-center justify-center text-white shadow-sm">
+                <Heart className="w-6 h-6 fill-current" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[12px] font-bold text-[#6B7280] uppercase tracking-wider">
+                  Alignment
+                </span>
+                <span className="text-2xl font-bold text-[#111111]">
+                  {summaryData?.alignment_average !== null &&
+                  summaryData?.alignment_average !== undefined
+                    ? ` ${Number(summaryData.alignment_average).toFixed(1)}`
+                    : " - "}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* This Week Calendar Widget */}
+          <div className="bg-white border border-[#EFEDE7] p-6 rounded-2xl flex-1 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <button
+                onClick={handlePrevWeek}
+                className="p-1 hover:bg-[#F9FAFB] rounded-full transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5 text-[#C4b89D]" />
+              </button>
+              <h4 className="text-[15px] font-bold text-[#374151]">
+                {getWeekLabel()}
+              </h4>
+              <button
+                onClick={handleNextWeek}
+                className="p-1 hover:bg-[#F9FAFB] rounded-full transition-colors"
+              >
+                <ChevronRight className="w-5 h-5 text-[#C4b89D]" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-7 gap-2 mb-6">
+              {weekData.map((day, idx) => (
+                <div
+                  key={idx}
+                  className={`flex flex-col items-center p-2 rounded-xl transition-all ${day.active ? "border-2 border-[#C4b89D] bg-[#FFF7ED]" : "bg-[#F9FAFB] border border-transparent"}`}
+                >
+                  <span
+                    className={`text-[11px] font-bold mb-1 ${day.active ? "text-[#C4b89D]" : "text-[#6B7280]"}`}
+                  >
+                    {day.day}
+                  </span>
+                  <span
+                    className={`text-[14px] font-extrabold mb-1.5 ${day.active ? "text-[#111111]" : "text-[#374151]"}`}
+                  >
+                    {day.date}
+                  </span>
+                  <div
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      day.state === "filled"
+                        ? "bg-[#22C55E]"
+                        : day.state === "missed"
+                          ? "bg-[#EF4444]"
+                          : "bg-[#D1D5DB]"
+                    }`}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-center gap-6">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-[#22C55E]" />
+                <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
+                  Filled
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-[#EF4444]" />
+                <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
+                  Missed
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-[#D1D5DB]" />
+                <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
+                  Upcoming
+                </span>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-10 rounded-xl flex flex-col min-h-[320px] items-center justify-center text-center shadow-none relative">
+          <div className="absolute top-10 left-10 flex items-center justify-between w-[calc(100%-80px)]">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-6 h-6 text-[#333333]" />
+              <h3 className="font-bold text-[#333333] text-[18px]">
+                Highest Rank
               </h3>
             </div>
-
-            <div className="flex items-center gap-2">
-              <TrendingUp
-                className="w-[14px] h-[14px] text-slate-900"
-                strokeWidth={2.5}
-              />
-              <span className="text-[14px] font-extrabold text-slate-900">
-                {summaryData?.alignment_average !== null &&
-                summaryData?.alignment_average !== undefined
-                  ? Number(summaryData.alignment_average).toFixed(1)
-                  : "5.0"}
-                /10
-              </span>
-              <div className="w-6 sm:w-10 h-[2.5px] bg-slate-900 rounded-full ml-1"></div>
-            </div>
+            <Link to="/achievements">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-[#BBA48B] font-bold text-[12px] hover:text-white hover:bg-red-700 h-auto p-0 px-2 uppercase tracking-wider"
+              >
+                View All
+              </Button>
+            </Link>
           </div>
-
-          {/* Content: Mission Text & Vision Board Image */}
-          <div className="mt-6 flex flex-col gap-6">
-            {/* Life Mission Text */}
-            {previewData.mission && (
-              <p className="text-xl font-bold text-slate-900">
-                {previewData.mission}
-              </p>
-            )}
-
-            {/* Vision Board Card */}
-            {previewData.vision_images &&
-              previewData.vision_images.length > 0 && (
-                <div className="bg-white rounded-[16px] p-5 shadow-sm border border-[#FEE2E2]">
-                  <div className="flex items-center gap-2.5 mb-4">
-                    <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center">
-                      <Heart
-                        className="w-4 h-4 text-[#E63946]"
-                        strokeWidth={2.5}
-                      />
-                    </div>
-                    <h4 className="font-bold text-slate-900 text-[16px]">
-                      Vision Board
-                    </h4>
-                  </div>
-
-                  <div className="relative rounded-[8px] overflow-hidden bg-slate-50 border border-slate-200">
-                    <img
-                      src={previewData.vision_images[0]}
-                      alt="Vision Board"
-                      className="w-full h-auto object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
+          <div className="bg-white w-28 h-28 rounded-full border border-[#E8E4D9] flex items-center justify-center mb-6">
+            <Trophy className="w-12 h-12 text-[#EFEDE7]" />
           </div>
+          <p className="text-[13px] text-[#AAAAAA] font-bold uppercase tracking-widest">
+            No rank achieved yet
+          </p>
+        </Card>
+
+        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-10 rounded-xl flex flex-col min-h-[320px] items-center justify-center text-center shadow-none relative">
+          <div className="absolute top-10 left-10 flex items-center gap-2">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#333333"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            <h3 className="font-bold text-[#333333] text-[18px]">People</h3>
+          </div>
+          <div
+            className="bg-white w-28 h-28 rounded-full border border-[#E8E4D9] flex items-center justify-center mb-6"
+            onClick={peopleHandler}
+            style={{ cursor: "pointer" }}
+          >
+            <svg
+              width="36"
+              height="36"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#EFEDE7"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </div>
+          <p className="text-[13px] text-[#AAAAAA] font-bold uppercase tracking-widest">
+            No people added yet
+          </p>
         </Card>
       </div>
 
-      {/* Execution & Tracking */}
-      <div>
-        <div className="flex items-center gap-2 mb-3 mt-8">
-          <Zap className="w-4 h-4 text-[#E63946]" strokeWidth={2.5} />
-          <h2 className="text-sm font-bold text-slate-800">
-            Execution & Tracking
-          </h2>
+      {/* Purpose & Direction Section */}
+      <div className="mb-4">
+        <h2 className="text-sm font-bold text-[#555555] opacity-80 uppercase tracking-widest">
+          Purpose & Direction
+        </h2>
+      </div>
+
+      <Card className="bg-[#FAF9F6] border-[#E8E4D9] rounded-xl shadow-none p-8 mb-10">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-5 h-5 text-[#BBA48B]" />
+            <h3 className="font-bold text-[#333333] text-[18px]">My Mission</h3>
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* UPDATED Journaling Consistency Block */}
-          <Card className="p-5 bg-[#FFF9F5] border border-[#FDBA74] shadow-sm rounded-[20px] flex flex-col transition-all hover:shadow-md">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-8 h-8 rounded-[8px] bg-[#F59E0B] flex items-center justify-center text-white shadow-sm">
-                <Flame className="w-4 h-4 fill-current" />
-              </div>
-              <h3 className="font-bold text-slate-800 text-[16px]">
-                Journaling Consistency
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="bg-white rounded-xl p-4 flex flex-col items-center justify-center shadow-sm border border-slate-100">
-                <div className="flex items-center gap-2 mb-1 text-slate-800">
-                  <Flame className="w-5 h-5 text-[#F97316]" strokeWidth={2.5} />
-                  <span className="text-[22px] font-extrabold leading-none">
-                    {summaryData?.current_streak || 0}
-                  </span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+          <div>
+            <p className="text-[20px] font-bold text-[#333333] leading-tight">
+              {previewData.mission || "Define your mission to see it here."}
+            </p>
+          </div>
+          {previewData.vision_images &&
+            previewData.vision_images.length > 0 && (
+              <div className="bg-white rounded-xl p-4 border border-[#E8E4D9]">
+                <h4 className="font-bold text-[#333333] text-[14px] mb-4">
+                  Vision Board
+                </h4>
+                <div className="rounded-lg overflow-hidden">
+                  <img
+                    src={previewData.vision_images[0]}
+                    alt="Vision Board"
+                    className="w-full h-auto object-cover max-h-[200px]"
+                  />
                 </div>
-                <span className="text-[12px] text-slate-500 font-medium mt-1">
-                  Current Streak
-                </span>
               </div>
+            )}
+        </div>
+      </Card>
 
-              <div className="bg-white rounded-xl p-4 flex flex-col items-center justify-center shadow-sm border border-slate-100">
-                <div className="flex items-center gap-2 mb-1 text-slate-800">
-                  <Calendar
-                    className="w-5 h-5 text-[#3B82F6]"
-                    strokeWidth={2.5}
-                  />
-                  <span className="text-[22px] font-extrabold leading-none">
-                    {last30DaysCount}
-                  </span>
-                </div>
-                <span className="text-[12px] text-slate-500 font-medium mt-1">
-                  Last 30 Days
-                </span>
-              </div>
+      {/* Execution & Tracking Section */}
+      <div className="mb-4">
+        <h2 className="text-sm font-bold text-[#555555] opacity-80 uppercase tracking-widest">
+          Execution & Tracking
+        </h2>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+        {/* Journaling Consistency */}
+        <Card className="bg-white border-[#E8E4D9] p-8 rounded-xl shadow-none">
+          <div className="flex items-center gap-2 mb-8">
+            <Sparkles className="w-5 h-5 text-[#BBA48B]" />
+            <h3 className="font-bold text-[#333333] text-[18px]">
+              Journaling Consistency
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            <div className="bg-white border border-[#EFEDE7] p-4 rounded-md text-center">
+              <span className="text-2xl font-bold text-[#333333]">
+                {summaryData?.current_streak || 0}
+              </span>
+              <span className="font-bold text-[#333333] ml-2 uppercase tracking-wide text-[10px]">
+                Current Streak
+              </span>
             </div>
-
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100 mb-4">
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-[13px] font-bold text-slate-700">
-                  Consistency Score
-                </span>
-                <span className="font-extrabold text-slate-900 text-[14px]">
-                  {consistencyScore}%
-                </span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-2.5 mb-3">
-                <div
-                  className="bg-[#F59E0B] h-2.5 rounded-full transition-all duration-500"
-                  style={{
-                    width: `${consistencyScore}%`,
-                  }}
-                ></div>
-              </div>
-              <div className="flex justify-center items-center gap-1.5 text-[11px] font-semibold text-[#D97706]">
-                <span>🏆</span> Longest streak: {longestStreak} days
-              </div>
+            <div className="bg-white border border-[#EFEDE7] p-4 rounded-md text-center">
+              <span className="text-2xl font-bold text-[#333333]">
+                {last30DaysCount}
+              </span>
+              <span className="font-bold text-[#333333] ml-2 uppercase tracking-wide text-[10px]">
+                Last 30 Days
+              </span>
             </div>
+          </div>
 
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
-              <h4 className="text-[13px] font-bold text-slate-700 mb-6 text-center">
-                Life Balance (Last 7 Days)
-              </h4>
-              <div className="relative w-full aspect-square max-w-[200px] mx-auto">
-                <svg
-                  viewBox="0 0 100 100"
-                  className="w-full h-full stroke-slate-200 fill-none"
-                  strokeWidth="0.5"
-                >
-                  {/* Grid lines */}
-                  <polygon
-                    points="50,10 90,40 75,90 25,90 10,40"
-                    strokeDasharray="2,2"
-                  />
-                  <polygon
-                    points="50,30 70,45 62,70 38,70 30,45"
-                    strokeDasharray="1,1"
-                  />
-                  <line x1="50" y1="50" x2="50" y2="10" />
-                  <line x1="50" y1="50" x2="90" y2="40" />
-                  <line x1="50" y1="50" x2="75" y2="90" />
-                  <line x1="50" y1="50" x2="25" y2="90" />
-                  <line x1="50" y1="50" x2="10" y2="40" />
+          <div className="mb-10">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-[14px] font-bold text-[#444444]">
+                Consistency Score
+              </span>
+              <span className="text-[14px] font-bold text-[#444444]">
+                {consistencyScore}%
+              </span>
+            </div>
+            <div className="w-full bg-[#EFEDE7] h-2.5 rounded-full overflow-hidden">
+              <div
+                className="bg-[#D2B48C] h-full rounded-full transition-all duration-500"
+                style={{ width: `${consistencyScore}%` }}
+              ></div>
+            </div>
+          </div>
 
-                  {/* Dynamic Data Polygon */}
+          <div className="pt-6 border-t border-[#EFEDE7]">
+            <h4 className="text-[12px] font-bold text-[#555555] mb-8 text-center uppercase tracking-widest">
+              Life Balance (Last 7 Days)
+            </h4>
+            <div className="flex justify-center">
+              <div className="relative w-64 h-64">
+                <svg viewBox="0 0 100 100" className="w-full h-full">
+                  {[20, 40, 60, 80, 100].map((r) => (
+                    <polygon
+                      key={r}
+                      points="50,10 90,40 75,90 25,90 10,40"
+                      transform={`scale(${r / 100}) translate(${(100 - r) / 2},${(100 - r) / 2})`}
+                      fill="none"
+                      stroke="#EFEDE7"
+                      strokeWidth="0.5"
+                    />
+                  ))}
+                  {[0, 72, 144, 216, 288].map((angle) => {
+                    const x2 =
+                      50 + 50 * Math.cos((angle - 90) * (Math.PI / 180));
+                    const y2 =
+                      50 + 50 * Math.sin((angle - 90) * (Math.PI / 180));
+                    return (
+                      <line
+                        key={angle}
+                        x1="50"
+                        y1="50"
+                        x2={x2}
+                        y2={y2}
+                        stroke="#EFEDE7"
+                        strokeWidth="0.5"
+                      />
+                    );
+                  })}
                   {summaryData?.life_balance && (
                     <polygon
                       points={`
-                        50,${50 - (summaryData.life_balance.career || 0) * 4} 
-                        ${50 + (summaryData.life_balance.health || 0) * 4},${50 - (summaryData.life_balance.health || 0) * 1}
-                        ${50 + (summaryData.life_balance.relationships || 0) * 2.5},${50 + (summaryData.life_balance.relationships || 0) * 4}
-                        ${50 - (summaryData.life_balance.growth || 0) * 2.5},${50 + (summaryData.life_balance.growth || 0) * 4}
-                        ${50 - (summaryData.life_balance.finance || 0) * 4},${50 - (summaryData.life_balance.finance || 0) * 1}
+                        ${50 + (summaryData.life_balance.career || 0) * 4 * Math.cos((0 - 90) * (Math.PI / 180))},${50 + (summaryData.life_balance.career || 0) * 4 * Math.sin((0 - 90) * (Math.PI / 180))}
+                        ${50 + (summaryData.life_balance.growth || 0) * 4 * Math.cos((72 - 90) * (Math.PI / 180))},${50 + (summaryData.life_balance.growth || 0) * 4 * Math.sin((72 - 90) * (Math.PI / 180))}
+                        ${50 + (summaryData.life_balance.relationships || 0) * 4 * Math.cos((144 - 90) * (Math.PI / 180))},${50 + (summaryData.life_balance.relationships || 0) * 4 * Math.sin((144 - 90) * (Math.PI / 180))}
+                        ${50 + (summaryData.life_balance.growth || 0) * 4 * Math.cos((216 - 90) * (Math.PI / 180))},${50 + (summaryData.life_balance.growth || 0) * 4 * Math.sin((216 - 90) * (Math.PI / 180))}
+                        ${50 + (summaryData.life_balance.finance || 0) * 4 * Math.cos((288 - 90) * (Math.PI / 180))},${50 + (summaryData.life_balance.finance || 0) * 4 * Math.sin((288 - 90) * (Math.PI / 180))}
                       `}
-                      fill="rgba(45, 212, 191, 0.6)"
-                      stroke="#14B8A6"
+                      fill="rgba(210, 180, 140, 0.4)"
+                      stroke="#BBA48B"
                       strokeWidth="1.5"
-                      className="transition-all duration-1000"
                     />
                   )}
+                  <text
+                    x="50"
+                    y="5"
+                    textAnchor="middle"
+                    fontSize="4"
+                    fontWeight="bold"
+                    fill="#777777"
+                  >
+                    Career
+                  </text>
+                  <text
+                    x="95"
+                    y="42"
+                    textAnchor="start"
+                    fontSize="4"
+                    fontWeight="bold"
+                    fill="#777777"
+                  >
+                    Growth
+                  </text>
+                  <text
+                    x="75"
+                    y="93"
+                    textAnchor="middle"
+                    fontSize="4"
+                    fontWeight="bold"
+                    fill="#777777"
+                  >
+                    Relationships
+                  </text>
+                  <text
+                    x="25"
+                    y="93"
+                    textAnchor="middle"
+                    fontSize="4"
+                    fontWeight="bold"
+                    fill="#777777"
+                  >
+                    Personal Growth
+                  </text>
+                  <text
+                    x="5"
+                    y="42"
+                    textAnchor="end"
+                    fontSize="4"
+                    fontWeight="bold"
+                    fill="#777777"
+                  >
+                    Finance
+                  </text>
                 </svg>
-
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[9px] font-bold text-slate-500">
-                  Career
-                </span>
-                <span className="absolute top-[35%] -right-4 text-[9px] font-bold text-slate-500">
-                  Health
-                </span>
-                <span className="absolute -bottom-3 -right-2 text-[9px] font-bold text-slate-500">
-                  Relationships
-                </span>
-                <span className="absolute -bottom-3 -left-4 text-[9px] font-bold text-slate-500">
-                  Personal Growth
-                </span>
-                <span className="absolute top-[35%] -left-3 text-[9px] font-bold text-slate-500">
-                  Finance
-                </span>
-              </div>
-            </div>
-          </Card>
-
-          {/* REBUILT: This Week's Strategic Focus (formerly Focus Areas) */}
-          <Card className="p-6 bg-red-50/50 border border-red-200 shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)] rounded-[20px] flex flex-col min-h-[400px]">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <div className="w-[42px] h-[42px] rounded-[12px] bg-red-500 flex items-center justify-center text-white shadow-sm">
-                  <Target className="w-[22px] h-[22px]" strokeWidth={2} />
-                </div>
-                <h3 className="font-bold text-slate-800 text-[17px] tracking-tight">
-                  This Week's Strategic Focus
-                </h3>
-              </div>
-            </div>
-
-            {/* Note: I'm keeping the logic here empty state until the specific API implementation is complete as discussed previously, it acts as a placeholder based on your empty layout request. Let me know if you need to fetch list. */}
-            <div className="flex-1 flex flex-col items-center justify-center text-center">
-              <Target className="w-[100px] h-[100px] text-red-200 stroke-[0.8] mb-6" />
-              <p className="text-[14px] text-slate-500 font-medium max-w-[280px] leading-relaxed">
-                Complete your weekly reflection to see your focus areas here
-              </p>
-            </div>
-          </Card>
-        </div>
-      </div>
-
-      {/* NEW: Habit Tracking Section */}
-      <div className="mt-8 mb-8">
-        <Card className="bg-[#F0FDF8] border-[1.5px] border-[#5EEAD4] shadow-sm rounded-[20px] overflow-hidden transition-all hover:shadow-md">
-          {/* Header */}
-          <div className="p-4 md:p-5 flex items-center justify-between border-b border-[#CCFBF1] bg-white/50">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-[8px] bg-[#14B8A6] flex items-center justify-center text-white shadow-sm">
-                <Zap className="w-4 h-4 fill-current" />
-              </div>
-              <h3 className="font-bold text-slate-800 text-[16px]">
-                Habit Tracking
-              </h3>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 text-[11px] font-bold text-slate-700 bg-white border-slate-200 rounded-full px-4"
-              asChild
-            >
-              <Link to="/goals-habits">View All</Link>
-            </Button>
-          </div>
-
-          {/* Content */}
-          <div className="p-5 bg-white">
-            {/* Top Stats */}
-            <div className="grid grid-cols-2 gap-4 mb-6 border-b border-slate-100 pb-6">
-              <div>
-                <p className="text-[11px] font-bold text-slate-500 mb-1 tracking-wide">
-                  Active Habits
-                </p>
-                <p className="text-[26px] font-extrabold text-[#0F766E] leading-none">
-                  {activeHabitsCount}
-                </p>
-              </div>
-              <div>
-                <p className="text-[11px] font-bold text-slate-500 mb-1 tracking-wide">
-                  Avg. Completion
-                </p>
-                <p className="text-[26px] font-extrabold text-[#14B8A6] leading-none">
-                  {avgHabitCompletion}%
-                </p>
-              </div>
-            </div>
-
-            {/* Habit Lists */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Daily Habits */}
-              <div>
-                <h4 className="text-[13px] font-bold text-slate-800 mb-4">
-                  Daily Habits
-                </h4>
-                {dailyHabits.length > 0 ? (
-                  <div className="space-y-5">
-                    {dailyHabits.map((habit, idx) => (
-                      <div key={idx} className="flex flex-col gap-2.5">
-                        <div className="flex justify-between items-center">
-                          <span className="text-[13px] font-extrabold text-slate-800">
-                            {habit.name || habit.title}
-                          </span>
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] px-2.5 py-0 h-[18px] border-slate-200 text-slate-600 bg-white rounded-full"
-                          >
-                            {habit.category || habit.habit_category || "Other"}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                            <div
-                              className="bg-[#0F172A] h-full rounded-full transition-all duration-500"
-                              style={{
-                                width: `${habit.completion_percentage || habit.completion_rate || 0}%`,
-                              }}
-                            ></div>
-                          </div>
-                          <span className="text-[11px] font-bold text-[#14B8A6] min-w-[28px] text-right">
-                            {habit.completion_percentage ||
-                              habit.completion_rate ||
-                              0}
-                            %
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[12px] text-slate-400 italic">
-                    No daily habits
-                  </p>
-                )}
-              </div>
-
-              {/* Weekly Habits */}
-              <div>
-                <h4 className="text-[13px] font-bold text-slate-800 mb-4">
-                  Weekly Habits
-                </h4>
-                {weeklyHabits.length > 0 ? (
-                  <div className="space-y-5">
-                    {weeklyHabits.map((habit, idx) => (
-                      <div key={idx} className="flex flex-col gap-2.5">
-                        <div className="flex justify-between items-center">
-                          <span className="text-[13px] font-extrabold text-slate-800">
-                            {habit.name || habit.title}
-                          </span>
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] px-2.5 py-0 h-[18px] border-slate-200 text-slate-600 bg-white rounded-full"
-                          >
-                            {habit.category || habit.habit_category || "Other"}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                            <div
-                              className="bg-[#0F172A] h-full rounded-full transition-all duration-500"
-                              style={{
-                                width: `${habit.completion_percentage || habit.completion_rate || 0}%`,
-                              }}
-                            ></div>
-                          </div>
-                          <span className="text-[11px] font-bold text-[#14B8A6] min-w-[28px] text-right">
-                            {habit.completion_percentage ||
-                              habit.completion_rate ||
-                              0}
-                            %
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[12px] text-slate-400 italic">
-                    No weekly habits
-                  </p>
-                )}
               </div>
             </div>
           </div>
         </Card>
+
+        {/* Focus Areas */}
+        <Card className="bg-white border border-[#E8E4D9] rounded-xl shadow-none flex flex-col p-10 justify-center">
+          <div className="flex items-center gap-3 mb-4">
+            <Lightbulb className="w-6 h-6 text-[#BBA48B]" />
+            <h3 className="font-bold text-[#333333] text-[20px] max-w-sm leading-tight text-left">
+              Complete Your Weekly Reflection To See Your Focus Areas Here
+            </h3>
+          </div>
+        </Card>
       </div>
 
-      {/* Review & Growth */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <BookOpen className="w-5 h-5 text-[#E63946]" strokeWidth={2} />
-          <h2 className="text-[15px] font-bold text-slate-700">
-            Review & Growth
-          </h2>
+      {/* Habit Tracking Section */}
+      <div className="mb-4">
+        <h2 className="text-sm font-bold text-[#555555] opacity-80 uppercase tracking-widest">
+          Habit Tracking
+        </h2>
+      </div>
+
+      <Card className="bg-white border-[#E8E4D9] rounded-xl shadow-none overflow-hidden mb-10">
+        <div className="p-6 border-b border-[#EFEDE7] bg-[#FAF9F6]/50 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Zap className="w-5 h-5 text-[#BBA48B]" />
+            <h3 className="font-bold text-[#333333] text-[17px]">
+              Active Habits
+            </h3>
+          </div>
+          <div className="flex gap-8">
+            <div className="text-center">
+              <p className="text-[20px] font-bold text-[#333333]">
+                {activeHabitsCount}
+              </p>
+              <p className="text-[10px] font-bold text-[#AAAAAA] uppercase">
+                Total
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-[20px] font-bold text-[#BBA48B]">
+                {avgHabitCompletion}%
+              </p>
+              <p className="text-[10px] font-bold text-[#AAAAAA] uppercase">
+                Avg. Comp
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* UPDATED: Recent Journal Entries */}
-          <Card className="p-6 bg-[#FFF6EE] border-2 border-[#F97316] shadow-sm flex flex-col min-h-[220px] rounded-[20px]">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-slate-900 text-[16px]">
+        <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-10">
+          <div className="space-y-6">
+            <h4 className="text-[14px] font-bold text-[#555555] opacity-70 uppercase tracking-wider">
+              Daily Habits
+            </h4>
+            {dailyHabits.length > 0 ? (
+              dailyHabits.map((h, i) => (
+                <div key={i} className="space-y-2">
+                  <div className="flex justify-between items-center text-[14px] font-bold text-[#333333]">
+                    <span>{h.name}</span>
+                    <span>{h.completion_percentage}%</span>
+                  </div>
+                  <div className="w-full bg-[#EFEDE7] h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-[#D2B48C] h-full"
+                      style={{ width: `${h.completion_percentage}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-[#AAAAAA] italic font-medium">
+                No daily habits active.
+              </p>
+            )}
+          </div>
+          <div className="space-y-6">
+            <h4 className="text-[14px] font-bold text-[#555555] opacity-70 uppercase tracking-wider">
+              Weekly Habits
+            </h4>
+            {weeklyHabits.length > 0 ? (
+              weeklyHabits.map((h, i) => (
+                <div key={i} className="space-y-2">
+                  <div className="flex justify-between items-center text-[14px] font-bold text-[#333333]">
+                    <span>{h.name}</span>
+                    <span>{h.completion_percentage}%</span>
+                  </div>
+                  <div className="w-full bg-[#EFEDE7] h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-[#D2B48C] h-full"
+                      style={{ width: `${h.completion_percentage}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-[#AAAAAA] italic font-medium">
+                No weekly habits active.
+              </p>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      {/* Review & Growth Section */}
+      <div className="mb-4">
+        <h2 className="text-sm font-bold text-[#555555] opacity-80 uppercase tracking-widest">
+          Review & Growth
+        </h2>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-8 rounded-xl shadow-none">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <BookOpen className="w-5 h-5 text-[#BBA48B]" />
+              <h3 className="font-bold text-[#333333] text-[18px]">
                 Recent Journal Entries
               </h3>
-              <Link to="/daily-journal">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs font-semibold text-slate-700 border-slate-200 bg-white hover:bg-slate-50 rounded-full px-4"
+            </div>
+            <Link to="/daily-journal">
+              <Button
+                size="sm"
+                className="bg-[#BBA48B] hover:bg-[#A68F76] text-white font-bold text-[12px] rounded-md px-3 h-8 shadow-sm"
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Add Entry
+              </Button>
+            </Link>
+          </div>
+          <div className="space-y-4">
+            {recentJournals.length > 0 ? (
+              recentJournals.slice(0, 3).map((j, i) => (
+                <div
+                  key={i}
+                  className="bg-white border border-[#EFEDE7] p-4 rounded-lg flex justify-between items-center"
                 >
-                  <Plus className="w-3.5 h-3.5 mr-1" /> Add Entry
-                </Button>
-              </Link>
-            </div>
-
-            <div className="flex-1 flex flex-col gap-4">
-              {recentJournals.length > 0 ? (
-                recentJournals.slice(0, 3).map((journal) => {
-                  const d = new Date(journal.start_date || journal.created_at);
-                  const month = d
-                    .toLocaleDateString("en-US", { month: "short" })
-                    .toUpperCase();
-                  const date = d.getDate();
-                  const weekday = d.toLocaleDateString("en-US", {
-                    weekday: "long",
-                  });
-                  const year = d.getFullYear();
-                  const energy = journal.energy_score ?? 5;
-                  const alignment = journal.alignment_score ?? 5;
-                  const note =
-                    journal.data?.description ||
-                    journal.description ||
-                    journal.gratitude_note ||
-                    journal.affirmation;
-
-                  return (
-                    <div
-                      key={journal.id}
-                      className="bg-white rounded-[16px] p-4 shadow-sm border border-slate-100 flex flex-col gap-3"
-                    >
-                      <div className="flex items-start gap-4">
-                        {/* Date Badge */}
-                        <div className="bg-[#FFEDD5] rounded-xl py-2 px-3 flex flex-col items-center justify-center min-w-[54px]">
-                          <span className="text-[#EA580C] text-[10px] font-bold">
-                            {month}
-                          </span>
-                          <span className="text-[#9A3412] text-lg font-extrabold leading-none mt-0.5">
-                            {date}
-                          </span>
-                        </div>
-
-                        {/* Info */}
-                        <div className="flex-1 pt-0.5">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h4 className="font-bold text-slate-900 text-[15px]">
-                              {weekday}, {year}
-                            </h4>
-                            <div className="w-4 h-4 rounded-md border border-purple-200 bg-purple-50"></div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Badge
-                              variant="secondary"
-                              className="bg-orange-50 text-[#EA580C] hover:bg-orange-50 border-0 px-2 py-0.5 text-[11px] gap-1 font-bold"
-                            >
-                              <Zap className="w-3 h-3 fill-current" /> {energy}
-                              /10
-                            </Badge>
-                            <Badge
-                              variant="secondary"
-                              className="bg-teal-50 text-teal-600 hover:bg-teal-50 border-0 px-2 py-0.5 text-[11px] gap-1 font-bold"
-                            >
-                              <Target className="w-3 h-3" /> {alignment}/10
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="h-px bg-slate-100 w-full my-1"></div>
-
-                      <div className="flex items-center gap-2.5">
-                        {note ? (
-                          <>
-                            <div className="w-5 h-5 rounded-full bg-green-50 border border-green-100 flex items-center justify-center flex-shrink-0">
-                              <svg
-                                width="10"
-                                height="10"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="3"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="text-green-500"
-                              >
-                                <polyline points="20 6 9 17 4 12"></polyline>
-                              </svg>
-                            </div>
-                            <span className="text-[13px] text-slate-600 font-medium truncate">
-                              {note}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-[13px] text-slate-400 italic">
-                            No detailed notes recorded.
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-[13px] text-slate-400 font-medium text-center py-6 bg-white rounded-xl border border-slate-100">
-                  No entries yet. Start journaling today!
-                </p>
-              )}
-            </div>
-          </Card>
-
-          {/* REBUILT Personalized Insights */}
-          <Card className="p-6 bg-[#FCFaff] border border-[#E9D5FF] shadow-[0_4px_20px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)] flex flex-col min-h-[220px] rounded-[20px]">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-[42px] h-[42px] rounded-[12px] bg-[#A855F7] flex items-center justify-center text-white shadow-sm">
-                <Lightbulb className="w-[20px] h-[20px] fill-current" />
-              </div>
-              <h3 className="font-bold text-slate-800 text-[17px]">
-                Personalized Insights
-              </h3>
-            </div>
-
-            {insightsData.personalized_insights.length > 0 ? (
-              <div className="flex-1 flex flex-col gap-3">
-                {insightsData.personalized_insights
-                  .slice(0, 3)
-                  .map((insight, idx) => {
-                    const insightText =
-                      insight.insight ||
-                      insight.text ||
-                      JSON.stringify(insight);
-                    // Determine if it's an alert based on content, else standard chart icon
-                    const isAlert =
-                      insightText
-                        .toLowerCase()
-                        .includes("hasn't gotten much attention") ||
-                      insightText.toLowerCase().includes("consider dedicating");
-
-                    return (
-                      <div
-                        key={insight.id ?? idx}
-                        className="text-[13px] text-slate-600 font-medium bg-white rounded-[12px] px-4 py-3.5 border border-[#F3E8FF] shadow-sm flex items-start gap-3"
-                      >
-                        {isAlert ? (
-                          <AlertCircle
-                            className="w-4 h-4 text-[#A855F7] shrink-0 mt-[2px]"
-                            strokeWidth={2.5}
-                          />
-                        ) : (
-                          <TrendingUp
-                            className="w-4 h-4 text-[#A855F7] shrink-0 mt-[2px]"
-                            strokeWidth={2.5}
-                          />
-                        )}
-                        <span className="leading-snug">{insightText}</span>
-                      </div>
-                    );
-                  })}
-              </div>
+                  <div>
+                    <h4 className="font-bold text-[#333333] text-[14px] mb-1">
+                      {j.title || "Daily Journal"}
+                    </h4>
+                    <p className="text-[12px] text-[#888888] font-medium">
+                      {j.start_date || j.created_at}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-[#BBA48B] font-bold hover:bg-[#FAF9F6]"
+                  >
+                    View
+                  </Button>
+                </div>
+              ))
             ) : (
-              <div className="bg-white rounded-[12px] p-4 border border-[#F3E8FF] shadow-sm flex items-center gap-3 mt-auto">
-                <TrendingUp
-                  className="w-5 h-5 text-[#A855F7] shrink-0"
-                  strokeWidth={2.5}
-                />
-                <p className="text-[13px] text-slate-600 font-medium">
-                  Start journaling to discover patterns and insights about your
-                  journey!
-                </p>
-              </div>
+              <p className="text-sm text-[#AAAAAA] italic font-medium px-2">
+                No entries yet.
+              </p>
             )}
-          </Card>
-        </div>
+          </div>
+        </Card>
+
+        <Card className="bg-white border-[#E8E4D9] p-8 rounded-xl shadow-none">
+          <div className="flex items-center gap-3 mb-8">
+            <Sparkles className="w-5 h-5 text-[#BBA48B]" />
+            <h3 className="font-bold text-[#333333] text-[18px]">
+              Personalized Insights
+            </h3>
+          </div>
+          <div className="space-y-4">
+            {insightsData.personalized_insights.length > 0 ? (
+              insightsData.personalized_insights.slice(0, 2).map((ins, i) => (
+                <div
+                  key={i}
+                  className="bg-[#FAF9F6] border border-[#EFEDE7] p-4 rounded-lg italic text-[14px] text-[#444444] leading-relaxed font-medium"
+                >
+                  "{ins.insight || ins.text}"
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-[#AAAAAA] italic font-medium px-2">
+                Complete more journals to unlock insights.
+              </p>
+            )}
+          </div>
+        </Card>
       </div>
 
       {/* Bucket List & Leaderboard Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-        {/* Bucket List Dreams */}
-        <Card className="p-6 bg-[#FDF2F8] border border-[#FBCFE8] shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)] flex flex-col min-h-[350px] rounded-[20px]">
-          <div className="flex justify-between items-start mb-8">
-            <div className="flex gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F472B6] to-[#EC4899] flex items-center justify-center text-white shadow-sm shadow-pink-200">
-                <ListOrdered className="w-5 h-5 fill-current" />
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-800 text-[15px]">
-                  Bucket List Progress
-                </h3>
-                <p className="text-xs text-slate-500 font-medium">
-                  {previewData.bucket_preview.length} dreams
-                </p>
-              </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-8 rounded-xl shadow-none">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <Target className="w-5 h-5 text-[#BBA48B]" />
+              <h3 className="font-bold text-[#333333] text-[18px]">
+                Bucket List
+              </h3>
             </div>
-            <Link
-              to="/bucket-list"
-              className="font-bold text-xs text-[#EC4899] hover:underline mt-1 mr-1"
-            >
-              View All
+            <Link to="/leaderboard">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-[#BBA48B] font-bold text-[12px] hover:text-white hover:bg-red-700 h-auto p-0 px-2 uppercase tracking-wider"
+              >
+                View All
+              </Button>
             </Link>
           </div>
-
-          <div className="flex-1 flex flex-col gap-3">
+          <div className="space-y-4">
             {previewData.bucket_preview.length > 0 ? (
-              previewData.bucket_preview.slice(0, 3).map((item) => (
+              previewData.bucket_preview.slice(0, 3).map((item, i) => (
                 <div
-                  key={item.id}
-                  className="bg-white rounded-[16px] p-4 shadow-sm border border-[#FCE7F3] flex justify-between items-center transition-all hover:bg-pink-50/30"
+                  key={i}
+                  className="flex justify-between items-center text-[14px] font-medium text-[#444444] border-b border-[#EFEDE7] pb-3"
                 >
-                  <span className="font-extrabold text-slate-800 text-sm tracking-tight">
-                    {item.title}
-                  </span>
-                  <div className="flex gap-2 flex-wrap justify-end">
-                    {item.status && (
-                      <Badge className="bg-[#EC4899] hover:bg-[#DB2777] text-white text-[10px] px-2.5 py-0.5 rounded-full capitalize font-bold shadow-sm border-0">
-                        {item.status.replace(/_/g, " ")}
-                      </Badge>
-                    )}
-                    {item.category && (
-                      <Badge
-                        variant="outline"
-                        className="text-[#EC4899] border-[#FBCFE8] bg-pink-50 text-[10px] px-2.5 py-0.5 rounded-full capitalize font-bold"
-                      >
-                        {item.category}
-                      </Badge>
-                    )}
-                  </div>
+                  <span>{item.title}</span>
+                  <Badge
+                    variant="outline"
+                    className="border-[#E8E4D9] text-[#777777] bg-white text-[10px] font-bold uppercase"
+                  >
+                    {item.status}
+                  </Badge>
                 </div>
               ))
             ) : (
-              <div className="flex-1 flex items-center justify-center">
-                <p className="text-[13px] text-slate-400 font-medium">
-                  No bucket list items yet. Let's dream!
-                </p>
-              </div>
+              <p className="text-sm text-[#AAAAAA] italic font-medium">
+                Your dreams will appear here.
+              </p>
             )}
           </div>
         </Card>
 
-        {/* Leaderboard */}
-        <Card className="p-6 bg-white border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.04)] rounded-[20px] transition-all hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)] flex flex-col min-h-[350px]">
-          <div className="flex justify-between items-center mb-6">
+        <Card className="bg-white border-[#E8E4D9] p-8 rounded-xl shadow-none">
+          <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
-              <div className="w-[42px] h-[42px] rounded-[12px] bg-[#A855F7] flex items-center justify-center text-white shadow-sm">
-                <Trophy className="w-[20px] h-[20px] fill-current" />
-              </div>
-              <h3 className="font-bold text-slate-800 text-[17px]">
-                Leaderboard
+              <Trophy className="w-5 h-5 text-[#BBA48B]" />
+              <h3 className="font-bold text-[#333333] text-[18px]">
+                Global Leaderboard
               </h3>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-[30px] text-[11px] font-bold text-slate-700 border-slate-200 px-4 rounded-full shadow-none bg-white hover:bg-slate-50"
-              asChild
-            >
-              <Link to="/leaderboard">View All</Link>
-            </Button>
+            <Link to="/leaderboard">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-[#BBA48B] font-bold text-[12px] hover:text-white hover:bg-red-700 h-auto p-0 px-2 uppercase tracking-wider"
+              >
+                View All
+              </Button>
+            </Link>
           </div>
-
-          <div className="bg-[#F3E8FF] rounded-[16px] p-4 flex flex-col justify-center border border-[#E9D5FF] mb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-[42px] h-[42px] rounded-full bg-[#A855F7] flex items-center justify-center text-white font-extrabold text-[13px] shadow-sm tracking-tight">
-                #{leaderboardData.currentUser?.rank || "232"}
-              </div>
-              <div>
-                <p className="font-bold text-[15px] text-[#7E22CE] leading-tight mb-0.5 tracking-tight">
-                  Your Rank
-                </p>
-                <p className="text-[13px] text-[#9333EA] font-semibold leading-tight">
-                  {leaderboardData.currentUser?.points ??
-                    summaryData?.total_score ??
-                    10}{" "}
-                  pts
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex-1 flex flex-col px-2 gap-1">
+          <div className="space-y-4">
             {leaderboardData.top.length > 0 ? (
-              leaderboardData.top.map((person, idx) => (
+              leaderboardData.top.map((player, i) => (
                 <div
-                  key={idx}
-                  className="flex justify-between items-center py-3 border-b border-slate-100 last:border-b-0"
+                  key={i}
+                  className="flex justify-between items-center text-[14px] font-bold text-[#333333]"
                 >
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div
-                      className={`w-[26px] h-[26px] rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 shadow-sm ${
-                        idx === 0
-                          ? "bg-[#FEF9C3] border border-[#FDE047] text-[#A16207]"
-                          : idx === 1
-                            ? "bg-slate-200 text-slate-600 border border-slate-300"
-                            : idx === 2
-                              ? "bg-[#FFEDD5] border border-[#FED7AA] text-[#9A3412]"
-                              : "bg-slate-50 border border-slate-100 text-slate-500"
-                      }`}
-                    >
-                      {idx === 0
-                        ? "👑"
-                        : idx === 1
-                          ? "🥈"
-                          : idx === 2
-                            ? "🥉"
-                            : idx + 1}
-                    </div>
-                    <span className="font-bold text-[14px] text-slate-700 truncate tracking-tight">
-                      {person.name || person.user_name || "Unknown"}
-                    </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[#AAAAAA] w-4">{i + 1}</span>
+                    <span>{player.name || "Anonymous"}</span>
                   </div>
-                  <span className="font-extrabold text-[#9333EA] text-[14px] ml-4 flex-shrink-0">
-                    {person.points ?? person.score ?? 0}
-                  </span>
+                  <span>{player.points || player.score || 0} pts</span>
                 </div>
               ))
             ) : (
-              <div className="flex-1 flex items-center justify-center">
-                <p className="text-[13px] text-slate-400 font-medium pb-2">
-                  Loading leaderboard data...
-                </p>
-              </div>
+              <p className="text-sm text-[#AAAAAA] italic font-medium">
+                Leaderboard data coming soon.
+              </p>
             )}
           </div>
         </Card>

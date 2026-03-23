@@ -16,6 +16,7 @@ import {
   Trash2,
   Edit,
   Loader2,
+  Plus,
 } from "lucide-react";
 import { getAuthHeaders } from "@/config/api";
 import { toast } from "sonner";
@@ -240,32 +241,32 @@ export function AddDreamDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
 
-      <DialogContent className="max-w-[750px] max-h-[90vh] overflow-y-auto p-0 border-[#fde68a] bg-[#fffcf0] shadow-2xl rounded-xl custom-scrollbar sm:rounded-2xl">
-        <DialogHeader className="p-6 pb-4 border-b border-[#fef3c7] sticky top-0 bg-[#fffcf0] z-10">
-          <DialogTitle className="flex items-center gap-3 text-2xl font-bold text-[#ea580c]">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#a855f7] to-[#8b5cf6] shadow-inner">
+      <DialogContent className="max-w-[750px] max-h-[90vh] overflow-y-auto p-0 border-[#E8E4D9] bg-[#FDFCF9] shadow-2xl rounded-2xl custom-scrollbar">
+        <DialogHeader className="p-8 pb-5 border-b border-[#E8E4D9] sticky top-0 bg-[#FAF9F6] z-10 rounded-t-2xl">
+          <DialogTitle className="flex items-center gap-4 text-[24px] font-bold text-[#111111] tracking-tight">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white border border-[#E8E4D9] shadow-sm">
               {initialData ? (
-                <Edit className="h-5 w-5 text-yellow-300" />
+                <Edit className="h-6 w-6 text-[#BBA48B]" />
               ) : (
-                <Sparkles className="h-6 w-6 text-yellow-300" />
+                <Sparkles className="h-6 w-6 text-[#BBA48B]" />
               )}
             </div>
-            <div className="flex items-center gap-1.5">
-              {initialData ? (
-                <Edit className="h-5 w-5 text-[#ea580c]" />
-              ) : (
-                <Sparkles className="h-5 w-5 text-[#ea580c]" />
-              )}
-              {initialData ? "Edit Dream" : "Add New Dream"}
+            <div className="flex flex-col">
+              <span className="text-[20px] leading-tight mb-1">
+                {initialData ? "Refine Your Dream" : "Envision a New Dream"}
+              </span>
+              <span className="text-[11px] font-bold text-[#AAAAAA] uppercase tracking-widest">
+                Bucket List Mastery
+              </span>
             </div>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="px-8 py-6 space-y-7 text-[#334155]">
+        <div className="px-8 py-8 space-y-8 text-[#334155]">
           {/* Main Input */}
-          <div className="space-y-2">
-            <label className="flex items-center gap-1.5 text-[14px] font-bold text-[#ea580c]">
-              <Sparkles className="w-4 h-4" />
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 text-[11px] font-bold text-[#555555] uppercase tracking-widest opacity-80">
+              <Sparkles className="w-3.5 h-3.5 text-[#BBA48B]" />
               What's Your Dream? *
             </label>
             <input
@@ -273,21 +274,21 @@ export function AddDreamDialog({
               value={dreamTitle}
               onChange={(e) => setDreamTitle(e.target.value)}
               placeholder="e.g., Visit the Northern Lights, Write a Book, Learn to Surf..."
-              className="w-full bg-white border-2 border-[#ea580c] rounded-lg px-4 py-3 text-[#1e293b] outline-none shadow-sm focus:ring-4 focus:ring-[#ffedd5] font-medium"
+              className="w-full bg-white border border-[#E8E4D9] rounded-xl px-5 py-4 text-[#111111] font-bold text-[16px] outline-none shadow-none focus:border-[#BBA48B] transition-all placeholder:text-[#CCCCCC]"
             />
           </div>
 
           {/* Selects */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="space-y-2">
-              <label className="text-[13px] font-bold text-[#475569]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <label className="text-[11px] font-bold text-[#555555] uppercase tracking-widest opacity-80">
                 Dream Category
               </label>
               <div className="relative">
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full appearance-none bg-white border border-[#fed7aa] rounded-lg py-2.5 pl-4 pr-10 text-sm text-[#334155] font-semibold outline-none focus:border-[#ea580c] focus:ring-2 focus:ring-[#ffedd5] shadow-sm cursor-pointer"
+                  className="w-full appearance-none bg-white border border-[#E8E4D9] rounded-xl py-3.5 pl-5 pr-12 text-sm text-[#111111] font-bold outline-none focus:border-[#BBA48B] shadow-none cursor-pointer transition-all"
                 >
                   <option value="Personal">🌟 Personal</option>
                   <option value="Travel">✈️ Travel</option>
@@ -295,9 +296,9 @@ export function AddDreamDialog({
                   <option value="Adventure">🧗 Adventure</option>
                   <option value="Learning">📚 Learning</option>
                 </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#AAAAAA]">
                   <svg
-                    className="w-4 h-4"
+                    className="w-5 h-5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -305,7 +306,7 @@ export function AddDreamDialog({
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      strokeWidth={2}
+                      strokeWidth={2.5}
                       d="M19 9l-7 7-7-7"
                     />
                   </svg>
@@ -313,15 +314,15 @@ export function AddDreamDialog({
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[13px] font-bold text-[#475569]">
+            <div className="space-y-3">
+              <label className="text-[11px] font-bold text-[#555555] uppercase tracking-widest opacity-80">
                 Progress Status
               </label>
               <div className="relative">
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
-                  className="w-full appearance-none bg-white border border-[#fed7aa] rounded-lg py-2.5 pl-4 pr-10 text-sm text-[#334155] font-semibold outline-none focus:border-[#ea580c] focus:ring-2 focus:ring-[#ffedd5] shadow-sm cursor-pointer"
+                  className="w-full appearance-none bg-white border border-[#E8E4D9] rounded-xl py-3.5 pl-5 pr-12 text-sm text-[#111111] font-bold outline-none focus:border-[#BBA48B] shadow-none cursor-pointer transition-all"
                 >
                   <option value="Dreaming & Ideas">Dreaming & Ideas</option>
                   <option value="Planning & Research">
@@ -330,9 +331,9 @@ export function AddDreamDialog({
                   <option value="In Progress">In Progress</option>
                   <option value="Achieved">Achieved</option>
                 </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#AAAAAA]">
                   <svg
-                    className="w-4 h-4"
+                    className="w-5 h-5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -340,7 +341,7 @@ export function AddDreamDialog({
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      strokeWidth={2}
+                      strokeWidth={2.5}
                       d="M19 9l-7 7-7-7"
                     />
                   </svg>
@@ -350,139 +351,119 @@ export function AddDreamDialog({
           </div>
 
           {/* Description */}
-          <div className="space-y-2">
-            <label className="flex items-center gap-1.5 text-[14px] font-bold text-[#b45309]">
-              <BookOpen className="w-4 h-4" />
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 text-[11px] font-bold text-[#555555] uppercase tracking-widest opacity-80">
+              <BookOpen className="w-3.5 h-3.5 text-[#BBA48B]" />
               Describe Your Dream
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Paint the picture... What will it look, feel, and mean to you when you achieve this dream?"
-              className="w-full bg-white border border-[#fef08a] rounded-lg px-4 py-3 text-sm text-[#334155] outline-none shadow-sm focus:border-[#fcd34d] focus:ring-2 focus:ring-[#fef08a] resize-y min-h-[120px]"
+              className="w-full bg-white border border-[#E8E4D9] rounded-xl px-5 py-4 text-sm text-[#111111] font-medium outline-none shadow-none focus:border-[#BBA48B] resize-y min-h-[120px] transition-all placeholder:text-[#CCCCCC]"
             />
           </div>
 
           {/* Linked Sections */}
-          <div className="space-y-4 pt-2">
-            <div className="border border-[#e9d5ff] bg-[#faf5ff] rounded-xl p-4">
-              <h4 className="flex items-center gap-1.5 text-sm font-bold text-[#9333ea] mb-2">
-                <Heart className="w-[15px] h-[15px]" />
+          <div className="space-y-5 pt-2">
+            <div className="border border-[#E8E4D9] bg-[#FAF9F6] rounded-2xl p-6">
+              <h4 className="flex items-center gap-2 text-[12px] font-bold text-[#333333] uppercase tracking-widest mb-3">
+                <Heart className="w-[15px] h-[15px] text-[#BBA48B]" />
                 Linked Core Values
               </h4>
-              <p className="flex items-center gap-1.5 text-xs text-[#a855f7] mb-3">
-                <span className="text-yellow-500">💡</span> Connect your dream
-                to your{" "}
-                <span className="font-bold cursor-pointer hover:underline">
-                  Core Values
-                </span>
+              <p className="flex items-center gap-2 text-[11px] text-[#888888] mb-4 font-bold uppercase tracking-wide">
+                <span className="text-[#BBA48B]">💡</span> Connect your dream
+                to your values
               </p>
 
               {isLoadingDetails ? (
-                <div className="flex items-center gap-2 text-xs text-[#c084fc] font-medium">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Fetching
-                  values...
+                <div className="flex items-center gap-2 text-[12px] text-[#BBA48B] font-bold">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> FETCHING VALUES...
                 </div>
               ) : coreValues.length > 0 ? (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {coreValues.map((cv, idx) => (
                     <span
                       key={idx}
-                      className="px-2.5 py-1 text-xs font-semibold bg-white border border-[#d8b4fe] text-[#9333ea] rounded-md shadow-sm"
+                      className="px-3 py-1.5 text-[11px] font-bold bg-white border border-[#E8E4D9] text-[#777777] rounded-lg uppercase tracking-wider"
                     >
                       {String(cv.name || "Unnamed Value")}
                     </span>
                   ))}
                 </div>
               ) : (
-                <div className="text-xs text-[#c084fc] italic font-medium">
+                <div className="text-[12px] text-[#AAAAAA] italic font-medium">
                   No Core Values defined yet
                 </div>
               )}
             </div>
 
-            <div className="border border-[#bfdbfe] bg-[#eff6ff] rounded-xl p-4">
-              <h4 className="flex items-center gap-1.5 text-sm font-bold text-[#2563eb] mb-2">
-                <Target className="w-[15px] h-[15px]" />
+            <div className="border border-[#E8E4D9] bg-[#FAF9F6] rounded-2xl p-6">
+              <h4 className="flex items-center gap-2 text-[12px] font-bold text-[#333333] uppercase tracking-widest mb-3">
+                <Target className="w-[15px] h-[15px] text-[#BBA48B]" />
                 Linked Goals
               </h4>
-              <p className="flex items-center gap-1.5 text-xs text-[#3b82f6] mb-3">
-                <span className="text-yellow-500">💡</span> Connect your dream
-                to your{" "}
-                <span className="font-bold cursor-pointer hover:underline">
-                  Goals
-                </span>
+              <p className="flex items-center gap-2 text-[11px] text-[#888888] mb-4 font-bold uppercase tracking-wide">
+                <span className="text-[#BBA48B]">💡</span> Map steps for success
               </p>
 
               {isLoadingDetails ? (
-                <div className="flex items-center gap-2 text-xs text-[#60a5fa] font-medium">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Fetching
-                  goals...
+                <div className="flex items-center gap-2 text-[12px] text-[#BBA48B] font-bold">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> FETCHING GOALS...
                 </div>
               ) : goals.length > 0 ? (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {goals.map((g, idx) => (
                     <span
                       key={idx}
-                      className="px-2.5 py-1 text-xs font-semibold bg-white border border-[#93c5fd] text-[#2563eb] rounded-md shadow-sm"
+                      className="px-3 py-1.5 text-[11px] font-bold bg-white border border-[#E8E4D9] text-[#777777] rounded-lg uppercase tracking-wider"
                     >
                       {String(g.title || "Unnamed Goal")}
                     </span>
                   ))}
                 </div>
               ) : (
-                <div className="text-xs text-[#60a5fa] italic font-medium">
+                <div className="text-[12px] text-[#AAAAAA] italic font-medium">
                   No goals defined yet
                 </div>
               )}
             </div>
 
-            <div className="border-2 border-[#99f6e4] bg-[#f0fdfa] rounded-xl p-4">
-              <h4 className="flex items-center gap-1.5 text-sm font-bold text-[#0d9488] mb-2">
-                <BookOpen className="w-[15px] h-[15px]" />
-                Progress Notes
+            <div className="border border-[#E8E4D9] bg-[#FDFCF9] rounded-2xl p-6">
+              <h4 className="flex items-center gap-2 text-[12px] font-bold text-[#333333] uppercase tracking-widest mb-4">
+                <BookOpen className="w-[15px] h-[15px] text-[#BBA48B]" />
+                Progress History
               </h4>
 
-              <div className="text-xs text-[#0f766e] mb-3 font-medium bg-white px-3 py-1.5 rounded-md shadow-sm opacity-80">
-                Track your journey towards this dream - document milestones,
-                learnings, and steps taken
-              </div>
-
-              <div className="mb-4">
+              <div className="mb-6">
                 <textarea
                   value={progressNotes}
                   onChange={(e) => setProgressNotes(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Add a progress update... What steps have you taken? What did you learn? (Ctrl+Enter to add)"
-                  className="w-full bg-white border border-[#5eead4] rounded-lg px-3 py-3 text-sm outline-none resize-none focus:ring-2 focus:ring-[#99f6e4] min-h-[80px]"
+                  placeholder="What steps have you taken today? (Ctrl+Enter to add)"
+                  className="w-full bg-white border border-[#E8E4D9] rounded-xl px-4 py-3 text-sm outline-none resize-none focus:border-[#BBA48B] min-h-[100px] transition-all placeholder:text-[#CCCCCC]"
                 />
-                {!initialData?.id || initialData.id.startsWith("s") ? (
-                  <p className="text-xs text-blue-600 mt-2 font-medium flex items-center gap-1">
-                    <span>ℹ️</span>
-                    <span>
-                      Notes will be saved as drafts and added after the dream is
-                      created
-                    </span>
-                  </p>
-                ) : null}
-                <div className="flex justify-end mt-2">
+                <div className="flex justify-between items-center mt-3">
+                  <div className="text-[11px] text-[#AAAAAA] font-bold uppercase tracking-widest">
+                    {!initialData?.id || initialData.id.startsWith("s") ? "Drafting Note..." : ""}
+                  </div>
                   <button
                     onClick={handleAddNote}
                     disabled={isAddingNote || !progressNotes.trim()}
-                    className="bg-[#76dec9] text-white hover:bg-[#5fcbb5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded-md px-4 py-2 text-sm font-semibold flex items-center gap-2 shadow-sm"
+                    className="bg-[#BBA48B] text-white hover:bg-[#A68F76] disabled:opacity-50 disabled:cursor-not-allowed transition-all rounded-lg px-5 py-2 text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 shadow-sm"
                   >
                     {isAddingNote ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
-                      <Save className="w-4 h-4" />
+                      <Plus className="w-3.5 h-3.5" />
                     )}
-                    {isAddingNote ? "Adding..." : "Add Note"}
+                    {isAddingNote ? "Adding..." : "Add Update"}
                   </button>
                 </div>
               </div>
 
-              <h4 className="text-xs font-bold text-[#134e4a] mb-2 font-sans">
-                Progress History ({notes.length + localDraftNotes.length})
+              <h4 className="text-[11px] font-bold text-[#AAAAAA] mb-4 uppercase tracking-widest px-1">
+                Timeline & Updates ({notes.length + localDraftNotes.length})
               </h4>
 
               {isLoadingDetails ? (
@@ -583,30 +564,30 @@ export function AddDreamDialog({
         </div>
 
         <DialogFooter
-          className={`p-5 border-t border-[#fef3c7] bg-[#fffcf0] sticky bottom-0 z-10 flex-row ${initialData ? "justify-between" : "justify-end"} space-x-2`}
+          className={`p-6 border-t border-[#E8E4D9] bg-[#FAF9F6] sticky bottom-0 z-10 flex-row ${initialData ? "justify-between" : "justify-end"} items-center space-x-3 rounded-b-2xl`}
         >
           {initialData && (
             <button
               onClick={handleDelete}
-              className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors shadow-sm"
+              className="flex items-center gap-2 px-5 py-3 text-[12px] font-bold text-red-600 bg-white border border-red-100 hover:bg-red-50 rounded-xl transition-all uppercase tracking-widest shadow-sm"
             >
               <Trash2 className="w-4 h-4" />
               Delete
             </button>
           )}
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <button
               onClick={() => setOpen(false)}
-              className="px-5 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-gray-900 transition-colors shadow-sm"
+              className="px-6 py-3 text-[12px] font-bold text-[#777777] bg-white border border-[#E8E4D9] rounded-xl hover:bg-gray-50 transition-all uppercase tracking-widest"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
-              className="flex items-center gap-1.5 px-6 py-2.5 text-sm font-bold text-white bg-[#ea580c] hover:bg-[#c2410c] rounded-lg transition-colors shadow-md"
+              className="flex items-center gap-2 px-8 py-3 text-[12px] font-bold text-white bg-[#BBA48B] hover:bg-[#A68F76] rounded-xl transition-all shadow-md uppercase tracking-widest"
             >
               <Save className="w-4 h-4" />
-              {initialData ? "Save Changes" : "Create Dream"}
+              {initialData ? "Save Changes" : "Forge Vision"}
             </button>
           </div>
         </DialogFooter>
