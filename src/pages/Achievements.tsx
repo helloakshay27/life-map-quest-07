@@ -331,6 +331,10 @@ const DEFAULT_STATS: AchievementStats = {
   percent: 0,
 };
 
+/** Figma dashboard: terracotta primary, ~8px radius, 8px×16px padding */
+const figmaPrimaryButton =
+  "!bg-[#D67455] !text-white shadow-sm hover:!bg-[#D67455]/92 active:!bg-[#D67455]/85 rounded-md px-4 py-2 h-auto min-h-9 font-medium border-0 [&_svg]:!text-white";
+
 const buildBadges = (
   earned: Record<string, unknown>[],
   locked: Record<string, unknown>[],
@@ -355,7 +359,7 @@ const parseStats = (raw: Record<string, unknown>): AchievementStats => {
 };
 
 const Pulse = ({ className = "" }: { className?: string }) => (
-  <div className={`animate-pulse bg-gray-200 rounded ${className}`} />
+  <div className={`animate-pulse rounded bg-[#E0E0E0]/90 ${className}`} />
 );
 
 const StatIcon = ({ type }: { type: string }) => {
@@ -365,7 +369,7 @@ const StatIcon = ({ type }: { type: string }) => {
         viewBox="0 0 24 24"
         className="w-6 h-6"
         fill="none"
-        stroke="#e07b39"
+        stroke="#D67455"
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -383,7 +387,7 @@ const StatIcon = ({ type }: { type: string }) => {
         viewBox="0 0 24 24"
         className="w-6 h-6"
         fill="none"
-        stroke="#3b82f6"
+        stroke="#D67455"
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -399,7 +403,7 @@ const StatIcon = ({ type }: { type: string }) => {
         viewBox="0 0 24 24"
         className="w-6 h-6"
         fill="none"
-        stroke="#8b5cf6"
+        stroke="#D67455"
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -415,7 +419,7 @@ const StatIcon = ({ type }: { type: string }) => {
         viewBox="0 0 24 24"
         className="w-6 h-6"
         fill="none"
-        stroke="#3b82f6"
+        stroke="#D67455"
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -430,7 +434,7 @@ const StatIcon = ({ type }: { type: string }) => {
         viewBox="0 0 24 24"
         className="w-6 h-6"
         fill="none"
-        stroke="#f59e0b"
+        stroke="#D67455"
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -443,7 +447,7 @@ const StatIcon = ({ type }: { type: string }) => {
         viewBox="0 0 24 24"
         className="w-6 h-6"
         fill="none"
-        stroke="#8b5cf6"
+        stroke="#D67455"
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -900,12 +904,10 @@ const BadgeCard = ({ id, title, subtitle, locked }: Badge) => (
       )}
     </div>
     <div className="text-center">
-      <p className="text-[11px] sm:text-xs font-medium text-foreground leading-tight">
+      <p className="text-[11px] font-medium leading-tight text-[#333333] sm:text-xs">
         {title}
       </p>
-      <p className="text-[10px] text-muted-foreground leading-tight">
-        {subtitle}
-      </p>
+      <p className="text-[10px] leading-tight text-[#666666]">{subtitle}</p>
     </div>
   </div>
 );
@@ -944,11 +946,11 @@ const ErrorBanner = ({ type }: { type: ApiErrorType }) => {
   };
   const { icon, text, hint } = map[type];
   return (
-    <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">
-      <span className="mt-0.5 flex-shrink-0">{icon}</span>
+    <div className="flex items-start gap-2 rounded-lg border border-red-200/90 bg-white px-3 py-2 text-xs text-red-800 shadow-sm">
+      <span className="mt-0.5 flex-shrink-0 text-red-600">{icon}</span>
       <div>
         <span className="font-semibold">{text}: </span>
-        <span className="text-red-600">{hint}</span>
+        <span className="text-red-700">{hint}</span>
       </div>
     </div>
   );
@@ -1089,19 +1091,21 @@ const Achievements = () => {
   ];
 
   return (
-    <div className="relative w-full animate-fade-in space-y-8">
+    <div
+      className="-m-2 md:-m-3 min-h-[calc(100vh-5rem)] animate-fade-in bg-[#F8F6F1] px-4 py-6 sm:px-6 lg:px-8"
+      data-page="achievements"
+    >
+      <div className="relative mx-auto w-full max-w-7xl space-y-6 sm:space-y-8">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2">
-            <Trophy className="h-7 w-7 text-amber-500" /> Achievements
+          <h1 className="flex items-center gap-2 text-2xl font-semibold text-[#333333] sm:text-3xl">
+            <Trophy className="h-7 w-7 shrink-0 text-[#D67455]" /> Achievements
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Your Hall of Fame
-          </p>
+          <p className="mt-0.5 text-sm text-[#666666]">Your Hall of Fame</p>
         </div>
         <Button
-          className="gap-2 w-full sm:w-auto bg-[#DA7756] hover:bg-[#C96B4D] text-white"
+          className={`w-full gap-2 sm:w-auto ${figmaPrimaryButton}`}
           onClick={handleRefresh}
           disabled={isRefreshing || isLoading}
         >
@@ -1115,30 +1119,25 @@ const Achievements = () => {
       {apiError && <ErrorBanner type={apiError} />}
 
       {/* Progress Card */}
-      <Card
-        className="p-4 sm:p-6 space-y-4 sm:space-y-5"
-        style={{ backgroundColor: "#fdf8f3" }}
-      >
+      <Card className="space-y-4 rounded-xl border border-[#E0E0E0]/90 bg-white p-4 shadow-sm sm:space-y-5 sm:p-6">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-foreground">
+            <h2 className="text-xl font-bold text-[#333333] sm:text-2xl">
               Your Progress
             </h2>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+            <p className="mt-0.5 text-xs text-[#666666] sm:text-sm">
               Unlock achievements by journaling consistently
             </p>
           </div>
           <div className="text-right">
             {isLoading ? (
-              <Pulse className="w-16 h-10" />
+              <Pulse className="h-10 w-16" />
             ) : (
               <>
-                <div className="text-3xl sm:text-4xl font-bold text-red-500">
+                <div className="text-3xl font-bold text-[#D67455] sm:text-4xl">
                   {stats.points}
                 </div>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  points
-                </p>
+                <p className="text-xs text-[#666666] sm:text-sm">points</p>
               </>
             )}
           </div>
@@ -1148,17 +1147,17 @@ const Achievements = () => {
           {statItems.map(({ type, value, label }) => (
             <div
               key={type}
-              className="flex flex-col items-center justify-center p-3 sm:p-4 bg-white rounded-xl border border-border space-y-1 sm:space-y-2"
+              className="flex flex-col items-center justify-center space-y-1 rounded-xl border border-[#E0E0E0]/80 bg-[#FAFAFA] p-3 sm:space-y-2 sm:p-4"
             >
               <StatIcon type={type} />
               {isLoading ? (
-                <Pulse className="w-10 h-6" />
+                <Pulse className="h-6 w-10" />
               ) : (
-                <div className="text-lg sm:text-2xl font-bold text-foreground">
+                <div className="text-lg font-bold text-[#333333] sm:text-2xl">
                   {value}
                 </div>
               )}
-              <p className="text-[10px] sm:text-xs text-muted-foreground text-center">
+              <p className="text-center text-[10px] text-[#666666] sm:text-xs">
                 {label}
               </p>
             </div>
@@ -1166,27 +1165,24 @@ const Achievements = () => {
         </div>
 
         <div className="space-y-2">
-          <div
-            className="relative w-full h-3 rounded-full overflow-hidden"
-            style={{ backgroundColor: "#f0e6d8" }}
-          >
+          <div className="relative h-3 w-full overflow-hidden rounded-full bg-[#F2EFE9]">
             <div
               className="h-full rounded-full transition-all duration-700"
               style={{
                 width: isLoading ? "0%" : `${progressPct}%`,
-                background: "linear-gradient(90deg,#f97316,#ef4444)",
-                boxShadow: "0 0 8px rgba(249,115,22,0.4)",
+                background: "linear-gradient(90deg, #D67455, #c45a3d)",
+                boxShadow: "0 0 8px rgba(214, 116, 85, 0.35)",
               }}
             />
           </div>
-          <div className="flex justify-between items-center">
-            <p className="text-xs text-muted-foreground">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-[#666666]">
               {isLoading
                 ? "Loading…"
                 : `${earnedCount} of ${totalBadges} badges unlocked`}
             </p>
             {!isLoading && (
-              <p className="text-xs font-semibold text-foreground">
+              <p className="text-xs font-semibold text-[#333333]">
                 {progressPct}%
               </p>
             )}
@@ -1195,26 +1191,29 @@ const Achievements = () => {
       </Card>
 
       {/* Tabs */}
-      <Card className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <Card className="space-y-4 rounded-xl border border-[#E0E0E0]/90 bg-white p-4 shadow-sm sm:space-y-6 sm:p-6">
         <Tabs
           defaultValue="earned"
           className="space-y-4"
           onValueChange={setActiveTab}
         >
-          <TabsList className="w-full sm:w-auto">
-            <TabsTrigger value="earned" className="flex-1 sm:flex-none text-sm">
+          <TabsList className="h-auto w-full gap-1 rounded-full border border-[#E0E0E0]/70 bg-[#F2EFE9] p-1 sm:w-auto">
+            <TabsTrigger
+              value="earned"
+              className="flex-1 !rounded-full px-4 py-2 text-sm text-[#666666] data-[state=active]:bg-white data-[state=active]:text-[#333333] data-[state=active]:shadow-sm sm:flex-none"
+            >
               My Badges ({isLoading ? "…" : earnedBadges.length})
             </TabsTrigger>
             <TabsTrigger
               value="how-to-earn"
-              className="flex-1 sm:flex-none text-sm"
+              className="flex-1 !rounded-full px-4 py-2 text-sm text-[#666666] data-[state=active]:bg-white data-[state=active]:text-[#333333] data-[state=active]:shadow-sm sm:flex-none"
             >
               How to Earn
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="earned" className="space-y-4">
-            <h3 className="text-sm sm:text-base font-semibold text-foreground">
+            <h3 className="text-sm font-semibold text-[#333333] sm:text-base">
               Earned ({isLoading ? "…" : earnedBadges.length})
             </h3>
             {isLoading ? (
@@ -1228,13 +1227,13 @@ const Achievements = () => {
               </div>
             ) : earnedBadges.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center">
-                <div className="mb-3 w-12 h-12 opacity-30">
+                <div className="mb-3 h-12 w-12 opacity-30">
                   <BadgeSVG id="1" locked={true} />
                 </div>
-                <p className="text-sm font-semibold text-foreground mb-1">
+                <p className="mb-1 text-sm font-semibold text-[#333333]">
                   No badges earned yet
                 </p>
-                <p className="text-xs text-muted-foreground max-w-xs">
+                <p className="max-w-xs text-xs text-[#666666]">
                   Start journaling consistently to unlock your first badge!
                 </p>
               </div>
@@ -1249,17 +1248,20 @@ const Achievements = () => {
 
           <TabsContent value="how-to-earn" className="space-y-4">
             <div>
-              <h3 className="text-sm sm:text-base font-semibold text-foreground">
+              <h3 className="text-sm font-semibold text-[#333333] sm:text-base">
                 How to Earn Badges
               </h3>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+              <p className="mt-1 text-xs text-[#666666] sm:text-sm">
                 Complete the following activities to unlock each badge.
               </p>
             </div>
             {reqLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <Card key={i} className="p-3 sm:p-4 border border-border">
+                  <Card
+                    key={i}
+                    className="border border-[#E0E0E0]/80 p-3 sm:p-4"
+                  >
                     <div className="flex items-start gap-3">
                       <Pulse className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex-shrink-0" />
                       <div className="flex-1 space-y-2">
@@ -1278,36 +1280,40 @@ const Achievements = () => {
                   return (
                     <Card
                       key={req.id}
-                      className={`p-3 sm:p-4 border transition-colors ${isEarned ? "border-amber-300 bg-amber-50/40" : "border-border hover:border-primary/50"}`}
+                      className={`border p-3 transition-colors sm:p-4 ${
+                        isEarned
+                          ? "border-[#D67455]/35 bg-[#D67455]/10 hover:border-[#D67455]/45"
+                          : "border-[#E0E0E0]/80 hover:border-[#D67455]/30"
+                      }`}
                     >
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 mt-0.5">
+                        <div className="mt-0.5 h-10 w-10 shrink-0 sm:h-12 sm:w-12">
                           <BadgeSVG id={req.id} locked={!isEarned} />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2 mb-0.5">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h4 className="font-semibold text-sm text-foreground leading-snug">
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-0.5 flex items-start justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h4 className="text-sm font-semibold leading-snug text-[#333333]">
                                 {req.title}
                               </h4>
                               {isEarned && (
-                                <span className="text-[10px] font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                <span className="whitespace-nowrap rounded-full bg-[#D67455]/15 px-1.5 py-0.5 text-[10px] font-bold text-[#D67455]">
                                   ✓ Earned
                                 </span>
                               )}
                             </div>
-                            <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 mt-0.5">
+                            <span className="mt-0.5 shrink-0 whitespace-nowrap text-[10px] text-[#666666] sm:text-xs">
                               {req.category}
                             </span>
                           </div>
-                          <p className="text-xs text-muted-foreground italic my-1.5 leading-snug">
+                          <p className="my-1.5 text-xs italic leading-snug text-[#666666]">
                             {req.description}
                           </p>
                           <div className="flex items-start gap-1.5">
-                            <span className="text-orange-500 text-xs flex-shrink-0 mt-0.5">
+                            <span className="mt-0.5 shrink-0 text-xs text-[#D67455]">
                               ⊙
                             </span>
-                            <p className="text-xs text-foreground leading-snug">
+                            <p className="text-xs leading-snug text-[#333333]">
                               {req.requirement}
                             </p>
                           </div>
@@ -1323,13 +1329,13 @@ const Achievements = () => {
       </Card>
 
       {/* Locked Badges */}
-      <Card className="p-4 sm:p-6 space-y-4">
+      <Card className="space-y-4 rounded-xl border border-[#E0E0E0]/90 bg-white p-4 shadow-sm sm:p-6">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm sm:text-base font-semibold text-foreground">
+          <h3 className="text-sm font-semibold text-[#333333] sm:text-base">
             Locked ({isLoading ? "…" : lockedBadges.length})
           </h3>
           {!isLoading && lockedBadges.length > 0 && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-[#666666]">
               {lockedBadges.length} more to unlock
             </p>
           )}
@@ -1345,11 +1351,11 @@ const Achievements = () => {
           </div>
         ) : lockedBadges.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <div className="text-4xl mb-3">🎉</div>
-            <p className="text-sm font-semibold text-foreground">
+            <div className="mb-3 text-4xl">🎉</div>
+            <p className="text-sm font-semibold text-[#333333]">
               All badges unlocked!
             </p>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="mt-1 text-xs text-[#666666]">
               You are a true champion!
             </p>
           </div>
@@ -1361,6 +1367,7 @@ const Achievements = () => {
           </div>
         )}
       </Card>
+      </div>
     </div>
   );
 };
