@@ -19,6 +19,12 @@ import AddPersonModal from "@/components/AddPersonModal";
 
 const API_BASE_URL = "https://life-api.lockated.com";
 
+const figmaPrimaryButton =
+  "inline-flex items-center justify-center gap-2 rounded-md border border-transparent bg-[#D67455] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#C86648] active:bg-[#B95D42]";
+
+const figmaSecondaryButton =
+  "inline-flex items-center justify-center gap-2 rounded-md border border-[#E0D4C4] bg-[#FFF9F1] px-4 py-2.5 text-sm font-medium text-[#5E4A3A] shadow-sm transition-colors hover:bg-[#F8EFE4]";
+
 interface Person {
   id: number;
   name: string;
@@ -197,7 +203,8 @@ const People = () => {
         initialData={personToEdit as any}
       />
 
-      <div className="relative w-full animate-fade-in space-y-8">
+      <div className="-m-2 animate-fade-in bg-[#F8F6F1] px-4 py-6 md:-m-3 md:px-6 md:py-8">
+        <div className="relative mx-auto w-full max-w-7xl space-y-8">
         {/* HEADER */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
@@ -205,14 +212,14 @@ const People = () => {
             {people.length > 0 && (
               <button 
                 onClick={() => navigate(-1)} 
-                className="w-[42px] h-[42px] rounded-full bg-white border border-gray-200 flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors shrink-0"
+                className="h-[42px] w-[42px] shrink-0 rounded-full border border-[#E0D4C4] bg-[#FFF9F1] shadow-sm transition-colors hover:bg-[#F8EFE4] flex items-center justify-center"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-700" />
+                <ArrowLeft className="h-5 w-5 text-[#5E4A3A]" />
               </button>
             )}
             <div>
-              <h1 className="text-3xl font-bold text-foreground">People</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
+              <h1 className="text-3xl font-semibold text-[#333333]">People</h1>
+              <p className="mt-0.5 text-sm text-[#666666]">
                 Nurture your meaningful relationships
               </p>
             </div>
@@ -221,7 +228,7 @@ const People = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsProfileModalOpen(true)}
-              className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 shadow-sm transition-colors hover:bg-red-100"
+              className={figmaSecondaryButton}
             >
               <User className="h-4 w-4" />
               My Profile
@@ -231,7 +238,7 @@ const People = () => {
                 setPersonToEdit(null);
                 setIsAddPersonModalOpen(true);
               }}
-              className="flex items-center gap-2 rounded-md bg-red-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-red-600"
+              className={figmaPrimaryButton}
             >
               <Plus className="h-4 w-4" />
               Add Person
@@ -332,12 +339,12 @@ const People = () => {
         </div>
 
         {/* FILTER + PEOPLE LIST */}
-        <div className="w-full min-h-[400px] flex flex-col bg-[#fafafa] rounded-2xl border border-gray-100 overflow-hidden">
+        <div className="w-full min-h-[400px] flex flex-col overflow-hidden rounded-2xl border border-[#E6DDD2] bg-white shadow-sm">
           {/* FILTER BAR */}
-          <div className="flex flex-wrap items-center gap-4 p-4 border-b border-gray-100 bg-white">
+          <div className="flex flex-wrap items-center gap-4 border-b border-[#EEE5DA] bg-[#FCFAF6] p-4">
             <div className="flex items-center gap-3">
               <svg
-                className="w-5 h-5 text-gray-500 shrink-0"
+                className="h-5 w-5 shrink-0 text-[#8B7A69]"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -355,11 +362,11 @@ const People = () => {
                     setIsRelationshipOpen(!isRelationshipOpen);
                     setIsPriorityOpen(false);
                   }}
-                  className="flex items-center justify-between w-48 px-3 py-2 bg-white border border-red-200 rounded-md text-sm text-red-700 hover:bg-red-50 focus:outline-none"
+                  className="flex w-48 items-center justify-between rounded-md border border-[#E0D4C4] bg-white px-3 py-2 text-sm text-[#5E4A3A] hover:bg-[#FAF4EA] focus:outline-none"
                 >
                   {relationshipFilter}
                   <svg
-                    className="w-4 h-4 text-gray-400"
+                    className="h-4 w-4 text-[#9A8977]"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -406,7 +413,7 @@ const People = () => {
 
             <div className="flex items-center gap-3">
               <svg
-                className="w-5 h-5 text-gray-500 shrink-0"
+                className="h-5 w-5 shrink-0 text-[#8B7A69]"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -424,11 +431,11 @@ const People = () => {
                     setIsPriorityOpen(!isPriorityOpen);
                     setIsRelationshipOpen(false);
                   }}
-                  className="flex items-center justify-between w-48 px-3 py-2 bg-white border border-red-200 rounded-md text-sm text-red-700 hover:bg-red-50 focus:outline-none"
+                  className="flex w-48 items-center justify-between rounded-md border border-[#E0D4C4] bg-white px-3 py-2 text-sm text-[#5E4A3A] hover:bg-[#FAF4EA] focus:outline-none"
                 >
                   {priorityFilter}
                   <svg
-                    className="w-4 h-4 text-gray-400"
+                    className="h-4 w-4 text-[#9A8977]"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -465,17 +472,17 @@ const People = () => {
             </div>
 
             <div className="flex items-center gap-2 ml-auto">
-              <span className="text-xs text-gray-400 font-medium mr-1">
+              <span className="mr-1 text-xs font-medium text-[#8B7A69]">
                 Sort:
               </span>
               {["Name", "Priority"].map((sort) => (
                 <button
                   key={sort}
                   onClick={() => setActiveSort(sort)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                     activeSort === sort
-                      ? "bg-red-500 text-white"
-                      : "bg-white text-red-700 border border-red-200 hover:bg-red-50"
+                      ? "border border-transparent bg-[#D67455] text-white"
+                      : "border border-[#E0D4C4] bg-white text-[#5E4A3A] hover:bg-[#FAF4EA]"
                   }`}
                 >
                   {sort}
@@ -497,7 +504,7 @@ const People = () => {
               <p className="text-sm text-red-500 font-medium">{peopleError}</p>
               <button
                 onClick={fetchPeople}
-                className="px-4 py-2 text-sm font-medium bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                className={figmaPrimaryButton}
               >
                 Retry
               </button>
@@ -535,7 +542,7 @@ const People = () => {
                     setPersonToEdit(null);
                     setIsAddPersonModalOpen(true);
                   }}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-red-500 text-white text-sm font-medium rounded-md hover:bg-red-600 transition-colors shadow-sm"
+                  className={figmaPrimaryButton}
                 >
                   <Plus className="w-5 h-5" />
                   Add Your First Person
@@ -667,6 +674,7 @@ const People = () => {
             </div>
           )}
         </div>
+      </div>
       </div>
       
       {/* Custom Toast (Bottom Right) */}
