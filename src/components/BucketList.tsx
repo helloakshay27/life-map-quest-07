@@ -449,7 +449,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
 
       {/* Board View */}
       {viewMode === "board" && (
-        <div className="flex flex-1 gap-4 sm:gap-5 overflow-x-auto min-h-[400px] pb-4 snap-x snap-mandatory">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 min-h-[400px] pb-4">
           {COLUMNS.map((col) => {
             const colItems = filteredItems.filter((i) => i.progress === col.id);
             return (
@@ -457,7 +457,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
                 key={col.id}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => handleDrop(e, col.id)}
-                className={`flex flex-col flex-1 min-w-[300px] shrink-0 snap-center sm:snap-align-none rounded-2xl border-2 ${col.borderColor} ${col.bgColor} p-6`}
+                className={`flex flex-col rounded-2xl border-2 ${col.borderColor} ${col.bgColor} p-6 h-full`}
               >
                 <div className="flex justify-between items-center mb-8">
                   <h3 className="font-extrabold text-[#333333] text-[16px] uppercase tracking-wider opacity-90">
