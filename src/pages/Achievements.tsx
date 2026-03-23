@@ -1101,7 +1101,7 @@ const Achievements = () => {
           </p>
         </div>
         <Button
-          className="gap-2 w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white"
+          className="gap-2 w-full sm:w-auto bg-[#DA7756] hover:bg-[#C96B4D] text-white"
           onClick={handleRefresh}
           disabled={isRefreshing || isLoading}
         >

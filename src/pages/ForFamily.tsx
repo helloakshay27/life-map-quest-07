@@ -562,13 +562,13 @@ export default function ForFamily() {
           <Button 
             variant="outline" 
             size="sm" 
-            className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" 
+            className="border-[#DA7756]/40 text-[#DA7756] hover:bg-[#DA7756]/10 hover:text-[#C96B4D]" 
             disabled={isFetching || isSaving}
             onClick={handleDownload}
           >
             Download
           </Button>
-          <Button size="sm" className="bg-red-500 hover:bg-red-600" onClick={handleSave} disabled={isFetching || isSaving}>
+          <Button size="sm" className="bg-[#DA7756] hover:bg-[#C96B4D] text-white" onClick={handleSave} disabled={isFetching || isSaving}>
             {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {hasExistingProfile ? "Updating..." : "Saving..."}</> : hasExistingProfile ? "Update Profile" : "Save Profile"}
           </Button>
         </div>

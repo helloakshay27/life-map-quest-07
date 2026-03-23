@@ -57,39 +57,46 @@ const pastRecordings: Recording[] = [
   { id: "9", title: "The Power of Discipline", date: "Oct 18, 2025", duration: "73 min", description: "Catch tomorrow and tie it with Unstoppable Success.", thumbnail: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=250&fit=crop" },
 ];
 
+/** Figma dashboard: terracotta primary, ~8px radius, 8px×16px padding */
+const figmaPrimaryButton =
+  "bg-[#D67455] text-white shadow-sm hover:bg-[#D67455]/92 active:bg-[#D67455]/85 rounded-md px-4 py-2 font-medium border-0 [&_svg]:text-white";
+
 const EventCard = ({ event }: { event: Event }) => (
-  <Card className="p-4 sm:p-6 hover:shadow-lg transition-shadow">
+  <Card className="rounded-xl border border-[#E0E0E0]/90 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-6">
     {/* Top: Icon + Title + Meta */}
-    <div className="flex items-start gap-3 sm:gap-4 mb-4">
-      <div className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 bg-red-500 rounded-2xl flex items-center justify-center shadow-md">
-        <Calendar className="w-6 h-6 text-white" />
+    <div className="mb-4 flex items-start gap-3 sm:gap-4">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#D67455] shadow-md sm:h-14 sm:w-14">
+        <Calendar className="h-6 w-6 text-white" />
       </div>
-      <div className="flex-1 min-w-0">
-        <h3 className="text-base sm:text-lg font-bold text-foreground mb-2 leading-tight">{event.title}</h3>
+      <div className="min-w-0 flex-1">
+        <h3 className="mb-2 text-base font-semibold leading-tight text-[#333333] sm:text-lg">{event.title}</h3>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center bg-red-100 text-red-600 font-semibold px-2.5 py-0.5 rounded-full text-xs">
+          <span className="inline-flex items-center rounded-full bg-[#D67455]/12 px-2.5 py-0.5 text-xs font-semibold text-[#D67455]">
             {event.frequency}
           </span>
-          <span className="inline-flex items-center gap-1 border border-border rounded-full px-2.5 py-0.5 text-xs text-foreground">
-            <Calendar className="w-3 h-3" /> {event.schedule}
+          <span className="inline-flex items-center gap-1 rounded-full border border-[#E0E0E0]/80 px-2.5 py-0.5 text-xs text-[#333333]">
+            <Calendar className="h-3 w-3" /> {event.schedule}
           </span>
-          <span className="inline-flex items-center gap-1 border border-border rounded-full px-2.5 py-0.5 text-xs text-foreground">
-            <Clock className="w-3 h-3" /> {event.time}
+          <span className="inline-flex items-center gap-1 rounded-full border border-[#E0E0E0]/80 px-2.5 py-0.5 text-xs text-[#333333]">
+            <Clock className="h-3 w-3" /> {event.time}
           </span>
         </div>
       </div>
     </div>
 
-    <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{event.description}</p>
+    <p className="mb-4 text-sm leading-relaxed text-[#666666]">{event.description}</p>
 
     {/* Action Row: stacks on mobile */}
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-      <button className="flex-1 bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 text-sm sm:text-base">
-        <Video className="w-4 h-4" />
+    <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+      <button
+        type="button"
+        className={`flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm sm:text-base ${figmaPrimaryButton}`}
+      >
+        <Video className="h-4 w-4" />
         Join Now
       </button>
-      <div className="flex items-center justify-center border border-border rounded-xl px-4 py-2.5 text-sm font-medium whitespace-nowrap bg-background">
-        Password: <span className="font-bold ml-1">{event.password}</span>
+      <div className="flex items-center justify-center whitespace-nowrap rounded-md border border-[#E0E0E0]/80 bg-[#FAFAFA] px-4 py-2.5 text-sm font-medium text-[#333333]">
+        Password: <span className="ml-1 font-bold">{event.password}</span>
       </div>
     </div>
   </Card>
@@ -98,22 +105,40 @@ const EventCard = ({ event }: { event: Event }) => (
 const RecordingCard = ({ recording }: { recording: Recording }) => {
   const [isHovering, setIsHovering] = useState(false);
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group">
-      <div className="aspect-video overflow-hidden bg-muted relative" onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)}>
-        <img src={recording.thumbnail} alt={recording.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-        <button className={`absolute inset-0 flex items-center justify-center bg-black/40 transition-all duration-300 ${isHovering ? "opacity-100" : "opacity-0"}`}>
-          <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-            <Play className="w-6 h-6 text-blue-600 fill-blue-600 ml-1" />
+    <Card className="group cursor-pointer overflow-hidden rounded-xl border border-[#E0E0E0]/90 bg-white shadow-sm transition-all duration-300 hover:shadow-md">
+      <div
+        className="relative aspect-video overflow-hidden bg-[#F2EFE9]"
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
+      >
+        <img
+          src={recording.thumbnail}
+          alt={recording.title}
+          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+        <button
+          type="button"
+          className={`absolute inset-0 flex items-center justify-center bg-black/40 transition-all duration-300 ${isHovering ? "opacity-100" : "opacity-0"}`}
+          aria-label={`Play ${recording.title}`}
+        >
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 shadow-lg">
+            <Play className="ml-1 h-6 w-6 fill-[#D67455] text-[#D67455]" />
           </div>
         </button>
       </div>
       <div className="p-3 sm:p-4">
-        <h3 className="font-semibold text-foreground text-sm mb-2 line-clamp-2">{recording.title}</h3>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
-          <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{recording.date}</span>
-          <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{recording.duration}</span>
+        <h3 className="mb-2 line-clamp-2 text-sm font-semibold text-[#333333]">{recording.title}</h3>
+        <div className="mb-2 flex items-center gap-3 text-xs text-[#666666]">
+          <span className="flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            {recording.date}
+          </span>
+          <span className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {recording.duration}
+          </span>
         </div>
-        <p className="text-xs text-muted-foreground line-clamp-2">{recording.description}</p>
+        <p className="line-clamp-2 text-xs text-[#666666]">{recording.description}</p>
       </div>
     </Card>
   );
@@ -128,27 +153,35 @@ const LearnAndConnect = () => {
   ];
 
   return (
-    <div className="animate-fade-in space-y-6 sm:space-y-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <div
+      className="-m-2 md:-m-3 min-h-[calc(100vh-5rem)] animate-fade-in bg-[#F8F6F1] px-4 py-6 sm:px-6 lg:px-8"
+      data-page="learn-connect"
+    >
+      <div className="mx-auto max-w-7xl space-y-6 sm:space-y-8">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Learn & Connect</h1>
-        <p className="text-sm sm:text-base text-muted-foreground mt-1">Join sessions, watch recordings, and track your reading</p>
+        <h1 className="text-2xl font-semibold text-[#333333] sm:text-3xl">Learn & Connect</h1>
+        <p className="mt-1 text-sm text-[#666666] sm:text-base">Join sessions, watch recordings, and track your reading</p>
       </div>
 
-      {/* Tabs — horizontally scrollable on mobile */}
-      <div className="border-b border-border overflow-x-auto">
-        <div className="flex gap-4 sm:gap-8 min-w-max sm:min-w-0">
+      {/* Tabs — Figma-style pill segment */}
+      <div className="overflow-x-auto pb-1">
+        <div className="flex min-w-max gap-1 rounded-full border border-[#E0E0E0]/70 bg-[#F2EFE9] p-1 sm:min-w-0 sm:inline-flex">
           {tabs.map((tab) => {
             const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => setActiveTab(tab.id as "events" | "movies" | "reading")}
-                className={`flex items-center gap-2 py-3 px-1 border-b-2 transition-colors whitespace-nowrap ${
-                  activeTab === tab.id ? "border-blue-500 text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+                className={`flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-all ${
+                  isActive
+                    ? "bg-white text-[#333333] shadow-sm"
+                    : "text-[#666666] hover:text-[#333333]"
                 }`}
               >
-                <Icon className="w-4 h-4" />
-                <span className="text-sm font-medium">{tab.label}</span>
+                <Icon className="h-4 w-4 shrink-0" />
+                <span>{tab.label}</span>
               </button>
             );
           })}
@@ -158,14 +191,14 @@ const LearnAndConnect = () => {
       {activeTab === "events" && (
         <div className="space-y-8">
           <div className="space-y-4">
-            <h2 className="text-lg sm:text-xl font-semibold text-foreground">Upcoming Events</h2>
+            <h2 className="text-lg font-semibold text-[#333333] sm:text-xl">Upcoming Events</h2>
             {/* 1 col on mobile, 2 col on md+ */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               {upcomingEvents.map((event) => <EventCard key={event.id} event={event} />)}
             </div>
           </div>
           <div className="space-y-4">
-            <h2 className="text-lg sm:text-xl font-semibold text-foreground">Past Session Recordings</h2>
+            <h2 className="text-lg font-semibold text-[#333333] sm:text-xl">Past Session Recordings</h2>
             {/* 1 → 2 → 3 col */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {pastRecordings.map((recording) => <RecordingCard key={recording.id} recording={recording} />)}
@@ -176,8 +209,8 @@ const LearnAndConnect = () => {
 
       {activeTab === "movies" && (
         <div className="space-y-4">
-          <h2 className="text-lg sm:text-xl font-semibold text-foreground">Movies & Books</h2>
-          <p className="text-sm text-muted-foreground">Explore curated movies and books for personal growth</p>
+          <h2 className="text-lg font-semibold text-[#333333] sm:text-xl">Movies & Books</h2>
+          <p className="text-sm text-[#666666]">Explore curated movies and books for personal growth</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {pastRecordings.slice(0, 6).map((recording) => <RecordingCard key={recording.id} recording={recording} />)}
           </div>
@@ -186,17 +219,18 @@ const LearnAndConnect = () => {
 
       {activeTab === "reading" && (
         <div className="space-y-4">
-          <h2 className="text-lg sm:text-xl font-semibold text-foreground">Reading List</h2>
-          <div className="bg-muted/50 rounded-lg p-8 sm:p-12 text-center">
-            <Book className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">No Books Yet</h3>
-            <p className="text-sm text-muted-foreground mb-4">Start tracking your personal development reading journey</p>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium transition-colors text-sm sm:text-base">
+          <h2 className="text-lg font-semibold text-[#333333] sm:text-xl">Reading List</h2>
+          <div className="rounded-xl border border-[#E0E0E0]/80 bg-[#FAFAFA] p-8 text-center sm:p-12">
+            <Book className="mx-auto mb-4 h-12 w-12 text-[#666666] sm:h-16 sm:w-16" />
+            <h3 className="mb-2 text-base font-semibold text-[#333333] sm:text-lg">No Books Yet</h3>
+            <p className="mb-4 text-sm text-[#666666]">Start tracking your personal development reading journey</p>
+            <button type="button" className={`inline-flex items-center justify-center px-6 py-2.5 text-sm sm:text-base ${figmaPrimaryButton}`}>
               Add Your First Book
             </button>
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

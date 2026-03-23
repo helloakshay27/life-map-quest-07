@@ -40,7 +40,7 @@ export default function OtherInfoSection({
               className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex flex-col items-start text-left">
-                <h3 className="text-[16px] font-semibold text-orange-900">Notes & Details</h3>
+                <h3 className="text-[16px] font-semibold text-black">Notes & Details</h3>
                 <p className="text-[14px] text-gray-500 mt-0.5">Locker details, important locations, etc.</p>
               </div>
               <div className="flex items-center gap-2">
@@ -57,7 +57,7 @@ export default function OtherInfoSection({
             {expandedSections.otherInfoDetails && (
               <div className="p-4 border-t border-orange-100 bg-gray-50 space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  <Label className="text-xs font-semibold text-black uppercase tracking-wider">
                     Additional Notes
                   </Label>
                   <textarea
