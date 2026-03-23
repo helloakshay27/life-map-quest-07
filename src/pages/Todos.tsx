@@ -466,7 +466,7 @@ const Todos = () => {
         </div>
         <Button
           size="sm"
-          className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto px-4 py-2.5"
+          className="bg-orange-500 hover:bg-orange-600 text-white w-full sm:w-auto px-4 py-2.5"
           onClick={() => {
             setEditingTodo(null);
             setIsCreateDialogOpen(true);
@@ -503,10 +503,10 @@ const Todos = () => {
             </Select>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
-            <Button variant="outline" size="sm" onClick={() => setViewMode("list")} className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "list" ? "bg-red-500 text-white border-red-500 hover:bg-red-600 hover:text-white" : "text-red-600 border-red-200 hover:bg-red-50"}`}>
+            <Button variant="outline" size="sm" onClick={() => setViewMode("list")} className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "list" ? "bg-orange-500 text-white border-orange-500 hover:bg-orange-600 hover:text-white" : "text-orange-600 border-orange-200 hover:bg-orange-50"}`}>
               <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />List
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setViewMode("kanban")} className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "kanban" ? "bg-red-500 text-white border-red-500 hover:bg-red-600 hover:text-white" : "text-red-600 border-red-200 hover:bg-red-50"}`}>
+            <Button variant="outline" size="sm" onClick={() => setViewMode("kanban")} className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "kanban" ? "bg-orange-500 text-white border-orange-500 hover:bg-orange-600 hover:text-white" : "text-orange-600 border-orange-200 hover:bg-orange-50"}`}>
               Kanban
             </Button>
           </div>
@@ -592,7 +592,7 @@ const Todos = () => {
                                     <button
                                       onPointerDown={(e) => e.stopPropagation()}
                                       onClick={() => handleDeleteTodo(todo.id)}
-                                      className="text-red-500 hover:text-red-700 transition-colors flex-shrink-0"
+                                      className="text-orange-500 hover:text-orange-700 transition-colors flex-shrink-0"
                                       title="Delete"
                                     >
                                       <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -657,7 +657,7 @@ const Todos = () => {
                           >
                             <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDeleteTodo(todo.id)} className="flex-shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50">
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteTodo(todo.id)} className="flex-shrink-0 text-orange-500 hover:text-orange-700 hover:bg-orange-50">
                             <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                         </div>
