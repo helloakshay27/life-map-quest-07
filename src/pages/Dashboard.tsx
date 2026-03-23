@@ -814,6 +814,42 @@ const Dashboard = () => {
   );
   const setupTotal = parseInt(localStorage.getItem("setupTotalCount") || "5");
 
+  const formatShortDateLabel = (s?: string) => {
+    if (!s) return "-";
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return s;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  const upcomingFromPeople = useMemo(() => {
+    try {
+      const today = new Date();
+      const limit = new Date(today);
+      limit.setDate(today.getDate() + 30);
+      return people
+        .filter((p) => p && typeof p.birthday === "string" && p.birthday)
+        .map((p) => {
+          const parts = (p.birthday as string).split("-");
+          if (parts.length < 3) return null;
+          const month = parseInt(parts[1], 10) - 1;
+          const day = parseInt(parts[2], 10);
+          let d = new Date(today.getFullYear(), month, day);
+          if (d < today) d = new Date(today.getFullYear() + 1, month, day);
+          return { name: p.name, date: d };
+        })
+        .filter((x) => x && x.date >= today && x.date <= limit) as {
+        name: string;
+        date: Date;
+      }[];
+    } catch {
+      return [] as { name: string; date: Date }[];
+    }
+  }, [people]);
+
+  const hasUpcomingDates =
+    (previewData.upcoming_dates && previewData.upcoming_dates.length > 0) ||
+    upcomingFromPeople.length > 0;
+
   return (
     <div className="animate-fade-in w-full min-h-screen bg-white -m-6 p-8">
       {/* Header Section */}
@@ -935,166 +971,166 @@ const Dashboard = () => {
           </div>
         </Card>
 
-        {/* Journaling Status */}
+        {/* Upcoming Dates */}
         <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-6 rounded-xl flex flex-col min-h-[220px] shadow-none">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-[#BBA48B]" />
+              <Calendar className="w-5 h-5 text-[#BBA48B]" />
               <h3 className="font-bold text-[#333333] text-[17px]">
-                Journaling Status
+                Upcoming Dates
               </h3>
             </div>
+            <Link to="/people">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-[#BBA48B] font-bold text-[12px] hover:bg-[#FAF9F6]"
+              >
+                View All
+              </Button>
+            </Link>
           </div>
-
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-[13px] font-bold text-[#444444]">
-                Daily ({dailyDateRangeStr})
-              </span>
-              <span className="text-[13px] font-bold text-[#777777]">
-                {dailyCompletedCount}/7
-              </span>
-            </div>
-            <div className="grid grid-cols-7 gap-1">
-              {dailyCompletion.map((day, idx) => (
-                <div
-                  key={idx}
-                  className={`aspect-square rounded-full flex items-center justify-center ${day.completed ? "bg-[#D2B48C]" : "bg-[#EFEDE7]"}`}
-                >
-                  {day.completed && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-[13px] font-bold text-[#444444]">
-                Weekly ({monthNameStatus} {currentYearStatus})
-              </span>
-              <span className="text-[13px] font-bold text-[#777777]">
-                {weeklyCompletedCount}/4
-              </span>
-            </div>
-            <div className="grid grid-cols-4 gap-2">
-              {weeklyBlocks.slice(0, 4).map((wk, idx) => (
-                <div
-                  key={idx}
-                  className={`aspect-square rounded-md p-1.5 flex flex-col items-center justify-center text-center ${wk.completed ? "bg-[#D2B48C] text-white" : "bg-[#EFEDE7] text-[#AAAAAA]"}`}
-                >
-                  <BookOpen
-                    className={`w-3.5 h-3.5 mb-1 ${wk.completed ? "text-white" : "text-[#CCCCCC]"}`}
-                  />
-                  <span className="text-[9px] font-bold">{wk.label}</span>
-                  <span className="text-[7px] opacity-70">
-                    (
-                    {wk.label === "WK#06"
-                      ? "Feb 1-7"
-                      : wk.label === "WK#07"
-                        ? "Feb 8-14"
-                        : wk.label === "WK#08"
-                          ? "Feb 15-21"
-                          : "Feb 22-28"}
-                    )
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-auto pt-6 flex justify-between items-center border-t border-[#E8E4D9]/50">
-            <span className="font-bold text-[#333333] uppercase tracking-wider text-[10px]">
-              Keep Up The Momentum!
-            </span>
-            <span className="text-[11px] font-bold text-[#333333]">
-              {percentComplete}% Complete
-            </span>
+          <div className="flex-1 -mt-2">
+            {hasUpcomingDates ? (
+              <div className="space-y-3">
+                {(previewData.upcoming_dates || []).slice(0, 3).map((d, i) => (
+                  <div
+                    key={i}
+                    className="bg-white border border-[#EFEDE7] p-3 rounded-md flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-[#D2B48C]" />
+                      <span className="text-[13px] font-bold text-[#333333]">
+                        {d.title || d.name || "Event"}
+                      </span>
+                    </div>
+                    <span className="text-[12px] font-bold text-[#777777]">
+                      {formatShortDateLabel(
+                        (d as any).date ||
+                          (d as any).event_date ||
+                          (d as any).birthday ||
+                          (d as any).anniversary_date ||
+                          (d as any).created_at,
+                      )}
+                    </span>
+                  </div>
+                ))}
+                {previewData.upcoming_dates.length === 0 &&
+                  upcomingFromPeople.slice(0, 3).map((x, idx) => (
+                    <div
+                      key={`p-${idx}`}
+                      className="bg-white border border-[#EFEDE7] p-3 rounded-md flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-[#D2B48C]" />
+                        <span className="text-[13px] font-bold text-[#333333]">
+                          {x.name}'s Birthday
+                        </span>
+                      </div>
+                      <span className="text-[12px] font-bold text-[#777777]">
+                        {x.date.toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-[#6B7280] font-medium text-[15px]">
+                  No upcoming dates in the next 30 days
+                </p>
+              </div>
+            )}
           </div>
         </Card>
       </div>
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-8 rounded-xl flex flex-col min-h-[380px] shadow-none">
+        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-6 rounded-xl flex flex-col min-h-[420px] shadow-none overflow-hidden">
           {/* Header Stats Block */}
-          <div className="flex items-center justify-between mb-8 pb-6 border-b border-[#EFEDE7]">
+          <div className="flex items-center justify-between mb-6 px-2">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-[#D32F2F] rounded-xl flex items-center justify-center text-white shadow-sm">
-                <Zap className="w-6 h-6 fill-current" />
+              <div className="w-14 h-14 bg-[#d32f2f] rounded-2xl flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
+                <Zap className="w-7 h-7 fill-current" />
               </div>
               <div className="flex flex-col">
-                <span className="text-[12px] font-bold text-[#6B7280] uppercase tracking-wider">
+                <span className="text-[13px] font-bold text-[#6B7280]">
                   Avg Energy
                 </span>
-                <span className="text-2xl font-bold text-[#111111]">
+                <span className="text-2xl font-black text-[#111111]">
                   {summaryData?.energy_average !== null &&
                   summaryData?.energy_average !== undefined
-                    ? ` ${Number(summaryData.energy_average).toFixed(1)}`
-                    : " - "}
+                    ? Number(summaryData.energy_average).toFixed(1)
+                    : "-"}
                 </span>
               </div>
             </div>
 
-            <div className="w-px h-10 bg-[#EFEDE7]" />
+            <div className="w-px h-12 bg-[#EFEDE7]" />
 
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-[#D32F2F] rounded-xl flex items-center justify-center text-white shadow-sm">
-                <Heart className="w-6 h-6 fill-current" />
+              <div className="w-14 h-14 bg-[#d32f2f] rounded-2xl flex items-center justify-center text-white shadow-lg shadow-purple-500/20">
+                <Heart className="w-7 h-7 fill-current" />
               </div>
               <div className="flex flex-col">
-                <span className="text-[12px] font-bold text-[#6B7280] uppercase tracking-wider">
+                <span className="text-[13px] font-bold text-[#6B7280]">
                   Alignment
                 </span>
-                <span className="text-2xl font-bold text-[#111111]">
+                <span className="text-2xl font-black text-[#111111]">
                   {summaryData?.alignment_average !== null &&
                   summaryData?.alignment_average !== undefined
-                    ? ` ${Number(summaryData.alignment_average).toFixed(1)}`
-                    : " - "}
+                    ? Number(summaryData.alignment_average).toFixed(1)
+                    : "-"}
                 </span>
               </div>
             </div>
           </div>
-
-          {/* This Week Calendar Widget */}
-          <div className="bg-white border border-[#EFEDE7] p-6 rounded-2xl flex-1 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
+          {/* This Week Calendar Sub-Container - Image Matching Proportions */}
+          <div className="bg-white rounded-[28px] p-4 shadow-sm border border-[#F3F4F6] flex flex-col mx-2 mt-2">
+            <div className="flex items-center justify-between mb-5 px-3">
               <button
                 onClick={handlePrevWeek}
-                className="p-1 hover:bg-[#F9FAFB] rounded-full transition-colors"
+                className="text-[#FF6B00] hover:opacity-70 transition-opacity"
               >
-                <ChevronLeft className="w-5 h-5 text-[#C4b89D]" />
+                <ChevronLeft className="w-4 h-4" strokeWidth={3} />
               </button>
-              <h4 className="text-[15px] font-bold text-[#374151]">
-                {getWeekLabel()}
+              <h4 className="text-[17px] font-bold text-[#203451] tracking-tight">
+                This Week
               </h4>
               <button
                 onClick={handleNextWeek}
-                className="p-1 hover:bg-[#F9FAFB] rounded-full transition-colors"
+                className="text-[#FF6B00] hover:opacity-70 transition-opacity"
               >
-                <ChevronRight className="w-5 h-5 text-[#C4b89D]" />
+                <ChevronRight className="w-4 h-4" strokeWidth={3} />
               </button>
             </div>
 
-            <div className="grid grid-cols-7 gap-2 mb-6">
+            <div className="grid grid-cols-7 gap-1 px-1">
               {weekData.map((day, idx) => (
                 <div
                   key={idx}
-                  className={`flex flex-col items-center p-2 rounded-xl transition-all ${day.active ? "border-2 border-[#C4b89D] bg-[#FFF7ED]" : "bg-[#F9FAFB] border border-transparent"}`}
+                  className={`flex flex-col items-center justify-between py-2.5 rounded-[12px] transition-all border ${
+                    day.active
+                      ? "border-2 border-[#F3F4F6] bg-white shadow-sm"
+                      : "border-transparent bg-[#F5F7F9]"
+                  }`}
+                  style={{ minHeight: "82px" }}
                 >
                   <span
-                    className={`text-[11px] font-bold mb-1 ${day.active ? "text-[#C4b89D]" : "text-[#6B7280]"}`}
+                    className={`text-[11px] font-medium ${day.active ? "text-[#FF6B00]" : "text-[#7B8794]"}`}
                   >
                     {day.day}
                   </span>
                   <span
-                    className={`text-[14px] font-extrabold mb-1.5 ${day.active ? "text-[#111111]" : "text-[#374151]"}`}
+                    className={`text-[16px] font-black leading-none ${day.active ? "text-[#FF6B00]" : "text-[#111111]"}`}
                   >
                     {day.date}
                   </span>
                   <div
-                    className={`w-1.5 h-1.5 rounded-full ${
+                    className={`w-2 h-2 rounded-full mb-0.5 ${
                       day.state === "filled"
                         ? "bg-[#22C55E]"
                         : day.state === "missed"
@@ -1106,98 +1142,177 @@ const Dashboard = () => {
               ))}
             </div>
 
-            <div className="flex justify-center gap-6">
+            <div className="flex justify-center gap-5 mt-4 pt-1">
               <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-[#22C55E]" />
-                <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
+                <div className="w-2.5 h-2.5 rounded-full bg-[#22C55E]" />
+                <span className="text-[13px] font-medium text-[#4B5E75]">
                   Filled
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-[#EF4444]" />
-                <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
+                <div className="w-2.5 h-2.5 rounded-full bg-[#EF4444]" />
+                <span className="text-[13px] font-medium text-[#4B5E75]">
                   Missed
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-[#D1D5DB]" />
-                <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
+                <div className="w-2.5 h-2.5 rounded-full bg-[#D1D5DB]" />
+                <span className="text-[13px] font-medium text-[#4B5E75]">
                   Upcoming
                 </span>
               </div>
             </div>
           </div>
+          <div className="flex-1" />{" "}
+          {/* Spacer to leave beige area at bottom */}
         </Card>
 
-        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-10 rounded-xl flex flex-col min-h-[320px] items-center justify-center text-center shadow-none relative">
-          <div className="absolute top-10 left-10 flex items-center justify-between w-[calc(100%-80px)]">
-            <div className="flex items-center gap-2">
-              <Trophy className="w-6 h-6 text-[#333333]" />
-              <h3 className="font-bold text-[#333333] text-[18px]">
+        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-8 rounded-xl flex flex-col min-h-[420px] shadow-none relative overflow-hidden">
+          <div className="flex items-center justify-between mb-16 px-1">
+            <div className="flex items-center gap-3">
+              <Trophy className="w-6 h-6 text-[#D97706]" strokeWidth={2.5} />
+              <h3 className="font-bold text-[#6B7280] text-[18px] tracking-tight">
                 Highest Rank
               </h3>
             </div>
             <Link to="/achievements">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-[#BBA48B] font-bold text-[12px] hover:text-white hover:bg-red-700 h-auto p-0 px-2 uppercase tracking-wider"
-              >
+              <span className="text-[#D97706] font-bold text-[14px] hover:underline cursor-pointer">
                 View All
-              </Button>
+              </span>
             </Link>
           </div>
-          <div className="bg-white w-28 h-28 rounded-full border border-[#E8E4D9] flex items-center justify-center mb-6">
-            <Trophy className="w-12 h-12 text-[#EFEDE7]" />
+
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <div className="w-24 h-24 bg-[#FEF3C7]/60 rounded-full flex items-center justify-center mb-6">
+              <Lock className="w-10 h-10 text-[#D97706]/40" strokeWidth={1.5} />
+            </div>
+            <h4 className="text-[19px] font-bold text-[#334155] mb-2">
+              No badges yet
+            </h4>
+            <p className="text-[14px] text-[#64748B] font-medium">
+              Start journaling to earn titles!
+            </p>
           </div>
-          <p className="text-[13px] text-[#AAAAAA] font-bold uppercase tracking-widest">
-            No rank achieved yet
-          </p>
+
+          <div className="mt-10 px-2">
+            <div className="w-full h-px bg-[#F1F5F9] mb-6" />
+            <div className="flex justify-between items-center bg-[#F8FAFC]/30 rounded-2xl p-1">
+              <span className="text-[15px] font-medium text-[#64748B]">
+                Total Unlocked
+              </span>
+              <div className="bg-white px-4 py-1.5 rounded-full border border-[#E2E8F0] shadow-sm">
+                <span className="text-[15px] font-black text-[#1E293B]">
+                  0 / 19
+                </span>
+              </div>
+            </div>
+          </div>
         </Card>
 
-        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-10 rounded-xl flex flex-col min-h-[320px] items-center justify-center text-center shadow-none relative">
-          <div className="absolute top-10 left-10 flex items-center gap-2">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#333333"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-            <h3 className="font-bold text-[#333333] text-[18px]">People</h3>
+        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-8 rounded-xl flex flex-col min-h-[420px] shadow-none">
+          <div className="flex items-center gap-2 mb-8">
+            <BookOpen className="w-5 h-5 text-[#BBA48B]" />
+            <h3 className="font-bold text-[#333333] text-[18px]">
+              Journaling Status
+            </h3>
           </div>
-          <div
-            className="bg-white w-28 h-28 rounded-full border border-[#E8E4D9] flex items-center justify-center mb-6"
-            onClick={peopleHandler}
-            style={{ cursor: "pointer" }}
-          >
-            <svg
-              width="36"
-              height="36"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#EFEDE7"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
+
+          <div className="mb-8">
+            <div className="flex justify-between items-baseline mb-4">
+              <span className="text-[14px] font-bold text-[#111111] flex items-center gap-2">
+                Daily{" "}
+                <span className="text-[#6B7280] font-bold text-[11px] opacity-60">
+                  ({dailyDateRangeStr})
+                </span>
+              </span>
+              <span className="text-[14px] font-black text-[#111111]">
+                {dailyCompletedCount}/7
+              </span>
+            </div>
+            <div className="grid grid-cols-7 gap-2">
+              {dailyCompletion.map((day, idx) => (
+                <div key={idx} className="flex flex-col items-center gap-2">
+                  <div
+                    className={`w-9 h-9 rounded-full border-2 flex items-center justify-center transition-all ${
+                      day.active
+                        ? "border-[#D2B48C] bg-white shadow-sm ring-4 ring-[#D2B48C]/5"
+                        : day.completed
+                          ? "border-[#D2B48C]/30 bg-white"
+                          : "border-[#EFEDE7] bg-white"
+                    }`}
+                  >
+                    <div
+                      className={`w-4 h-4 rounded-full ${
+                        day.completed
+                          ? "bg-[#D2B48C]"
+                          : "border border-[#EFEDE7]"
+                      }`}
+                    />
+                  </div>
+                  <span
+                    className={`text-[10px] font-bold ${day.active ? "text-[#111111]" : "text-[#9CA3AF]"}`}
+                  >
+                    {day.dayLabel}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-          <p className="text-[13px] text-[#AAAAAA] font-bold uppercase tracking-widest">
-            No people added yet
-          </p>
+
+          <div className="mb-0">
+            <div className="flex justify-between items-baseline mb-4">
+              <span className="text-[14px] font-bold text-[#111111] flex items-center gap-2">
+                Weekly{" "}
+                <span className="text-[#6B7280] font-bold text-[11px] opacity-60">
+                  ({monthNameStatus} {currentYearStatus})
+                </span>
+              </span>
+              <span className="text-[14px] font-black text-[#111111]">
+                {weeklyCompletedCount}/5
+              </span>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              {weeklyBlocks.slice(0, 5).map((wk, idx) => (
+                <div
+                  key={idx}
+                  className={`aspect-[4/5] rounded-xl p-2 flex flex-col items-center justify-center text-center border-2 transition-all ${
+                    wk.completed
+                      ? "bg-[#D2B48C] border-transparent text-white shadow-md shadow-[#D2B48C]/20"
+                      : "bg-[#F9FAFB] text-[#AAAAAA] border-[#EFEDE7] opacity-60"
+                  }`}
+                >
+                  <Calendar
+                    className={`w-4 h-4 mb-2 ${
+                      wk.completed ? "text-white" : "text-[#D1D5DB]"
+                    }`}
+                  />
+                  <span className="text-[9px] font-black leading-tight uppercase tracking-tighter">
+                    {wk.label}
+                  </span>
+                  <span className="text-[7px] font-bold mt-0.5 opacity-80">
+                    {wk.datesLabel.replace(/[()]/g, "")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-auto pt-8 flex flex-col gap-3">
+            <div className="flex justify-between items-center">
+              <span className="font-bold text-[#777777] uppercase tracking-[0.15em] text-[10px]">
+                Keep Up The Momentum!
+              </span>
+              <span className="text-[12px] font-black text-[#111111]">
+                {percentComplete}% Complete
+              </span>
+            </div>
+            <div className="w-full h-2 bg-[#EFEDE7] rounded-full overflow-hidden p-0.5">
+              <div
+                className="h-full bg-[#D2B48C] rounded-full transition-all duration-1000 ease-out shadow-sm"
+                style={{ width: `${percentComplete}%` }}
+              />
+            </div>
+          </div>
         </Card>
       </div>
 
