@@ -718,6 +718,7 @@ const GoalsHabits = () => {
       toast({
         title: "Goal deleted",
         description: "Goal removed successfully.",
+        variant: "todoDelete",
       });
     } catch (err) {
       toast({
@@ -780,6 +781,7 @@ const GoalsHabits = () => {
         toast({
           title: "Goal moved",
           description: `Status updated to ${newStatus}.`,
+          variant: "goalsSuccess",
         });
       } catch (err) {
         toast({
@@ -1322,7 +1324,10 @@ const GoalsHabits = () => {
           method: "POST",
         });
       if (!res.ok) throw new Error(`Failed (${res.status})`);
-      toast({ title: "Habit deleted" });
+      toast({
+        title: "Habit deleted",
+        variant: "todoDelete",
+      });
     } catch (err) {
       toast({
         title: "Error",

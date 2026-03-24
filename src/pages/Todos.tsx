@@ -263,7 +263,7 @@ const Todos = () => {
       toast({
         title: "To do deleted",
         description: "Removed successfully.",
-        variant: "goalsSuccess",
+        variant: "todoDelete",
       });
     } catch (error) {
       console.error("Failed to delete todo:", error);
