@@ -550,6 +550,22 @@ const GoalsHabits = () => {
   // ─── GOALS CRUD ───────────────────────────────────────────────────────────
   const handleCreateGoal = async () => {
     if (!goalName.trim()) return;
+    if (!goalStartDate.trim() || !goalTargetDate.trim()) {
+      toast({
+        title: "Date required",
+        description: "Add both a start date and a target date before creating a goal.",
+        variant: "goalsError",
+      });
+      return;
+    }
+    if (goalTargetDate < goalStartDate) {
+      toast({
+        title: "Invalid dates",
+        description: "Target date must be on or after the start date.",
+        variant: "goalsWarning",
+      });
+      return;
+    }
     setGoalSaving(true);
     try {
       const res = await fetchWithAuth("/goals", {
@@ -596,6 +612,7 @@ const GoalsHabits = () => {
       toast({
         title: "Goal created",
         description: "Your goal has been saved.",
+        variant: "goalsSuccess",
       });
     } catch (err) {
       toast({
