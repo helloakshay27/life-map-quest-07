@@ -325,7 +325,7 @@ export default function ForFamily() {
       });
 
       if (!response.ok) throw new Error(`Failed to save: ${response.status}`);
-      toast({ title: "Success!", description: hasExistingProfile ? "Updated successfully" : "Saved successfully" });
+      toast({ title: "Success!", description: hasExistingProfile ? "Updated successfully" : "Saved successfully", variant: "goalsSuccess" });
       setHasExistingProfile(true); 
     } catch (error) {
       console.error("Save error:", error);
@@ -494,7 +494,7 @@ export default function ForFamily() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    toast({ title: "Success!", description: "Your profile has been downloaded as a text file." });
+    toast({ title: "Success!", description: "Your profile has been downloaded as a text file.", variant: "goalsSuccess" });
   };
   // --- Handlers ---
   const updatePersonalInfo = (field: keyof PersonalInfo, value: string) => setPersonalInfo(prev => ({ ...prev, [field]: value }));

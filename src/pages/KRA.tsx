@@ -589,6 +589,7 @@ export default function KraSelfEvaluation() {
       toast({
         title: "Evaluation submitted",
         description: "Your responses have been saved. 🎉",
+        variant: "goalsSuccess",
       });
       setNotes("");
       setQuestions(evaluationType === "md" ? defaultMD : defaultTeam);

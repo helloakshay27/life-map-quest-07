@@ -845,6 +845,11 @@ const GoalsHabits = () => {
       setBeliefAlternative("");
       setBeliefAffirmationId("none");
       setIsBeliefDialogOpen(false);
+      toast({
+        title: "Belief added",
+        description: "Your belief has been saved successfully.",
+        variant: "goalsSuccess",
+      });
     } catch {
       toast({
         title: "Error",
@@ -901,6 +906,10 @@ const GoalsHabits = () => {
       setBeliefAlternative("");
       setBeliefAffirmationId("none");
       setIsBeliefDialogOpen(false);
+      toast({
+        title: "Belief updated",
+        description: "Your changes have been saved.",
+      });
     } catch {
       toast({
         title: "Error",
@@ -919,6 +928,11 @@ const GoalsHabits = () => {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed");
+      toast({
+        title: "Belief deleted",
+        description: "Your belief has been removed successfully.",
+        variant: "todoDelete",
+      });
     } catch {
       toast({
         title: "Error",
@@ -989,6 +1003,11 @@ const GoalsHabits = () => {
       setPatternStrategies("");
       setPatternAffirmationId("");
       setIsPatternDialogOpen(false);
+      toast({
+        title: "Pattern added",
+        description: "Your pattern has been saved successfully.",
+        variant: "goalsSuccess",
+      });
     } catch {
       toast({
         title: "Error",
@@ -1047,6 +1066,10 @@ const GoalsHabits = () => {
       setPatternStrategies("");
       setPatternAffirmationId("");
       setIsPatternDialogOpen(false);
+      toast({
+        title: "Pattern updated",
+        description: "Your changes have been saved.",
+      });
     } catch {
       toast({
         title: "Error",
@@ -1065,6 +1088,11 @@ const GoalsHabits = () => {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed");
+      toast({
+        title: "Pattern deleted",
+        description: "Your pattern has been removed successfully.",
+        variant: "todoDelete",
+      });
     } catch {
       toast({
         title: "Error",
@@ -1124,6 +1152,11 @@ const GoalsHabits = () => {
       setAffirmationStatement("");
       setAffirmationPriority(5);
       setIsAffirmationDialogOpen(false);
+      toast({
+        title: "Affirmation added",
+        description: "Your affirmation has been saved successfully.",
+        variant: "goalsSuccess",
+      });
     } catch {
       toast({
         title: "Error",
@@ -1165,6 +1198,10 @@ const GoalsHabits = () => {
       setAffirmationStatement("");
       setAffirmationPriority(5);
       setIsAffirmationDialogOpen(false);
+      toast({
+        title: "Affirmation updated",
+        description: "Your changes have been saved.",
+      });
     } catch {
       toast({
         title: "Error",
@@ -1190,6 +1227,11 @@ const GoalsHabits = () => {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed");
+      toast({
+        title: "Affirmation deleted",
+        description: "Your affirmation has been removed successfully.",
+        variant: "todoDelete",
+      });
     } catch {
       toast({
         title: "Error",
@@ -1304,7 +1346,6 @@ const GoalsHabits = () => {
       toast({
         title: "Habit updated",
         description: "Your changes have been saved.",
-        variant: "goalsSuccess",
       });
     } catch (err) {
       toast({
@@ -2403,7 +2444,7 @@ const GoalsHabits = () => {
                 Cancel
               </Button>
               <Button
-                className="bg-red-500 hover:bg-red-600 text-white"
+                className="bg-[#DA7756] hover:bg-[#C96B4D] text-white"
                 onClick={
                   editingPatternId !== null
                     ? handleUpdatePattern
