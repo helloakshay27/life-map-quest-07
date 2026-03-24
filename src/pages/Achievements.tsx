@@ -37,12 +37,15 @@ const safeFetch = async (
     let data: unknown = null;
     try {
       data = await res.json();
-    } catch {}
+    } catch {
+      // Ignore JSON parse errors
+    }
     return { ok: res.ok, status: res.status, data };
   } catch (err) {
     console.error(`[Achievements] Network error:`, err);
     return { ok: false, status: 0, data: null };
   }
+
 };
 
 interface Badge {
@@ -1050,8 +1053,10 @@ const Achievements = () => {
     const success = await fetchAchievements();
     setIsLoading(false);
     toast.dismiss(toastId);
-    if (success) toast.success("Badges refreshed!");
-    else toast.error("Could not refresh. Check console for details.");
+    if (success)
+      toast.success("Badges refreshed!", { style: { background: "#a4f4e7" } });
+    else
+      toast.error("Could not refresh. Check console for details.", { style: { background: "#a4f4e7" } });
     setIsRefreshing(false);
   };
 
