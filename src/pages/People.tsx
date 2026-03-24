@@ -21,6 +21,13 @@ import AddPersonModal from "@/components/AddPersonModal";
 
 const API_BASE_URL = "https://life-api.lockated.com";
 
+// Note: These buttons are declared but currently unused in this component.
+const figmaPrimaryButton =
+  "inline-flex items-center justify-center gap-2 rounded-md border border-transparent bg-[#D67455] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#C86648] active:bg-[#B95D42]";
+
+const figmaSecondaryButton =
+  "inline-flex items-center justify-center gap-2 rounded-md border border-[#E0D4C4] bg-[#FFF9F1] px-4 py-2.5 text-sm font-medium text-[#5E4A3A] shadow-sm transition-colors hover:bg-[#F8EFE4]";
+
 interface Person {
   id: number;
   name: string;
@@ -328,7 +335,7 @@ const People = () => {
               )}
             </div>
           </div>
-        </div>
+        </div> {/* <--- MAIN FIX: Ye grid div yahan close hona zaroori tha */}
 
         {/* FILTER + PEOPLE LIST */}
         <div className="w-full min-h-[400px] flex flex-col bg-[#FEF4EE] rounded-2xl border border-[#D6B99D] overflow-hidden">

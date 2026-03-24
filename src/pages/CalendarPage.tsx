@@ -138,6 +138,10 @@ const deleteCalendarApi = async (id: string): Promise<void> => {
   }
 };
 
+/** Figma dashboard: terracotta primary, ~8px radius, 8px×16px padding */
+const figmaPrimaryButton =
+  "!bg-[#D67455] !text-white shadow-sm hover:!bg-[#D67455]/92 active:!bg-[#D67455]/85 rounded-md px-4 py-2 h-auto min-h-9 font-medium border-0 [&_svg]:!text-white";
+
 const CalendarPage = () => {
   const [calendars, setCalendars] = useState<CalendarItem[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -362,19 +366,23 @@ const CalendarPage = () => {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 animate-fade-in px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <div
+      className="-m-2 md:-m-3 min-h-[calc(100vh-5rem)] animate-fade-in bg-[#F8F6F1] px-4 py-6 sm:px-6 lg:px-8"
+      data-page="calendar"
+    >
+      <div className="mx-auto max-w-7xl space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
-        <div className="mt-1 rounded-md bg-primary/10 p-2 text-primary">
+        <div className="mt-1 rounded-md bg-[#D67455]/12 p-2 text-[#D67455]">
           <CalendarDays className="h-5 w-5 sm:h-6 sm:w-6" />
         </div>
         <div className="text-center sm:text-left">
-          <h1 className="text-2xl sm:text-3xl text-foreground">My Calendars</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1">View and manage your schedules</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-[#333333]">My Calendars</h1>
+          <p className="mt-1 text-sm sm:text-base text-[#666666]">View and manage your schedules</p>
         </div>
       </div>
 
       {!hasCalendars && (
-        <Card className="bg-muted/25">
+        <Card className="rounded-xl border border-[#E0E0E0]/90 bg-white shadow-sm">
           <CardContent className="flex min-h-[150px] sm:min-h-[200px] flex-col items-center justify-center gap-2 text-center p-4 sm:p-6">
             {isLoading ? (
               <>
@@ -392,24 +400,24 @@ const CalendarPage = () => {
         </Card>
       )}
 
-      <Card className="bg-blue-50/80">
-        <CardHeader className="pb-3 p-4 sm:p-6">
-          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-            <Info className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
+      <Card className="rounded-xl border border-[#E0E0E0]/90 bg-white shadow-sm">
+        <CardHeader className="p-4 pb-3 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg text-[#333333]">
+            <Info className="h-4 w-4 shrink-0 text-[#D67455] sm:h-5 sm:w-5" />
             How to Embed Your Google Calendar
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 p-4 sm:p-6 pt-0">
-          <div className="rounded-md border border-blue-100 bg-card p-3 sm:p-4">
-            <h3 className="mb-3 text-base sm:text-lg font-semibold text-foreground">Step-by-Step Instructions:</h3>
-            <ol className="list-decimal space-y-2 pl-4 sm:pl-5 text-sm sm:text-base text-muted-foreground marker:text-primary marker:font-semibold">
+        <CardContent className="space-y-3 p-4 pt-0 sm:p-6 sm:pt-0">
+          <div className="rounded-lg border border-[#E0E0E0]/80 bg-[#FAFAFA] p-3 sm:p-4">
+            <h3 className="mb-3 text-base sm:text-lg font-semibold text-[#333333]">Step-by-Step Instructions:</h3>
+            <ol className="list-decimal space-y-2 pl-4 sm:pl-5 text-sm sm:text-base text-[#666666] marker:font-semibold marker:text-[#D67455]">
               <li className="break-words">
                 Go to{" "}
                 <a
                   href="https://calendar.google.com"
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-primary hover:underline"
+                  className="inline-flex items-center gap-1 font-medium text-[#D67455] underline underline-offset-2 hover:text-[#D67455]/90"
                 >
                   Google Calendar <ExternalLink className="h-3 w-3" />
                 </a>
@@ -432,19 +440,23 @@ const CalendarPage = () => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-3 p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <CardTitle className="text-base sm:text-lg">Manage Calendars</CardTitle>
-            <Button size="sm" onClick={() => setShowAddForm((prev) => !prev)} className="w-full sm:w-auto">
+      <Card className="rounded-xl border border-[#E0E0E0]/90 bg-white shadow-sm">
+        <CardHeader className="p-4 pb-3 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-base sm:text-lg text-[#333333]">Manage Calendars</CardTitle>
+            <Button
+              size="sm"
+              onClick={() => setShowAddForm((prev) => !prev)}
+              className={`w-full sm:w-auto ${figmaPrimaryButton}`}
+            >
               <Plus className="h-4 w-4" />
               Add Calendar
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4 p-4 sm:p-6 pt-0">
+        <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
           {showAddForm && (
-            <form onSubmit={handleAddCalendar} className="grid gap-3 rounded-lg border bg-muted/20 p-3 sm:p-4">
+            <form onSubmit={handleAddCalendar} className="grid gap-3 rounded-lg border border-[#E0E0E0]/80 bg-[#F2EFE9]/40 p-3 sm:p-4">
               <Input
                 value={calendarName}
                 onChange={(event) => setCalendarName(event.target.value)}
@@ -460,7 +472,7 @@ const CalendarPage = () => {
                 className="text-sm"
                 disabled={isSubmitting}
               />
-              <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
+              <Button type="submit" className={`w-full sm:w-auto ${figmaPrimaryButton}`} disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -474,15 +486,15 @@ const CalendarPage = () => {
           )}
 
           {calendars.length === 0 ? (
-            <div className="rounded-lg bg-muted/30 py-8 sm:py-10 text-center text-sm sm:text-base text-muted-foreground">
+            <div className="rounded-lg border border-[#E0E0E0]/60 bg-[#FAFAFA] py-8 text-center text-sm text-[#666666] sm:py-10 sm:text-base">
               No calendars added yet. Click "Add Calendar" to get started.
             </div>
           ) : (
             <div className="space-y-3 sm:space-y-4">
               {calendars.map((calendar) => (
-                <Card key={calendar.id} className="overflow-hidden">
-                  <CardHeader className="flex-row items-center justify-between space-y-0 border-b bg-muted/20 py-3 px-4">
-                    <CardTitle className="text-sm sm:text-base truncate flex-1 mr-2">{calendar.name}</CardTitle>
+                <Card key={calendar.id} className="overflow-hidden rounded-xl border border-[#E0E0E0]/90 bg-white shadow-sm">
+                  <CardHeader className="flex-row items-center justify-between space-y-0 border-b border-[#E0E0E0]/80 bg-[#FAFAFA] py-3 px-4">
+                    <CardTitle className="mr-2 flex-1 truncate text-sm text-[#333333] sm:text-base">{calendar.name}</CardTitle>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <Button
                         variant="ghost"
@@ -504,7 +516,7 @@ const CalendarPage = () => {
                   </CardHeader>
 
                   {editingId === calendar.id && (
-                    <CardContent className="p-3 sm:p-4 border-b bg-muted/10">
+                    <CardContent className="border-b border-[#E0E0E0]/80 bg-[#F8F6F1]/80 p-3 sm:p-4">
                       <form onSubmit={handleUpdateCalendar} className="grid gap-3">
                         <Input
                           value={editName}
@@ -521,8 +533,8 @@ const CalendarPage = () => {
                           className="text-sm"
                           disabled={isUpdating}
                         />
-                        <div className="flex gap-2">
-                          <Button type="submit" size="sm" disabled={isUpdating}>
+                        <div className="flex flex-wrap gap-2">
+                          <Button type="submit" size="sm" className={figmaPrimaryButton} disabled={isUpdating}>
                             {isUpdating ? (
                               <>
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -532,7 +544,14 @@ const CalendarPage = () => {
                               "Update"
                             )}
                           </Button>
-                          <Button type="button" size="sm" variant="outline" onClick={handleCancelEdit} disabled={isUpdating}>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="rounded-md border-[#E0E0E0] bg-white text-[#333333] hover:bg-[#F2EFE9]"
+                            onClick={handleCancelEdit}
+                            disabled={isUpdating}
+                          >
                             <X className="h-4 w-4" />
                             Cancel
                           </Button>
@@ -555,6 +574,7 @@ const CalendarPage = () => {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };

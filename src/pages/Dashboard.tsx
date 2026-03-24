@@ -348,6 +348,42 @@ const Dashboard = () => {
   const setupCompleted = parseInt(localStorage.getItem("setupCompletedCount") || "0");
   const setupTotal = parseInt(localStorage.getItem("setupTotalCount") || "5");
 
+  const formatShortDateLabel = (s?: string) => {
+    if (!s) return "-";
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return s;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  const upcomingFromPeople = useMemo(() => {
+    try {
+      const today = new Date();
+      const limit = new Date(today);
+      limit.setDate(today.getDate() + 30);
+      return people
+        .filter((p) => p && typeof p.birthday === "string" && p.birthday)
+        .map((p) => {
+          const parts = (p.birthday as string).split("-");
+          if (parts.length < 3) return null;
+          const month = parseInt(parts[1], 10) - 1;
+          const day = parseInt(parts[2], 10);
+          let d = new Date(today.getFullYear(), month, day);
+          if (d < today) d = new Date(today.getFullYear() + 1, month, day);
+          return { name: p.name, date: d };
+        })
+        .filter((x) => x && x.date >= today && x.date <= limit) as {
+        name: string;
+        date: Date;
+      }[];
+    } catch {
+      return [] as { name: string; date: Date }[];
+    }
+  }, [people]);
+
+  const hasUpcomingDates =
+    (previewData.upcoming_dates && previewData.upcoming_dates.length > 0) ||
+    upcomingFromPeople.length > 0;
+
   return (
     <div className="animate-fade-in space-y-6 w-full" style={{ background: C.pageBg }}>
 
@@ -587,6 +623,8 @@ const Dashboard = () => {
               <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full" style={{ background: C.mist }}></div> Upcoming</div>
             </div>
           </div>
+          <div className="flex-1" />{" "}
+          {/* Spacer to leave beige area at bottom */}
         </Card>
 
         {/* Highest Rank */}

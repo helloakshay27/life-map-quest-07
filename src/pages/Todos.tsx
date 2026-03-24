@@ -457,7 +457,7 @@ const Todos = () => {
   const draggingTodo = dragState ? todos.find((t) => t.id === dragState.todoId) : null;
 
   return (
-    <div className="relative w-full animate-fade-in space-y-8">
+    <div className="relative w-full min-h-[calc(100vh-7rem)] animate-fade-in space-y-8 rounded-xl bg-[#F6F4EE] p-3 sm:p-4">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -466,7 +466,7 @@ const Todos = () => {
         </div>
         <Button
           size="sm"
-          className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto px-4 py-2.5"
+          className="bg-[#DA7756] hover:bg-[#C96B4D] text-white w-full sm:w-auto px-4 py-2.5"
           onClick={() => {
             setEditingTodo(null);
             setIsCreateDialogOpen(true);
@@ -476,9 +476,9 @@ const Todos = () => {
         </Button>
       </div>
 
-      <div className="w-full min-h-[520px] flex flex-col bg-[#fafafa] rounded-2xl border border-gray-100 overflow-hidden">
+      <div className="w-full min-h-[520px] flex flex-col bg-[#F6F4EE] rounded-2xl border border-gray-100 overflow-hidden">
         {/* Filters */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 border-b border-gray-100 bg-white">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 border-b border-gray-100 bg-[#F6F4EE]">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full sm:w-auto">
             <Select value={selectedArea} onValueChange={setSelectedArea}>
               <SelectTrigger className="w-full text-sm"><SelectValue placeholder="All Areas" /></SelectTrigger>
@@ -503,10 +503,10 @@ const Todos = () => {
             </Select>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
-            <Button variant="outline" size="sm" onClick={() => setViewMode("list")} className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "list" ? "bg-red-500 text-white border-red-500 hover:bg-red-600 hover:text-white" : "text-red-600 border-red-200 hover:bg-red-50"}`}>
+            <Button variant="outline" size="sm" onClick={() => setViewMode("list")} className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "list" ? "bg-[#DA7756] text-white border-[#DA7756] hover:bg-[#C96B4D] hover:text-white" : "text-[#DA7756] border-[#DA7756]/40 hover:bg-[#DA7756]/10"}`}>
               <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />List
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setViewMode("kanban")} className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "kanban" ? "bg-red-500 text-white border-red-500 hover:bg-red-600 hover:text-white" : "text-red-600 border-red-200 hover:bg-red-50"}`}>
+            <Button variant="outline" size="sm" onClick={() => setViewMode("kanban")} className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "kanban" ? "bg-[#DA7756] text-white border-[#DA7756] hover:bg-[#C96B4D] hover:text-white" : "text-[#DA7756] border-[#DA7756]/40 hover:bg-[#DA7756]/10"}`}>
               Kanban
             </Button>
           </div>
@@ -592,7 +592,7 @@ const Todos = () => {
                                     <button
                                       onPointerDown={(e) => e.stopPropagation()}
                                       onClick={() => handleDeleteTodo(todo.id)}
-                                      className="text-red-500 hover:text-red-700 transition-colors flex-shrink-0"
+                                      className="text-[#DA7756] hover:text-[#C96B4D] transition-colors flex-shrink-0"
                                       title="Delete"
                                     >
                                       <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -657,7 +657,7 @@ const Todos = () => {
                           >
                             <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDeleteTodo(todo.id)} className="flex-shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50">
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteTodo(todo.id)} className="flex-shrink-0 text-[#DA7756] hover:text-[#C96B4D] hover:bg-[#DA7756]/10">
                             <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                         </div>

@@ -403,6 +403,12 @@ function KraItem({
 }
 
 // ─── QuestionsAndAnswers ──────────────────────────────────────────────────────
+const figmaPrimaryButton =
+  "inline-flex items-center justify-center gap-2 rounded-md border border-transparent bg-[#D67455] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#C86648] active:bg-[#B95D42] disabled:opacity-70 disabled:cursor-not-allowed";
+
+const figmaSecondaryButton =
+  "inline-flex items-center justify-center gap-2 rounded-md border border-[#E0D4C4] bg-[#FFF9F1] px-4 py-2.5 text-sm font-medium text-[#5E4A3A] shadow-sm transition-colors hover:bg-[#F8EFE4]";
+
 function QuestionsAndAnswers({
   header,
   questions,
@@ -411,6 +417,7 @@ function QuestionsAndAnswers({
   setNotes,
   onSubmit,
   isSubmitting,
+  figmaPrimaryButton,
 }) {
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -451,35 +458,10 @@ function QuestionsAndAnswers({
       </div>
 
       <button
-        style={{
-          marginTop: 16,
-          width: "100%",
-          padding: "16px",
-          borderRadius: 12,
-          background: "linear-gradient(135deg,#ef4444,#dc2626)",
-          color: "#fff",
-          fontWeight: 700,
-          fontSize: 15,
-          border: "none",
-          cursor: isSubmitting ? "not-allowed" : "pointer",
-          letterSpacing: "0.02em",
-          boxShadow: "0 4px 14px rgba(220,38,38,0.35)",
-          transition: "opacity 0.2s",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "8px",
-          opacity: isSubmitting ? 0.7 : 1,
-        }}
+        className={figmaPrimaryButton + " w-full mt-4 py-4 text-base font-bold"}
         onClick={onSubmit}
         id="submit-kra-evaluation"
         disabled={isSubmitting}
-        onMouseEnter={(e) =>
-          !isSubmitting && (e.currentTarget.style.opacity = "0.88")
-        }
-        onMouseLeave={(e) =>
-          !isSubmitting && (e.currentTarget.style.opacity = "1")
-        }
       >
         {isSubmitting ? "Submitting…" : "Submit Evaluation"}
       </button>
@@ -624,124 +606,107 @@ export default function KraSelfEvaluation() {
   };
 
   return (
-    <div className="relative w-full animate-fade-in space-y-8">
-      {/* HEADER */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            KRA Self-Evaluation
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Assess your performance across key result areas
-          </p>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex bg-gray-200/50 p-1 rounded-xl mb-5">
-        {["MD", "Team"].map((tab) => (
-          <button
-            key={tab}
-            id={`kra-tab-${tab.toLowerCase()}`}
-            onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-              activeTab === tab
-                ? "bg-red-50 border border-red-200 shadow-sm text-red-600"
-                : "text-red-400 hover:text-red-600"
-            }`}
-          >
-            {tab === "MD" ? "MD's Evaluation" : "Team's Evaluation"}
-          </button>
-        ))}
-      </div>
-
-      {/* Content */}
-      <div
-        style={{
-          background: "rgba(237,233,254,0.3)",
-          borderRadius: 16,
-          border: "1px solid rgba(167,139,250,0.2)",
-          padding: 16,
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
-        }}
-      >
-        <ScoreCard 
-          data={scoreData} 
-          liveTotal={questions.reduce((a: number, b: KRAItemType) => a + (b.score || 0), 0)}
-          maxTotal={questions.length * 5}
-        />
-
-        <QuestionsAndAnswers
-          header={
-            activeTab === "MD"
-              ? "MD/Owner Self-Evaluation"
-              : "Team Self-Evaluation"
-          }
-          questions={questions}
-          onScoreChange={handleScoreChange}
-          notes={notes}
-          setNotes={setNotes}
-          onSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
-        />
-      </div>
-
-      {/* History Table */}
-      {evaluations.length > 0 && (
-        <div
-          style={{ marginTop: 32 }}
-          className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
-        >
-          <h2
-            style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}
-            className="text-gray-900"
-          >
-            Previous {evaluationType === "md" ? "MD" : "Team"} Evaluations
-          </h2>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="whitespace-nowrap">Date</TableHead>
-                  <TableHead>Notes</TableHead>
-                  {questions.map((q) => (
-                    <TableHead key={q.key} className="min-w-[150px]">
-                      {q.title}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {[...evaluations].reverse().map((ev, idx) => (
-                  <TableRow key={ev.id ?? idx}>
-                    <TableCell className="font-medium">
-                      {ev.evaluation_date
-                        ? new Date(ev.evaluation_date).toLocaleDateString()
-                        : ev.date || "-"}
-                    </TableCell>
-                    <TableCell
-                      className="text-gray-600 max-w-[200px] truncate"
-                      title={ev.notes}
-                    >
-                      {ev.notes || "-"}
-                    </TableCell>
-                    {questions.map((q) => (
-                      <TableCell
-                        key={q.key}
-                        className="text-center font-semibold text-purple-600"
-                      >
-                        {ev.scores && q.key ? ev.scores[q.key] : "-"}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+    <div className="-m-2 animate-fade-in bg-[#F8F6F1] px-4 py-6 md:-m-3 md:px-6 md:py-8 min-h-[calc(100vh-5rem)]">
+      <div className="relative mx-auto w-full max-w-7xl space-y-8">
+        {/* HEADER */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold text-[#333333]">KRA Self-Evaluation</h1>
+            <p className="mt-0.5 text-sm text-[#666666]">Assess your performance across key result areas</p>
           </div>
         </div>
-      )}
+
+        {/* Tabs */}
+        <div className="flex bg-[#F2EFE9] p-1 rounded-xl mb-5 border border-[#E0D4C4]/60">
+          {["MD", "Team"].map((tab) => (
+            <button
+              key={tab}
+              id={`kra-tab-${tab.toLowerCase()}`}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                activeTab === tab
+                  ? "bg-[#FFF9F1] border border-[#E0D4C4] shadow-sm text-[#D67455]"
+                  : "text-[#BCA18A] hover:text-[#D67455]"
+              }`}
+            >
+              {tab === "MD" ? "MD's Evaluation" : "Team's Evaluation"}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div className="rounded-2xl border border-[#E0D4C4]/60 bg-white/80 p-4 md:p-6 flex flex-col gap-6 shadow-sm">
+          <ScoreCard 
+            data={scoreData} 
+            liveTotal={questions.reduce((a: number, b: KRAItemType) => a + (b.score || 0), 0)}
+            maxTotal={questions.length * 5}
+          />
+
+          <QuestionsAndAnswers
+            header={
+              activeTab === "MD"
+                ? "MD/Owner Self-Evaluation"
+                : "Team Self-Evaluation"
+            }
+            questions={questions}
+            onScoreChange={handleScoreChange}
+            notes={notes}
+            setNotes={setNotes}
+            onSubmit={handleSubmit}
+            isSubmitting={isSubmitting}
+            figmaPrimaryButton={figmaPrimaryButton}
+          />
+        </div>
+
+        {/* History Table */}
+        {evaluations.length > 0 && (
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#E0D4C4]/60 mt-8">
+            <h2 className="text-xl font-semibold text-[#333333] mb-4">
+              Previous {evaluationType === "md" ? "MD" : "Team"} Evaluations
+            </h2>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="whitespace-nowrap">Date</TableHead>
+                    <TableHead>Notes</TableHead>
+                    {questions.map((q) => (
+                      <TableHead key={q.key} className="min-w-[150px]">
+                        {q.title}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...evaluations].reverse().map((ev, idx) => (
+                    <TableRow key={ev.id ?? idx}>
+                      <TableCell className="font-medium">
+                        {ev.evaluation_date
+                          ? new Date(ev.evaluation_date).toLocaleDateString()
+                          : ev.date || "-"}
+                      </TableCell>
+                      <TableCell
+                        className="text-[#7C6B5A] max-w-[200px] truncate"
+                        title={ev.notes}
+                      >
+                        {ev.notes || "-"}
+                      </TableCell>
+                      {questions.map((q) => (
+                        <TableCell
+                          key={q.key}
+                          className="text-center font-semibold text-[#D67455]"
+                        >
+                          {ev.scores && q.key ? ev.scores[q.key] : "-"}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

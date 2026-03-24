@@ -127,13 +127,13 @@ const CreateToDoDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-title-1 text-foreground">
+          <DialogTitle className={isEditMode ? "text-title-1 text-foreground" : "text-title-1 text-[#222]"}>
             {isEditMode ? "Update To Do" : "Create New To Do"}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <label className="text-body-5 font-medium text-primary">Title *</label>
+            <label className="text-body-5 font-medium text-[#222]">Title *</label>
             <Input
               placeholder="What needs to be done?"
               value={title}
@@ -142,7 +142,7 @@ const CreateToDoDialog = ({
             />
           </div>
           <div>
-            <label className="text-body-5 font-medium text-primary">Description</label>
+            <label className="text-body-5 font-medium text-[#222]">Description</label>
             <Textarea
               placeholder="Add details..."
               value={description}
@@ -152,7 +152,7 @@ const CreateToDoDialog = ({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-body-5 font-medium text-primary">Life Area</label>
+              <label className="text-body-5 font-medium text-[#222]">Life Area</label>
               <div className="mt-1">
                 <SearchableSelect
                   options={toOptions(LIFE_AREAS)}
@@ -164,7 +164,7 @@ const CreateToDoDialog = ({
               </div>
             </div>
             <div>
-              <label className="text-body-5 font-medium text-primary">Priority</label>
+              <label className="text-body-5 font-medium text-[#222]">Priority</label>
               <div className="mt-1">
                 <SearchableSelect
                   options={toOptions(PRIORITIES)}
@@ -178,7 +178,7 @@ const CreateToDoDialog = ({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-body-5 font-medium text-primary">Status</label>
+              <label className="text-body-5 font-medium text-[#222]">Status</label>
               <div className="mt-1">
                 <SearchableSelect
                   options={toOptions(STATUSES)}
@@ -190,7 +190,7 @@ const CreateToDoDialog = ({
               </div>
             </div>
             <div>
-              <label className="text-body-5 font-medium text-primary">Target Date</label>
+              <label className="text-body-5 font-medium text-[#222]">Target Date</label>
               <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -222,7 +222,7 @@ const CreateToDoDialog = ({
 
           {/* 🚀 NAYA DROPDOWN: LINK TO GOAL */}
           <div>
-            <label className="text-body-5 font-medium text-primary">Link to Goal (Optional)</label>
+            <label className="text-body-5 font-medium text-[#222]">Link to Goal (Optional)</label>
             <div className="mt-1">
               <Select value={selectedGoal} onValueChange={setSelectedGoal}>
                 <SelectTrigger className="w-full bg-white">

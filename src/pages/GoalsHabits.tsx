@@ -1387,22 +1387,22 @@ const GoalsHabits = () => {
     goals: {
       onClick: () => setIsGoalDialogOpen(true),
       label: areaLabels[selectedArea] || "Create Your First Goal",
-      className: "bg-red-500 hover:bg-red-600 text-white",
+      className: "bg-[#DA7756] hover:bg-[#C96B4D] text-white",
     },
     beliefs: {
       onClick: () => setIsBeliefDialogOpen(true),
       label: "Identify Your First Belief",
-      className: "bg-red-500 hover:bg-red-600 text-white",
+      className: "bg-[#DA7756] hover:bg-[#C96B4D] text-white",
     },
     affirmations: {
       onClick: () => setIsAffirmationDialogOpen(true),
       label: "Add Your First Affirmation",
-      className: "bg-red-500 hover:bg-red-600 text-white",
+      className: "bg-[#DA7756] hover:bg-[#C96B4D] text-white",
     },
     habits: {
       onClick: () => setIsHabitDialogOpen(true),
       label: "Create Your First Habit",
-      className: "bg-red-500 hover:bg-red-600 text-white",
+      className: "bg-[#DA7756] hover:bg-[#C96B4D] text-white",
     },
   };
   const currentFooter = footerConfig[activeTab as keyof typeof footerConfig];
@@ -1431,9 +1431,9 @@ const GoalsHabits = () => {
 
   // ─── RENDER ───────────────────────────────────────────────────────────────
   return (
-    <div className="relative w-full animate-fade-in space-y-8">
+    <div className="relative w-full min-h-[calc(100vh-7rem)] animate-fade-in space-y-8 rounded-xl bg-[#F6F4EE] p-3 sm:p-4">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Goals & Habits</h1>
+        <h1 className="text-3xl font-bold text-black">Goals & Habits</h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-1">
           Transform beliefs and achieve your aspirations
         </p>
@@ -1456,25 +1456,25 @@ const GoalsHabits = () => {
           <TabsList className="grid w-full max-w-md min-w-[280px] grid-cols-4">
             <TabsTrigger
               value="goals"
-              className="text-xs sm:text-sm data-[state=active]:bg-red-500 data-[state=active]:text-white"
+              className="text-xs sm:text-sm data-[state=active]:bg-[#DA7756] data-[state=active]:text-white"
             >
               Goals
             </TabsTrigger>
             <TabsTrigger
               value="beliefs"
-              className="text-xs sm:text-sm data-[state=active]:bg-red-500 data-[state=active]:text-white"
+              className="text-xs sm:text-sm data-[state=active]:bg-[#DA7756] data-[state=active]:text-white"
             >
               Beliefs
             </TabsTrigger>
             <TabsTrigger
               value="affirmations"
-              className="text-xs sm:text-sm data-[state=active]:bg-red-500 data-[state=active]:text-white"
+              className="text-xs sm:text-sm data-[state=active]:bg-[#DA7756] data-[state=active]:text-white"
             >
               Affirmations
             </TabsTrigger>
             <TabsTrigger
               value="habits"
-              className="text-xs sm:text-sm data-[state=active]:bg-red-500 data-[state=active]:text-white"
+              className="text-xs sm:text-sm data-[state=active]:bg-[#DA7756] data-[state=active]:text-white"
             >
               Habits
             </TabsTrigger>
@@ -1501,7 +1501,7 @@ const GoalsHabits = () => {
               <Button
                 variant="outline"
                 size="sm"
-                className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "kanban" ? "bg-red-500 text-white border-red-500 hover:bg-red-600 hover:text-white" : "text-red-600 border-red-200 hover:bg-red-50"}`}
+                className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "kanban" ? "bg-[#DA7756] text-white border-[#DA7756] hover:bg-[#C96B4D] hover:text-white" : "text-[#DA7756] border-[#DA7756]/40 hover:bg-[#DA7756]/10"}`}
                 onClick={() => setViewMode("kanban")}
               >
                 <Columns3 className="h-3.5 w-3.5 mr-1.5" /> Kanban
@@ -1509,14 +1509,14 @@ const GoalsHabits = () => {
               <Button
                 variant="outline"
                 size="sm"
-                className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "grid" ? "bg-red-500 text-white border-red-500 hover:bg-red-600 hover:text-white" : "text-red-600 border-red-200 hover:bg-red-50"}`}
+                className={`flex-1 sm:flex-none text-xs sm:text-sm ${viewMode === "grid" ? "bg-[#DA7756] text-white border-[#DA7756] hover:bg-[#C96B4D] hover:text-white" : "text-[#DA7756] border-[#DA7756]/40 hover:bg-[#DA7756]/10"}`}
                 onClick={() => setViewMode("grid")}
               >
                 <LayoutGrid className="h-3.5 w-3.5 mr-1.5" /> Grid
               </Button>
               <Button
                 size="sm"
-                className="bg-red-500 hover:bg-red-600 text-white flex-1 sm:flex-none text-xs sm:text-sm"
+                className="bg-[#DA7756] hover:bg-[#C96B4D] text-white flex-1 sm:flex-none text-xs sm:text-sm"
                 onClick={() => setIsGoalDialogOpen(true)}
               >
                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" /> New Goal
@@ -1704,7 +1704,7 @@ const GoalsHabits = () => {
                   </p>
                 </div>
                 <Button
-                  className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto text-sm"
+                  className="bg-[#DA7756] hover:bg-[#C96B4D] text-white w-full sm:w-auto text-sm"
                   onClick={() => setIsBeliefDialogOpen(true)}
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add Belief
@@ -1757,7 +1757,7 @@ const GoalsHabits = () => {
                   </p>
                 </div>
                 <Button
-                  className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto text-sm"
+                  className="bg-[#DA7756] hover:bg-[#C96B4D] text-white w-full sm:w-auto text-sm"
                   onClick={() => setIsPatternDialogOpen(true)}
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add Pattern
@@ -1821,7 +1821,7 @@ const GoalsHabits = () => {
                 </p>
               </div>
               <Button
-                className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto text-sm"
+                className="bg-[#DA7756] hover:bg-[#C96B4D] text-white w-full sm:w-auto text-sm"
                 onClick={() => setIsAffirmationDialogOpen(true)}
               >
                 <Plus className="h-4 w-4 mr-2" /> Add
@@ -1885,7 +1885,7 @@ const GoalsHabits = () => {
                 </p>
               </div>
               <Button
-                className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto text-sm"
+                className="bg-[#DA7756] hover:bg-[#C96B4D] text-white w-full sm:w-auto text-sm"
                 onClick={() => setIsHabitDialogOpen(true)}
               >
                 <Plus className="h-4 w-4 mr-2" /> Add Habit
@@ -1935,7 +1935,7 @@ const GoalsHabits = () => {
       </Tabs>
 
       {currentFooter && shouldShowFooter() && (
-        <div className="flex items-center justify-center pt-2 pb-1">
+        <div className="flex items-center justify-center bg-[#F6F4EE] pt-2 pb-1">
           <Button
             className={`h-8 rounded-md px-4 text-xs sm:text-sm font-semibold shadow-sm ${currentFooter.className}`}
             onClick={currentFooter.onClick}
@@ -2124,14 +2124,14 @@ const GoalsHabits = () => {
             <div className="flex justify-end gap-2 pt-4">
               <Button
                 variant="outline"
-                className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                className="border-[#DA7756]/40 text-[#DA7756] hover:bg-[#DA7756]/10 hover:text-[#C96B4D]"
                 onClick={() => setIsGoalDialogOpen(false)}
                 disabled={goalSaving}
               >
                 Cancel
               </Button>
               <Button
-                className="bg-red-500 hover:bg-red-600 text-white"
+                className="bg-[#DA7756] hover:bg-[#C96B4D] text-white"
                 onClick={
                   editingGoalId !== null ? handleUpdateGoal : handleCreateGoal
                 }
@@ -2238,7 +2238,7 @@ const GoalsHabits = () => {
                 Cancel
               </Button>
               <Button
-                className="bg-red-500 hover:bg-red-600 text-white"
+                className="bg-[#DA7756] hover:bg-[#C96B4D] text-white"
                 onClick={
                   editingBeliefId !== null
                     ? handleUpdateBelief
@@ -2519,14 +2519,14 @@ const GoalsHabits = () => {
             <div className="flex justify-end gap-2 pt-4">
               <Button
                 variant="outline"
-                className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                className="border-[#DA7756]/40 text-[#DA7756] hover:bg-[#DA7756]/10 hover:text-[#C96B4D]"
                 onClick={() => setIsAffirmationDialogOpen(false)}
                 disabled={affirmationSaving}
               >
                 Cancel
               </Button>
               <Button
-                className="bg-red-500 hover:bg-red-600 text-white"
+                className="bg-[#DA7756] hover:bg-[#C96B4D] text-white"
                 onClick={
                   editingAffirmationId !== null
                     ? handleUpdateAffirmation
@@ -2662,7 +2662,7 @@ const GoalsHabits = () => {
                           : [...p, goal.id],
                       )
                     }
-                    className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${habitLinkedGoals.includes(goal.id) ? "bg-red-50 border-red-200 text-red-700 font-medium" : "bg-white border-gray-200 text-gray-600 hover:bg-red-50"}`}
+                    className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${habitLinkedGoals.includes(goal.id) ? "bg-[#DA7756]/10 border-[#DA7756]/40 text-[#C96B4D] font-medium" : "bg-white border-gray-200 text-gray-600 hover:bg-[#DA7756]/10"}`}
                   >
                     {goal.title}
                   </button>
@@ -2672,7 +2672,7 @@ const GoalsHabits = () => {
             <div className="flex justify-end gap-2 pt-4">
               <Button
                 variant="outline"
-                className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                className="border-[#DA7756]/40 text-[#DA7756] hover:bg-[#DA7756]/10 hover:text-[#C96B4D]"
                 onClick={() => {
                   setIsHabitDialogOpen(false);
                   setHabitLinkedGoals([]);
@@ -2682,7 +2682,7 @@ const GoalsHabits = () => {
                 Cancel
               </Button>
               <Button
-                className="bg-red-500 hover:bg-red-600 text-white"
+                className="bg-[#DA7756] hover:bg-[#C96B4D] text-white"
                 onClick={
                   editingHabitId !== null
                     ? handleUpdateHabit
