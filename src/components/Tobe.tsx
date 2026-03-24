@@ -99,7 +99,6 @@ function Tobe() {
   const [selectedGoalForDelete, setSelectedGoalForDelete] = useState<Goal | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
 
-  // ── Toast timer ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 3500);
@@ -109,7 +108,6 @@ function Tobe() {
   const showError = (msg: string) => setToast({ type: "error", message: msg });
   const showSuccess = (msg: string) => setToast({ type: "success", message: msg });
 
-  // ── FETCH DREAMS ───────────────────────────────────────────────────────
   const fetchBucketList = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -143,13 +141,12 @@ function Tobe() {
     } finally {
       setIsLoading(false);
     }
-  }, [showError]);
+  }, []);
 
   useEffect(() => {
     fetchBucketList();
   }, []);
 
-  // ── ADD CUSTOM GOAL  →  POST /dreams ──────────────────────────────────
   const handleAddCustomGoal = async () => {
     if (!customGoal.trim()) { showError("Please enter a goal"); return; }
 
@@ -187,7 +184,6 @@ function Tobe() {
     }
   };
 
-  // ── DELETE GOAL  →  DELETE /dreams/:id ────────────────────────────────
   const deleteGoalFromBackend = async (goal: Goal): Promise<boolean> => {
     setDeletingId(goal.id);
     try {
@@ -204,7 +200,6 @@ function Tobe() {
     }
   };
 
-  // ── SAVE EXERCISE  →  POST /be_do_have_exercise ───────────────────────
   const saveExerciseToBackend = async () => {
     const selected = bucketList.filter((g) => g.checked);
     if (!selected.length) { showError("Please select at least one goal"); return; }
@@ -230,7 +225,6 @@ function Tobe() {
     }
   };
 
-  // ── AI ANALYSIS ───────────────────────────────────────────────────────
   const handleAnalyzeAI = async () => {
     const selected = bucketList.filter((g) => g.checked);
     if (!selected.length) { showError("Please select at least one goal to analyze"); return; }
@@ -280,7 +274,6 @@ function Tobe() {
     }
   };
 
-  // ── Handlers ──────────────────────────────────────────────────────────
   const handleToggleCheck = (id: string | number) =>
     setBucketList((prev) =>
       prev.map((g) => (g.id === id ? { ...g, checked: !g.checked } : g))
@@ -304,67 +297,65 @@ function Tobe() {
     setSelectedGoalForDelete(null);
   };
 
-  // ── Loading ───────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#faf9fc] flex items-center justify-center">
-        <p className="text-gray-500 font-medium animate-pulse">Loading your Dreams...</p>
+      <div className="min-h-[300px] bg-[#FEF4EE] flex items-center justify-center font-sans">
+        <p className="text-[#888780] font-medium animate-pulse">Loading your Dreams...</p>
       </div>
     );
   }
 
-  // ── Render ────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#faf9fc] p-4 md:p-8 font-sans text-gray-800 relative">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="min-h-screen p-4 md:p-8 font-sans text-[#2C2C2A] relative bg-[#FEF4EE]">
+      <div className="space-y-8 max-w-5xl mx-auto">
 
         {/* HEADER */}
         <div>
-          <h2 className="text-xl font-bold flex items-center gap-2 text-gray-900">
-            <Target className="text-purple-600" size={24} />
+          <h2 className="text-[18px] font-bold flex items-center gap-2 text-[#2C2C2A]">
+            <Target className="text-[#DA7756]" size={24} />
             Be-Do-Have Exercise
           </h2>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="text-[#888780] text-sm mt-1 font-medium">
             Work backwards from your goals. Select what you want to{" "}
-            <span className="font-bold">HAVE</span>, and AI will help you understand who
-            you need to <span className="font-bold">BE</span> and what you need to{" "}
-            <span className="font-bold">DO</span>.
+            <span className="font-bold text-[#2C2C2A]">HAVE</span>, and AI will help you understand who
+            you need to <span className="font-bold text-[#2C2C2A]">BE</span> and what you need to{" "}
+            <span className="font-bold text-[#2C2C2A]">DO</span>.
           </p>
         </div>
 
         {/* INFO CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { letter: "H", label: "HAVE", sub: "Your goals",         bg: "bg-green-100",  text: "text-green-600",  icon: null },
-            { letter: "D", label: "DO",   sub: "Actions & habits",   bg: "bg-blue-100",   text: "text-blue-500",   icon: <Zap size={24} strokeWidth={2.5} /> },
-            { letter: "B", label: "BE",   sub: "Identity & mindset", bg: "bg-purple-100", text: "text-purple-600", icon: <User size={24} strokeWidth={2.5} /> },
+            { letter: "H", label: "HAVE", sub: "Your goals",         bg: "bg-[#0B5D41]/[0.08]", text: "text-[#0B5D41]", icon: null },
+            { letter: "D", label: "DO",   sub: "Actions & habits",   bg: "bg-[#FEF4EE]",        text: "text-[#DA7756]", icon: <Zap size={24} strokeWidth={2.5} /> },
+            { letter: "B", label: "BE",   sub: "Identity & mindset", bg: "bg-[#FEF4EE]",        text: "text-[#DA7756]", icon: <User size={24} strokeWidth={2.5} /> },
           ].map(({ letter, label, sub, bg, text, icon }) => (
-            <div key={label} className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm flex flex-col items-center text-center">
+            <div key={label} className="bg-white border border-[#D6B99D] rounded-2xl p-5 shadow-sm flex flex-col items-center text-center">
               <div className={`w-12 h-12 rounded-full ${bg} ${text} flex items-center justify-center font-bold text-xl mb-3`}>
                 {icon || letter}
               </div>
-              <h3 className="font-bold text-gray-900">{label}</h3>
-              <p className="text-sm text-gray-500">{sub}</p>
+              <h3 className="font-bold text-[#2C2C2A]">{label}</h3>
+              <p className="text-sm text-[#888780] font-medium">{sub}</p>
             </div>
           ))}
         </div>
 
         {/* MAIN CARD */}
-        <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-6">
+        <div className="bg-white border border-[#D6B99D] shadow-sm rounded-2xl p-6">
 
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-lg bg-green-100 text-green-600 flex items-center justify-center font-bold text-lg">H</div>
+            <div className="w-10 h-10 rounded-xl bg-[#0B5D41]/[0.08] text-[#0B5D41] flex items-center justify-center font-bold text-lg">H</div>
             <div>
-              <h3 className="font-bold text-gray-900 text-lg">What I want to HAVE</h3>
-              <p className="text-sm text-gray-500">Select from bucket list or add custom goals</p>
+              <h3 className="font-bold text-[#2C2C2A] text-[18px]">What I want to HAVE</h3>
+              <p className="text-sm text-[#888780] font-medium">Select from bucket list or add custom goals</p>
             </div>
           </div>
 
           {/* BUCKET LIST */}
           <div className="mb-4">
-            <p className="text-sm font-semibold text-gray-700 mb-3">From Your Bucket List:</p>
+            <p className="text-sm font-semibold text-[#2C2C2A] mb-3">From Your Bucket List:</p>
             {bucketList.length === 0 ? (
-              <div className="p-4 border border-dashed border-gray-200 rounded-lg text-center text-gray-400 text-sm bg-gray-50">
+              <div className="p-4 border border-dashed border-[#D6B99D] rounded-xl text-center text-[#888780] font-medium text-sm bg-[#FEF4EE]">
                 No items yet. Add a custom goal below!
               </div>
             ) : (
@@ -372,10 +363,10 @@ function Tobe() {
                 {bucketList.map((goal) => (
                   <div
                     key={goal.id}
-                    className={`flex items-start gap-3 p-3 border rounded-lg transition-colors ${
+                    className={`flex items-start gap-3 p-3 border rounded-xl transition-colors ${
                       goal.checked
-                        ? "border-green-400 bg-green-50/50 shadow-sm"
-                        : "border-gray-200 hover:border-green-200 bg-white"
+                        ? "border-[#DA7756] bg-[#FEF4EE] shadow-sm"
+                        : "border-[#D6B99D] hover:border-[#DA7756] bg-white"
                     }`}
                   >
                     <div
@@ -386,29 +377,29 @@ function Tobe() {
                         type="checkbox"
                         checked={goal.checked}
                         onChange={() => handleToggleCheck(goal.id)}
-                        className="mt-1 w-4 h-4 accent-green-500 cursor-pointer"
+                        className="mt-1 w-4 h-4 accent-[#0B5D41] cursor-pointer"
                       />
                       <div>
-                        <h4 className="text-sm font-bold text-gray-800 flex items-center flex-wrap gap-2">
+                        <h4 className="text-sm font-bold text-[#2C2C2A] flex items-center flex-wrap gap-2">
                           {goal.title}
                           {goal.status && (
-                            <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] rounded-full uppercase tracking-wider font-semibold border border-gray-200">
+                            <span className="px-2 py-0.5 bg-[#FEF4EE] text-[#2C2C2A] text-[10px] rounded-full uppercase tracking-wider font-semibold border border-[#D6B99D]">
                               {goal.status.replace("_", " ")}
                             </span>
                           )}
                         </h4>
-                        {goal.desc && <p className="text-xs text-gray-500 mt-1">{goal.desc}</p>}
+                        {goal.desc && <p className="text-xs text-[#888780] mt-1 font-medium">{goal.desc}</p>}
                       </div>
                     </div>
 
                     <button
                       onClick={(e) => handleDeleteClick(goal, e)}
                       disabled={deletingId === goal.id}
-                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
+                      className="p-1.5 text-[#888780] hover:text-[#A32D2D] hover:bg-[#A32D2D]/[0.08] rounded-lg transition-colors disabled:opacity-40 outline-none"
                       title="Delete goal"
                     >
                       {deletingId === goal.id
-                        ? <span className="text-xs text-gray-400">...</span>
+                        ? <span className="text-xs text-[#888780]">...</span>
                         : <Trash2 size={16} />}
                     </button>
                   </div>
@@ -419,28 +410,28 @@ function Tobe() {
 
           {/* AI RESULTS */}
           {analysisResult && (
-            <div className="mb-6 p-5 bg-purple-50 border border-purple-100 rounded-xl shadow-sm">
-              <h4 className="font-bold text-purple-900 mb-4 flex items-center gap-2 text-lg">
-                <Sparkles size={20} className="text-purple-600" /> AI Analysis Results
+            <div className="mb-6 p-5 bg-[#FEF4EE] border border-[#D6B99D] rounded-2xl shadow-sm animate-in fade-in zoom-in-95">
+              <h4 className="font-bold text-[#2C2C2A] mb-4 flex items-center gap-2 text-[18px]">
+                <Sparkles size={20} className="text-[#DA7756]" /> AI Analysis Results
               </h4>
               <div className="space-y-4">
                 {[
-                  { key: "be" as const, label: "Who you need to BE:", badge: "BE", color: "purple" },
-                  { key: "do" as const, label: "What you need to DO:", badge: "DO", color: "blue" },
-                ].map(({ key, label, badge, color }) => (
+                  { key: "be" as const, label: "Who you need to BE:", badge: "BE" },
+                  { key: "do" as const, label: "What you need to DO:", badge: "DO" },
+                ].map(({ key, label, badge }) => (
                   <div key={key}>
                     <div className="flex items-center gap-2 mb-2">
-                      <div className={`w-7 h-7 rounded-full bg-${color}-200 text-${color}-800 flex items-center justify-center text-xs font-bold`}>
+                      <div className="w-7 h-7 rounded-full bg-[#DA7756] text-white flex items-center justify-center text-xs font-bold shadow-sm">
                         {badge}
                       </div>
-                      <span className="text-sm font-bold text-gray-800">{label}</span>
+                      <span className="text-sm font-bold text-[#2C2C2A]">{label}</span>
                     </div>
-                    <p className={`text-sm text-gray-800 bg-white p-3.5 rounded-lg border border-${color}-100 shadow-sm`}>
+                    <p className="text-sm text-[#2C2C2A] bg-white p-3.5 rounded-xl border border-[#D6B99D] shadow-sm leading-relaxed">
                       {analysisResult[key]}
                     </p>
                   </div>
                 ))}
-                <div className="flex items-center gap-1.5 pt-3 border-t border-purple-100 text-xs text-purple-600 font-medium">
+                <div className="flex items-center gap-1.5 pt-3 border-t border-[#D6B99D] text-xs text-[#DA7756] font-bold">
                   <Sparkles size={12} />
                   <span>Analysis based on your selected goals</span>
                 </div>
@@ -450,7 +441,7 @@ function Tobe() {
 
           {/* ADD CUSTOM GOAL */}
           <div className="mb-6">
-            <p className="text-sm font-semibold text-gray-700 mb-2">Add Custom Goal:</p>
+            <p className="text-sm font-semibold text-[#2C2C2A] mb-2">Add Custom Goal:</p>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -458,13 +449,13 @@ function Tobe() {
                 onChange={(e) => setCustomGoal(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !isAdding && handleAddCustomGoal()}
                 placeholder="e.g., Own a beach house, Run a marathon..."
-                className="flex-1 border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="flex-1 border border-[#D6B99D] rounded-xl p-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#DA7756] focus:border-[#DA7756] placeholder:text-[#888780] text-[#2C2C2A] transition-all bg-white"
                 disabled={isAdding}
               />
               <button
                 onClick={handleAddCustomGoal}
                 disabled={isAdding}
-                className="bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-lg font-medium flex items-center gap-1.5 transition-colors text-sm shadow-sm"
+                className="bg-[#DA7756] hover:bg-[#C26547] disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 transition-colors text-sm shadow-sm outline-none"
               >
                 <Plus size={18} />
                 {isAdding ? "Adding..." : "Add"}
@@ -477,17 +468,17 @@ function Tobe() {
             <button
               onClick={handleAnalyzeAI}
               disabled={isAnalyzing}
-              className="flex-1 bg-red-100 hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed text-red-700 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
+              className="flex-1 bg-[#FEF4EE] hover:bg-[#D6B99D]/40 disabled:opacity-50 disabled:cursor-not-allowed text-[#2C2C2A] border border-[#D6B99D] py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors outline-none"
             >
-              <Sparkles size={18} />
+              <Sparkles size={18} className="text-[#DA7756]" />
               {isAnalyzing ? "Analyzing..." : "Analyze with AI"}
             </button>
             <button
               onClick={saveExerciseToBackend}
               disabled={isSaving}
-              className="flex-1 bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
+              className="flex-1 bg-[#DA7756] hover:bg-[#C26547] disabled:opacity-50 disabled:cursor-not-allowed text-white py-3.5 rounded-xl font-extrabold flex items-center justify-center gap-2 transition-colors shadow-sm uppercase tracking-wider text-sm outline-none"
             >
-              <Save size={18} />
+              <Save size={18} strokeWidth={2.5} />
               {isSaving ? "Saving..." : "Save Goals"}
             </button>
           </div>
@@ -496,17 +487,23 @@ function Tobe() {
 
       {/* DELETE CONFIRMATION MODAL */}
       {showDeleteConfirm && selectedGoalForDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md mx-4 shadow-xl">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Goal</h3>
-            <p className="text-gray-600 mb-4">
-              Are you sure you want to delete &quot;{selectedGoalForDelete.title}&quot;? This cannot be undone.
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 animate-in fade-in">
+          <div className="bg-white rounded-2xl p-6 max-w-md mx-4 shadow-xl border border-[#D6B99D] animate-in zoom-in-95">
+            <h3 className="text-[18px] font-bold text-[#2C2C2A] mb-2">Delete Goal</h3>
+            <p className="text-[#888780] mb-4 text-sm font-medium">
+              Are you sure you want to delete &quot;<span className="text-[#2C2C2A] font-semibold">{selectedGoalForDelete.title}</span>&quot;? This cannot be undone.
             </p>
             <div className="flex gap-3 justify-end">
-              <button onClick={cancelDelete} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+              <button
+                onClick={cancelDelete}
+                className="px-4 py-2 text-[#2C2C2A] hover:bg-[#FEF4EE] rounded-xl transition-colors text-sm font-bold border border-[#D6B99D] outline-none"
+              >
                 Cancel
               </button>
-              <button onClick={confirmDelete} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-[#A32D2D] hover:bg-[#8A2424] text-white rounded-xl transition-colors text-sm font-bold shadow-sm outline-none"
+              >
                 Delete
               </button>
             </div>
@@ -516,9 +513,9 @@ function Tobe() {
 
       {/* TOAST */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 ${toast.type === "error" ? "bg-red-500" : "bg-green-500"} text-white px-4 py-3 rounded-lg shadow-lg flex flex-col min-w-[260px] z-50`}>
+        <div className={`fixed bottom-6 right-6 ${toast.type === "error" ? "bg-[#A32D2D]" : "bg-[#0B5D41]"} text-white px-4 py-3 rounded-xl shadow-lg flex flex-col min-w-[260px] z-50 animate-in fade-in slide-in-from-bottom-4`}>
           <span className="font-bold text-sm">{toast.type === "error" ? "Error" : "Success"}</span>
-          <span className="text-sm">{toast.message}</span>
+          <span className="text-sm font-medium">{toast.message}</span>
         </div>
       )}
     </div>

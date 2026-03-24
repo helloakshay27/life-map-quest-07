@@ -12,6 +12,7 @@ import {
   BookOpen,
   TrendingUp,
   AlertCircle,
+  CalendarDays
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { apiRequest } from "@/config/api";
@@ -31,7 +32,25 @@ import FocusAndBoundaries, {
 import ReviewToDos from "@/components/ReviewToDos";
 import BucketListProgress from "@/components/BucketListProgress";
 
-// ── WeeklyStrip ───────────────────────────────────────────────────────────────
+// ── Exact same color tokens as DailyJournal ───────────────────────────────────
+const C = {
+  coral:    "#D54744",
+  coral8:   "rgba(213,71,68,0.08)",
+  coral15:  "rgba(213,71,68,0.15)",
+  charcoal: "#1A1A2A",
+  cream:    "#F0CEAA",
+  forest:   "#0B5541",
+  forest8:  "rgba(11,85,65,0.08)",
+  crimson:  "#B72B2D",
+  crimson8: "rgba(183,43,45,0.08)",
+  sand:     "#C5A881",
+  dune:     "#D1BC88",
+  mist:     "#D1D6A6",
+  stone:    "#888763",
+  muted:    "#AAAAAA",
+  pageBg:   "#F7F4EE",
+};
+
 // ── WeeklyStrip ───────────────────────────────────────────────────────────────
 const getWeekStartW = (date: Date) => {
   const d = new Date(date);
@@ -56,6 +75,13 @@ const toDateKey = (d: Date) => {
   return `${y}-${m}-${day}`;
 };
 
+const formatWeekRangeW = (weekStart: Date) => {
+  const weekEnd = addWeeksW(weekStart, 1);
+  weekEnd.setDate(weekEnd.getDate() - 1);
+  const monthStr = weekStart.toLocaleDateString("en-US", { month: "short" }).toUpperCase();
+  return `${monthStr} ${weekStart.getDate()}-${weekEnd.getDate()}`;
+};
+
 const WeeklyStrip = ({
   selectedDate,
   onDateChange,
@@ -71,13 +97,18 @@ const WeeklyStrip = ({
   today.setHours(0, 0, 0, 0);
   const todayWeekStart = getWeekStartW(today);
 
-  const [pageOffset, setPageOffset] = useState(0);
+  const [viewStart, setViewStart] = useState(() => addWeeksW(todayWeekStart, -5));
 
-  const viewBegin = addWeeksW(todayWeekStart, -5 + pageOffset * 6);
-  const weekCells = Array.from({ length: 6 }, (_, i) =>
-    addWeeksW(viewBegin, i),
-  );
+  // Keep selected week in view when changed externally
+  useEffect(() => {
+    const selWS = getWeekStartW(selectedDate);
+    const viewEnd = addWeeksW(viewStart, 5);
+    if (selWS < viewStart || selWS > viewEnd) {
+      setViewStart(addWeeksW(selWS, -5));
+    }
+  }, [selectedDate]);
 
+  const weekCells = Array.from({ length: 6 }, (_, i) => addWeeksW(viewStart, i));
   const filledSet = new Set(filledWeekStarts);
 
   const getStatus = (ws: Date) => {
@@ -87,116 +118,107 @@ const WeeklyStrip = ({
   };
 
   const selWS = getWeekStartW(selectedDate);
-  const selWE = new Date(selWS);
-  selWE.setDate(selWE.getDate() + 6);
-  const wkNum = format(selWS, "ww");
-  const mon = selWS
-    .toLocaleDateString("en-US", { month: "short" })
-    .toUpperCase();
-  const headerLabel = `Wk#${wkNum}, ${mon} ${selWS.getDate()}-${selWE.getDate()}`;
+  const isCurrentWeek = isSameWeekW(selWS, today);
+  const weekLabel = isCurrentWeek
+    ? "This Week"
+    : formatWeekRangeW(selWS);
+
+  const headerLabel = isCurrentWeek
+    ? "This Week"
+    : `Wk#${format(selWS, "ww")}, ${selWS.toLocaleDateString("en-US", { month: "short" }).toUpperCase()} ${selWS.getDate()}-${addWeeksW(selWS, 1).getDate() - 1}`;
 
   return (
-    <div className="bg-orange-50 rounded-2xl border border-orange-200 p-4 sm:p-5 w-full font-sans">
+    <div className="rounded-2xl border p-4 sm:p-5 w-full font-sans"
+      style={{ background: C.pageBg, borderColor: C.cream }}>
+
+      {/* Header */}
       <div className="flex items-center gap-2.5 mb-5">
-        <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center flex-shrink-0 shadow-sm">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
+          style={{ background: `linear-gradient(135deg, ${C.coral}, ${C.sand})` }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <rect
-              x="3"
-              y="4"
-              width="18"
-              height="17"
-              rx="2"
-              stroke="white"
-              strokeWidth="2"
-            />
+            <rect x="3" y="4" width="18" height="17" rx="2" stroke="white" strokeWidth="2" />
             <path d="M3 9h18" stroke="white" strokeWidth="2" />
-            <path
-              d="M8 2v3M16 2v3"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
+            <path d="M8 2v3M16 2v3" stroke="white" strokeWidth="2" strokeLinecap="round" />
             <rect x="7" y="13" width="2" height="2" rx="0.5" fill="white" />
             <rect x="11" y="13" width="2" height="2" rx="0.5" fill="white" />
             <rect x="15" y="13" width="2" height="2" rx="0.5" fill="white" />
           </svg>
         </div>
-        <span className="font-bold text-[16px] text-gray-900">
-          {journalId ? `Editing ${headerLabel}` : `Viewing ${headerLabel}`}
+        <span className="font-bold text-[16px]" style={{ color: C.charcoal }}>
+          {journalId ? `Editing ${headerLabel}` : headerLabel}
         </span>
-        <svg
-          width="15"
-          height="15"
-          viewBox="0 0 24 24"
-          fill="none"
-          className="text-gray-400 flex-shrink-0"
-        >
-          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
-          <path
-            d="M12 8v1M12 11v5"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        </svg>
       </div>
 
+      {/* Navigation + cells */}
       <div className="flex items-center gap-1 sm:gap-3 w-full">
         <button
-          onClick={() => setPageOffset((v) => v - 1)}
-          className="w-8 h-8 sm:w-9 sm:h-9 flex-shrink-0 flex items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-500 hover:border-orange-400 hover:text-orange-500 transition-all shadow-sm text-lg outline-none"
-        >
-          ‹
-        </button>
+          onClick={() => setViewStart((v) => addWeeksW(v, -1))}
+          className="w-8 h-8 sm:w-9 sm:h-9 flex-shrink-0 flex items-center justify-center rounded-xl bg-white border shadow-sm text-lg outline-none transition-all"
+          style={{ borderColor: C.cream, color: C.stone }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = C.sand; e.currentTarget.style.color = C.sand; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = C.cream; e.currentTarget.style.color = C.stone; }}
+        >‹</button>
 
-        <div className="flex-1 flex flex-col items-center w-full">
-          {/* Changed to grid-cols-6 because the WeeklyStrip shows 6 weeks at a time */}
+        <div className="flex-1 flex flex-col items-center gap-3 w-full">
+          {/* Week label — same as Dailystrip */}
+          <span className="text-[13px] font-bold tracking-wide" style={{ color: C.stone }}>
+            {weekLabel}
+          </span>
+
           <div className="grid grid-cols-6 gap-1 sm:gap-2.5 w-full max-w-[500px] mx-auto">
             {weekCells.map((ws, i) => {
-              const status = getStatus(ws);
+              const status     = getStatus(ws);
               const isSelected = isSameWeekW(ws, selectedDate);
-              const isFilled = status === "filled";
-              const isMissed = status === "missed";
+              const isFilled   = status === "filled";
+              const isMissed   = status === "missed";
               const isUpcoming = status === "upcoming";
 
               const we = new Date(ws);
               we.setDate(we.getDate() + 6);
-              const monthStr = ws
-                .toLocaleDateString("en-US", { month: "short" })
-                .toUpperCase();
+              const monthStr = ws.toLocaleDateString("en-US", { month: "short" }).toUpperCase();
               const rangeStr = `${monthStr} ${ws.getDate()}-${we.getDate()}`;
-              const wkLabel = `WK#${format(ws, "ww")}`;
+              const wkLabel  = `WK#${format(ws, "ww")}`;
+
+              // Exact same color logic as Dailystrip
+              let bg = "", color = "";
+              if (isFilled   && !isSelected) { bg = C.forest8;        color = C.forest;  }
+              if (isFilled   &&  isSelected) { bg = C.forest;         color = "#fff";    }
+              if (isMissed   && !isSelected) { bg = C.crimson8;       color = C.crimson; }
+              if (isMissed   &&  isSelected) { bg = C.crimson;        color = "#fff";    }
+              if (isUpcoming && !isSelected) { bg = C.mist + "30";    color = C.stone;   }
+              if (isSelected &&  isUpcoming) { bg = "#fff";           color = C.charcoal;}
 
               return (
                 <button
                   key={i}
                   onClick={() => onDateChange(ws)}
-                  className={`
-                    flex flex-col items-center justify-center rounded-xl sm:rounded-2xl
-                    w-full py-2 min-h-[75px] sm:min-h-[90px] transition-all duration-200 ease-in-out relative outline-none
-                    ${isSelected ? "ring-[1.5px] sm:ring-2 ring-orange-400 ring-offset-[2px] sm:ring-offset-[3px] ring-offset-orange-50 z-10 scale-105 sm:scale-110 shadow-md" : "border border-transparent scale-100"}
-                    ${isFilled ? "bg-[#22C55E] text-white" : ""}
-                    ${isMissed ? "bg-[#EF4444] text-white" : ""}
-                    ${isUpcoming ? "bg-[#E2E8F0] text-slate-800 hover:bg-gray-300" : ""}
-                    ${isSelected && isUpcoming ? "bg-white text-slate-800 ring-offset-orange-50" : ""}
-                  `}
+                  className="flex flex-col items-center justify-center rounded-xl sm:rounded-2xl w-full py-2 min-h-[75px] sm:min-h-[90px] transition-all duration-200 ease-in-out relative outline-none"
+                  style={{
+                    background: bg,
+                    color,
+                    ...(isSelected
+                      ? { boxShadow: `0 0 0 2px ${C.sand}, 0 0 0 4px ${C.pageBg}`, transform: "scale(1.08)", zIndex: 10 }
+                      : { border: "1px solid transparent" }
+                    ),
+                  }}
                 >
-                  <span className="text-[10px] sm:text-[11px] font-extrabold tracking-wide opacity-90 leading-none mt-1">
+                  <span className="text-[10px] sm:text-[11px] font-extrabold tracking-wide opacity-90 leading-none mt-1"
+                    style={isSelected && isUpcoming ? { color: C.sand } : {}}>
                     {wkLabel}
                   </span>
-                  {/* Smaller font size here compared to daily to fit the date range */}
-                  <span className="text-[12px] sm:text-[13px] font-extrabold leading-tight mt-1 sm:mt-1.5 mb-1 sm:mb-1.5 text-center px-1">
+                  <span className="text-[11px] sm:text-[12px] font-extrabold leading-tight mt-1 sm:mt-1.5 mb-1 sm:mb-1.5 text-center px-1">
                     {rangeStr}
                   </span>
-
                   <div className="h-4 flex items-center justify-center">
                     {isMissed && (
-                      <span className="text-[9px] sm:text-[10px] font-bold bg-white/30 text-white rounded-full px-1.5 sm:px-2 py-[2px] leading-none tracking-wide">
+                      <span className="text-[9px] sm:text-[10px] font-bold rounded-full px-1.5 sm:px-2 py-[2px] leading-none tracking-wide"
+                        style={{ background: isSelected ? "rgba(255,255,255,0.3)" : C.crimson8, color: isSelected ? "#fff" : C.crimson }}>
                         -10
                       </span>
                     )}
                     {isFilled && (
-                      <span className="text-[9px] sm:text-[10px] font-bold bg-white/30 text-white rounded-full px-1.5 sm:px-2 py-[2px] leading-none tracking-wide">
+                      <span className="text-[9px] sm:text-[10px] font-bold rounded-full px-1.5 sm:px-2 py-[2px] leading-none tracking-wide"
+                        style={{ background: isSelected ? "rgba(255,255,255,0.3)" : C.forest8, color: isSelected ? "#fff" : C.forest }}>
                         +10
                       </span>
                     )}
@@ -208,36 +230,32 @@ const WeeklyStrip = ({
         </div>
 
         <button
-          onClick={() => setPageOffset((v) => v + 1)}
-          className="w-8 h-8 sm:w-9 sm:h-9 flex-shrink-0 flex items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-500 hover:border-orange-400 hover:text-orange-500 transition-all shadow-sm text-lg outline-none"
-        >
-          ›
-        </button>
+          onClick={() => setViewStart((v) => addWeeksW(v, 1))}
+          className="w-8 h-8 sm:w-9 sm:h-9 flex-shrink-0 flex items-center justify-center rounded-xl bg-white border shadow-sm text-lg outline-none transition-all"
+          style={{ borderColor: C.cream, color: C.stone }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = C.sand; e.currentTarget.style.color = C.sand; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = C.cream; e.currentTarget.style.color = C.stone; }}
+        >›</button>
       </div>
 
+      {/* Legend — exact same as Dailystrip */}
       <div className="flex items-center justify-center gap-3 sm:gap-4 mt-5">
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#22C55E] inline-block shadow-sm" />
-          <span className="text-[12px] sm:text-[13px] font-medium text-gray-600">
-            Filled
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444] inline-block shadow-sm" />
-          <span className="text-[12px] sm:text-[13px] font-medium text-gray-600">
-            Missed
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#E2E8F0] border border-gray-300 inline-block shadow-sm" />
-          <span className="text-[12px] sm:text-[13px] font-medium text-gray-600">
-            Upcoming
-          </span>
-        </div>
+        {[
+          { color: C.forest,  label: "Filled" },
+          { color: C.crimson, label: "Missed" },
+          { color: C.mist,    label: "Upcoming", border: true },
+        ].map(({ color, label, border }) => (
+          <div key={label} className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full inline-block shadow-sm"
+              style={{ background: border ? C.mist + "30" : color, ...(border ? { border: `1px solid ${C.cream}` } : {}) }} />
+            <span className="text-[12px] sm:text-[13px] font-medium" style={{ color: C.stone }}>{label}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
 };
+
 // ── PeopleUpcomingDates ───────────────────────────────────────────────────────
 const PeopleUpcomingDates = () => {
   const [people, setPeople] = useState<any[]>([]);
@@ -263,9 +281,11 @@ const PeopleUpcomingDates = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-pink-200 bg-pink-50/30 py-8 shadow-sm animate-pulse">
-        <div className="w-12 h-12 bg-white rounded-full shadow-sm border border-pink-100 flex items-center justify-center mb-3">
-          <CalendarIcon className="h-5 w-5 text-pink-300" strokeWidth={2} />
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed py-8 shadow-sm animate-pulse"
+        style={{ borderColor: C.cream, background: C.pageBg }}>
+        <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mb-3"
+          style={{ border: `1px solid ${C.cream}` }}>
+          <CalendarIcon className="h-5 w-5" style={{ color: C.cream }} strokeWidth={2} />
         </div>
       </div>
     );
@@ -273,45 +293,34 @@ const PeopleUpcomingDates = () => {
 
   if (people.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-pink-200 bg-pink-50/30 py-8 shadow-sm">
-        <div className="w-12 h-12 bg-white rounded-full shadow-sm border border-pink-100 flex items-center justify-center mb-3">
-          <CalendarIcon className="h-5 w-5 text-pink-400" strokeWidth={2} />
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed py-8 shadow-sm"
+        style={{ borderColor: C.cream, background: C.pageBg }}>
+        <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mb-3"
+          style={{ border: `1px solid ${C.cream}` }}>
+          <CalendarIcon className="h-5 w-5" style={{ color: C.coral }} strokeWidth={2} />
         </div>
-        <p className="text-[15px] font-semibold text-gray-600">
-          No people added yet
-        </p>
-        <p className="text-sm text-gray-400 mt-0.5">
-          Connect with friends to share progress
-        </p>
+        <p className="text-[15px] font-semibold" style={{ color: C.charcoal }}>No people added yet</p>
+        <p className="text-sm mt-0.5" style={{ color: C.stone }}>Connect with friends to share progress</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-[16px] border border-[#F48FB1] bg-[#FFF0F5]/50 px-5 pt-4 pb-8 font-sans w-full">
+    <div className="rounded-[16px] px-5 pt-4 pb-8 font-sans w-full"
+      style={{ border: `1px solid ${C.cream}`, background: C.pageBg }}>
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-2.5">
-          <div className="w-[30px] h-[30px] rounded-[8px] bg-[#F06292] flex items-center justify-center shadow-sm">
-            <CalendarIcon
-              className="w-[18px] h-[18px] text-white"
-              strokeWidth={2}
-            />
+          <div className="w-[30px] h-[30px] rounded-[8px] flex items-center justify-center shadow-sm"
+            style={{ background: `linear-gradient(135deg, ${C.coral}, ${C.sand})` }}>
+            <CalendarIcon className="w-[18px] h-[18px] text-white" strokeWidth={2} />
           </div>
-          <span className="font-bold text-[#0F172A] text-[15px]">
-            Upcoming Dates
-          </span>
+          <span className="font-bold text-[15px]" style={{ color: C.charcoal }}>Upcoming Dates</span>
         </div>
-        <button
-          onClick={() => navigate("/people")}
-          className="text-[13px] font-medium text-[#1E293B] hover:text-[#0F172A] transition-colors"
-        >
-          View All
-        </button>
+        <button onClick={() => navigate("/people")} className="text-[13px] font-medium transition-colors"
+          style={{ color: C.stone }}>View All</button>
       </div>
       <div className="text-center">
-        <p className="text-[14px] text-[#64748B]">
-          No upcoming dates in the next 30 days
-        </p>
+        <p className="text-[14px]" style={{ color: C.stone }}>No upcoming dates in the next 30 days</p>
       </div>
     </div>
   );
@@ -324,148 +333,118 @@ interface PastJournalCardProps {
   onEdit: (journal: PastWeeklyJournal) => void;
 }
 
-const PastJournalCard = ({
-  journal,
-  onDelete,
-  onEdit,
-}: PastJournalCardProps) => {
+const PastJournalCard = ({ journal, onDelete, onEdit }: PastJournalCardProps) => {
   const [expanded, setExpanded] = useState(false);
 
   const weekStart = new Date(journal.start_date);
-  const balanceRating =
-    journal.data?.life_balance_rating ?? journal.alignment_score ?? null;
+  const balanceRating = journal.data?.life_balance_rating ?? journal.alignment_score ?? null;
 
-  const winsByDay: Record<
-    string,
-    { description: string; completed: boolean }[]
-  > = {};
+  const winsByDay: Record<string, { description: string; completed: boolean }[]> = {};
   if (journal.data?.wins) {
     for (const win of journal.data.wins) {
       if (!winsByDay[win.day]) winsByDay[win.day] = [];
-      winsByDay[win.day].push({
-        description: win.description,
-        completed: win.completed,
-      });
+      winsByDay[win.day].push({ description: win.description, completed: win.completed });
     }
   }
 
-  const dayOrder = [
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-  ];
+  const dayOrder = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const sortedDays = Object.keys(winsByDay).sort(
     (a, b) => dayOrder.indexOf(b) - dayOrder.indexOf(a),
   );
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-sm overflow-hidden" style={{ border: `1px solid ${C.cream}` }}>
       <div className="flex items-center justify-between px-5 py-4">
         <div className="flex items-center gap-2.5">
-          <CalendarIcon className="w-4 h-4 text-violet-500" />
-          <span className="font-bold text-gray-900 text-[15px]">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{ background: C.pageBg }}>
+            <CalendarIcon className="w-4 h-4" style={{ color: C.coral }} />
+          </div>
+          <span className="font-bold text-[15px]" style={{ color: C.charcoal }}>
             Week of {format(weekStart, "MMMM d, yyyy")}
           </span>
         </div>
         <div className="flex items-center gap-2">
           {balanceRating !== null && (
-            <span className="bg-violet-50 text-violet-700 border border-violet-200 px-3 py-1 rounded-full text-xs font-semibold">
+            <span className="px-3 py-1 rounded-full text-xs font-semibold"
+              style={{ background: C.pageBg, color: C.charcoal, border: `1px solid ${C.cream}` }}>
               Balance {balanceRating}/10
             </span>
           )}
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(journal);
-            }}
-            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            onClick={(e) => { e.stopPropagation(); onEdit(journal); }}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white text-xs font-semibold transition-colors"
+            style={{ color: C.charcoal, border: `1px solid ${C.cream}` }}
+            onMouseEnter={e => (e.currentTarget.style.background = C.pageBg)}
+            onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
             title="Edit"
           >
-            <Pencil className="w-4 h-4" />
+            <Pencil className="w-3 h-3" /> Update
           </button>
-          <button
-            onClick={(e) => onDelete(journal.id, e)}
-            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            title="Delete"
-          >
+          <button onClick={(e) => onDelete(journal.id, e)} className="p-1.5 transition-colors"
+            style={{ color: C.muted }}
+            onMouseEnter={e => (e.currentTarget.style.color = C.crimson)}
+            onMouseLeave={e => (e.currentTarget.style.color = C.muted)}
+            title="Delete">
             <Trash2 className="w-4 h-4" />
           </button>
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            {expanded ? (
-              <ChevronUp className="w-4 h-4" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
-            )}
+          <button onClick={() => setExpanded((v) => !v)} className="p-1.5 transition-colors"
+            style={{ color: C.muted }}
+            onMouseEnter={e => (e.currentTarget.style.color = C.charcoal)}
+            onMouseLeave={e => (e.currentTarget.style.color = C.muted)}>
+            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
         </div>
       </div>
 
       {expanded && (
-        <div className="px-4 pb-4 space-y-3">
+        <div className="px-5 pb-5 flex flex-col gap-3 pt-3" style={{ borderTop: `1px solid ${C.cream}` }}>
+
           {(sortedDays.length > 0 || journal.data?.weekly_story) && (
-            <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4">
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center shadow-sm">
-                  <BookOpen className="w-4 h-4 text-white" />
+            <div className="rounded-xl px-4 py-3" style={{ background: C.pageBg, border: `1px solid ${C.cream}` }}>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: `linear-gradient(135deg, ${C.coral}, ${C.sand})` }}>
+                  <BookOpen className="w-3.5 h-3.5 text-white" />
                 </div>
-                <span className="font-bold text-blue-800 text-[15px]">
-                  My Weekly Story
-                </span>
+                <span className="text-sm font-semibold" style={{ color: C.charcoal }}>My Weekly Story</span>
               </div>
               {sortedDays.length > 0 ? (
                 <div className="space-y-3 pl-1">
                   {sortedDays.map((day) => (
                     <div key={day}>
-                      <p className="text-sm font-bold text-blue-700 mb-1">
-                        **{day}**
-                      </p>
+                      <p className="text-sm font-bold mb-1" style={{ color: C.charcoal }}>{day}</p>
                       {winsByDay[day].map((win, i) => (
                         <div key={i} className="flex items-start gap-2 ml-2">
-                          <CheckSquare className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                          <span className="text-sm text-blue-900">
-                            {win.description}
-                          </span>
+                          <CheckSquare className="w-4 h-4 mt-0.5 shrink-0" style={{ color: C.forest }} />
+                          <span className="text-sm" style={{ color: C.charcoal }}>{win.description}</span>
                         </div>
                       ))}
                     </div>
                   ))}
                 </div>
               ) : journal.data?.weekly_story ? (
-                <p className="text-sm text-blue-900 leading-relaxed pl-1">
-                  {journal.data.weekly_story}
-                </p>
+                <p className="text-sm leading-relaxed pl-1" style={{ color: C.charcoal }}>{journal.data.weekly_story}</p>
               ) : null}
             </div>
           )}
 
           {journal.data?.wins && journal.data.wins.length > 0 && (
-            <div className="rounded-xl border border-green-200 bg-green-50/60 p-4">
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center shadow-sm">
-                  <TrendingUp className="w-4 h-4 text-white" />
+            <div className="rounded-xl px-4 py-3" style={{ background: C.pageBg, border: `1px solid ${C.cream}` }}>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: C.forest }}>
+                  <TrendingUp className="w-3.5 h-3.5 text-white" />
                 </div>
-                <span className="font-bold text-green-800 text-[15px]">
-                  Achievements This Week
-                </span>
+                <span className="text-sm font-semibold" style={{ color: C.charcoal }}>Achievements This Week</span>
               </div>
-              <div className="space-y-3 pl-1">
+              <div className="space-y-2 pl-1">
                 {journal.data.wins.map((win, i) => (
                   <div key={i} className="flex items-start gap-2">
-                    <CheckSquare className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5" style={{ background: C.coral }} />
                     <div>
-                      <p className="text-xs font-semibold text-green-700 capitalize">
-                        {win.category}
-                      </p>
-                      <p className="text-sm text-green-900">
-                        {win.description}
-                      </p>
+                      <p className="text-xs font-semibold capitalize" style={{ color: C.coral }}>{win.category}</p>
+                      <p className="text-sm" style={{ color: C.charcoal }}>{win.description}</p>
                     </div>
                   </div>
                 ))}
@@ -474,44 +453,34 @@ const PastJournalCard = ({
           )}
 
           {journal.data?.biggest_challenge && (
-            <div className="rounded-xl border border-yellow-300 bg-yellow-50/60 p-4">
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-8 h-8 rounded-full bg-orange-400 flex items-center justify-center shadow-sm">
-                  <AlertCircle className="w-4 h-4 text-white" />
+            <div className="rounded-xl px-4 py-3" style={{ background: C.crimson8, border: `1px solid rgba(183,43,45,0.18)` }}>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: C.crimson }}>
+                  <AlertCircle className="w-3.5 h-3.5 text-white" />
                 </div>
-                <span className="font-bold text-orange-800 text-[15px]">
-                  Biggest Challenge
-                </span>
+                <span className="text-sm font-semibold" style={{ color: C.charcoal }}>Biggest Challenge</span>
               </div>
-              <p className="text-sm text-orange-900 pl-1 leading-relaxed">
-                {journal.data.biggest_challenge}
-              </p>
+              <p className="text-sm pl-1 leading-relaxed" style={{ color: C.charcoal }}>{journal.data.biggest_challenge}</p>
               {journal.data.challenge_cause && (
-                <p className="text-xs text-orange-700 mt-2 pl-1 border-t border-yellow-200 pt-2">
-                  <span className="font-semibold">Cause:</span>{" "}
-                  {journal.data.challenge_cause}
+                <p className="text-xs mt-2 pl-1 pt-2" style={{ color: C.stone, borderTop: `1px solid rgba(183,43,45,0.12)` }}>
+                  <span className="font-semibold">Cause:</span> {journal.data.challenge_cause}
                 </p>
               )}
             </div>
           )}
 
           {journal.data?.key_insight && (
-            <div className="rounded-xl border border-pink-200 bg-pink-50/50 p-4">
-              <p className="text-xs font-bold text-pink-700 mb-1">
-                Key Insight
-              </p>
-              <p className="text-sm text-gray-700 italic">
-                "{journal.data.key_insight}"
-              </p>
+            <div className="rounded-xl px-4 py-3" style={{ background: "rgba(80,52,187,0.06)", border: "1px solid rgba(80,52,187,0.14)" }}>
+              <p className="text-xs font-bold mb-1" style={{ color: "#5034BB" }}>Key Insight</p>
+              <p className="text-sm italic" style={{ color: C.charcoal }}>"{journal.data.key_insight}"</p>
             </div>
           )}
 
           {journal.gratitude_note && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
-              <p className="text-xs font-bold text-amber-700 mb-1">Gratitude</p>
-              <p className="text-sm text-gray-700 italic">
-                "{journal.gratitude_note}"
-              </p>
+            <div className="rounded-xl px-4 py-3" style={{ background: C.pageBg, border: `1px solid ${C.cream}` }}>
+              <p className="text-xs font-bold mb-1" style={{ color: C.sand }}>Gratitude</p>
+              <p className="text-sm italic" style={{ color: C.charcoal }}>"{journal.gratitude_note}"</p>
             </div>
           )}
         </div>
@@ -586,19 +555,15 @@ const WeeklyJournal = () => {
     [pastJournals],
   );
 
-  // ✅ CHANGE 1: Future week check
   const isFutureWeek =
     startOfWeek(currentDate, { weekStartsOn: 0 }) >
     startOfWeek(new Date(), { weekStartsOn: 0 });
 
-  // ── Save Plan ──
   const handleSavePlan = async () => {
-    // ✅ CHANGE 2: Block future week save + show toast
     if (isFutureWeek) {
       toast({
         title: "Cannot Create Future Entry",
-        description:
-          "You can only create journal entries for today or past dates.",
+        description: "You can only create journal entries for today or past dates.",
         variant: "destructive",
       });
       return;
@@ -606,14 +571,8 @@ const WeeklyJournal = () => {
 
     setIsSaving(true);
     try {
-      const startDate = format(
-        startOfWeek(currentDate, { weekStartsOn: 0 }),
-        "yyyy-MM-dd",
-      );
-      const endDate = format(
-        endOfWeek(currentDate, { weekStartsOn: 0 }),
-        "yyyy-MM-dd",
-      );
+      const startDate = format(startOfWeek(currentDate, { weekStartsOn: 0 }), "yyyy-MM-dd");
+      const endDate = format(endOfWeek(currentDate, { weekStartsOn: 0 }), "yyyy-MM-dd");
 
       const payload = {
         user_journal: {
@@ -640,10 +599,7 @@ const WeeklyJournal = () => {
 
       const url = journalId ? `/user_journals/${journalId}` : `/user_journals`;
       const method = journalId ? "PUT" : "POST";
-      const res = await apiRequest(url, {
-        method,
-        body: JSON.stringify(payload),
-      });
+      const res = await apiRequest(url, { method, body: JSON.stringify(payload) });
 
       if (!res.ok) {
         const errorData = await res.text();
@@ -652,10 +608,7 @@ const WeeklyJournal = () => {
       }
 
       const responseData = await res.json();
-      const newId =
-        responseData.journal?.id ??
-        responseData.user_journal?.id ??
-        responseData.id;
+      const newId = responseData.journal?.id ?? responseData.user_journal?.id ?? responseData.id;
       if (newId) setJournalId(newId);
 
       localStorage.setItem(`weekly_wins_${startDate}`, JSON.stringify(wins));
@@ -703,7 +656,6 @@ const WeeklyJournal = () => {
     }
   };
 
-  // ── Fetch journal for date ──
   useEffect(() => {
     if (activeTab === "new") {
       const fetchJournalForDate = async () => {
@@ -712,38 +664,26 @@ const WeeklyJournal = () => {
           const res = await apiRequest(
             `/user_journals/0?date=${formattedDate}&journal_type=weekly`,
           );
-
           if (res.ok) {
             const data = await res.json();
             if (data.id) {
               setJournalId(data.id);
               setGratitude(data.gratitude_note || "");
-              setBalanceRating(
-                data.data?.life_balance_rating ?? data.alignment_score ?? 3,
-              );
+              setBalanceRating(data.data?.life_balance_rating ?? data.alignment_score ?? 3);
               setChallenge(data.data?.biggest_challenge || "");
               setChallengeCause(data.data?.challenge_cause || "");
               setInsight(data.data?.key_insight || "");
               setWins(data.data?.wins || []);
               setMissionText(data.data?.mission_connection || "");
               setHabitsText(data.data?.weekly_story || "");
-              setWeeklyPlanData(
-                data.data?.weekly_plan || generateEmptyWeekData(currentDate),
-              );
+              setWeeklyPlanData(data.data?.weekly_plan || generateEmptyWeekData(currentDate));
               setFocusData(data.data?.focus_and_boundaries || defaultFocusData);
               return;
             }
           }
-
           setJournalId(null);
-          setGratitude("");
-          setBalanceRating(3);
-          setChallenge("");
-          setChallengeCause("");
-          setInsight("");
-          setWins([]);
-          setMissionText("");
-          setHabitsText("");
+          setGratitude(""); setBalanceRating(3); setChallenge(""); setChallengeCause("");
+          setInsight(""); setWins([]); setMissionText(""); setHabitsText("");
           setWeeklyPlanData(generateEmptyWeekData(currentDate));
           setFocusData(defaultFocusData);
         } catch (error) {
@@ -767,9 +707,7 @@ const WeeklyJournal = () => {
     }
   };
 
-  useEffect(() => {
-    fetchPastJournals();
-  }, [token]);
+  useEffect(() => { fetchPastJournals(); }, [token]);
   useEffect(() => {
     if (activeTab === "past" || activeTab === "insights") fetchPastJournals();
   }, [activeTab, token]);
@@ -781,19 +719,10 @@ const WeeklyJournal = () => {
         const res = await apiRequest("/goals");
         if (res.ok) {
           const data = await res.json();
-          const raw: any[] = Array.isArray(data)
-            ? data
-            : Array.isArray(data.goals)
-              ? data.goals
-              : Array.isArray(data.data)
-                ? data.data
-                : [];
+          const raw: any[] = Array.isArray(data) ? data : Array.isArray(data.goals) ? data.goals : Array.isArray(data.data) ? data.data : [];
           const normalized: Goal[] = raw.map((g) => ({
-            ...g,
-            id: String(g.id),
-            status:
-              (g.status === "in_progress" ? "progress" : g.status) ||
-              "planning",
+            ...g, id: String(g.id),
+            status: (g.status === "in_progress" ? "progress" : g.status) || "planning",
           }));
           setGoals(normalized);
         }
@@ -811,9 +740,7 @@ const WeeklyJournal = () => {
     setJournalId(journal.id);
     setCurrentDate(new Date(journal.start_date));
     setGratitude(journal.gratitude_note || "");
-    setBalanceRating(
-      journal.data?.life_balance_rating ?? journal.alignment_score ?? 3,
-    );
+    setBalanceRating(journal.data?.life_balance_rating ?? journal.alignment_score ?? 3);
     setChallenge(journal.data?.biggest_challenge || "");
     setChallengeCause(journal.data?.challenge_cause || "");
     setInsight(journal.data?.key_insight || "");
@@ -821,8 +748,7 @@ const WeeklyJournal = () => {
     setMissionText(journal.data?.mission_connection || "");
     setHabitsText(journal.data?.weekly_story || "");
     if (journal.data?.weekly_plan) setWeeklyPlanData(journal.data.weekly_plan);
-    if (journal.data?.focus_and_boundaries)
-      setFocusData(journal.data.focus_and_boundaries);
+    if (journal.data?.focus_and_boundaries) setFocusData(journal.data.focus_and_boundaries);
     toast({
       title: "Editing journal",
       description: `Loaded journal for week of ${format(new Date(journal.start_date), "MMMM d, yyyy")}. Save to update.`,
@@ -831,125 +757,90 @@ const WeeklyJournal = () => {
 
   const handleDeletePastJournal = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (
-      !window.confirm(
-        "Are you sure you want to delete this weekly journal entry?",
-      )
-    )
-      return;
+    if (!window.confirm("Are you sure you want to delete this weekly journal entry?")) return;
     try {
-      const res = await apiRequest(`/user_journals/${id}`, {
-        method: "DELETE",
-      });
+      const res = await apiRequest(`/user_journals/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
-      toast({
-        title: "Deleted",
-        description: "Weekly journal entry removed successfully.",
-      });
+      toast({ title: "Deleted", description: "Weekly journal entry removed successfully." });
       setPastJournals((prev) => prev.filter((j) => j.id !== id));
       if (journalId === id) setJournalId(null);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Could not delete journal entry.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Could not delete journal entry.", variant: "destructive" });
     }
   };
 
   return (
-    <div className="relative w-full animate-fade-in space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Weekly Journal</h1>
-          <p className="text-sm text-muted-foreground">
-            Strategic review and planning
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
+    <div className="min-h-screen animate-fade-in font-sans py-4 relative" style={{ background: C.pageBg }}>
+      <div className="w-full mx-auto">
+
+        {/* Header */}
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight" style={{ color: C.charcoal }}>
+              Weekly Journal
+            </h1>
+            <p className="mt-1 font-medium text-sm sm:text-base" style={{ color: C.stone }}>
+              Strategic review and planning
+            </p>
+          </div>
           <button
             onClick={() => navigate("/help")}
-            className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 shadow-sm transition-colors hover:bg-red-100"
+            className="flex items-center gap-1.5 text-sm font-semibold bg-white/50 px-3 py-1.5 rounded-lg border border-transparent transition-all mt-2"
+            style={{ color: C.stone }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = C.cream; e.currentTarget.style.color = C.charcoal; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = C.stone; }}
           >
-            <HelpCircle className="h-4 w-4" /> Help?
+            <HelpCircle className="h-4 w-4" style={{ color: C.coral }} /> Help
           </button>
         </div>
-      </div>
 
-      <div className="w-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-6 w-full p-1 bg-gray-100 border border-gray-200 rounded-xl h-auto shadow-inner flex">
-            <TabsTrigger
-              value="new"
-              className="flex-1 py-2.5 rounded-lg text-sm font-bold data-[state=active]:bg-red-50 data-[state=active]:text-red-700 data-[state=active]:border data-[state=active]:border-red-200 data-[state=active]:shadow-sm transition-all text-red-500"
-            >
-              New
-            </TabsTrigger>
-            <TabsTrigger
-              value="past"
-              className="flex-1 py-2.5 rounded-lg text-sm font-semibold data-[state=active]:bg-red-50 data-[state=active]:text-red-700 data-[state=active]:border data-[state=active]:border-red-200 data-[state=active]:shadow-sm transition-all text-red-500"
-            >
-              Past ({pastJournals.length})
-            </TabsTrigger>
-            <TabsTrigger
-              value="insights"
-              className="flex-1 py-2.5 rounded-lg text-sm font-semibold data-[state=active]:bg-red-50 data-[state=active]:text-red-700 data-[state=active]:border data-[state=active]:border-red-200 data-[state=active]:shadow-sm transition-all text-red-500"
-            >
-              Insights
-            </TabsTrigger>
+          <TabsList className="mb-4 w-full p-1.5 rounded-xl h-auto shadow-none"
+            style={{ background: C.pageBg, border: `1px solid ${C.cream}` }}>
+            {["new", "past", "insights"].map((tab) => (
+              <TabsTrigger
+                key={tab}
+                value={tab}
+                className="flex-1 py-2.5 rounded-lg text-[13px] font-bold transition-all uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                style={{ color: activeTab === tab ? C.coral : C.stone }}
+              >
+                {tab === "past" ? `Past (${pastJournals.length})` : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
           {/* ── NEW TAB ── */}
           <TabsContent value="new" className="focus:outline-none">
-            <div className="flex flex-col w-full gap-6">
+            <div className="flex flex-col w-full gap-6 pb-32 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <WeeklyStrip
                 selectedDate={currentDate}
                 onDateChange={(newDate) => setCurrentDate(newDate)}
                 filledWeekStarts={filledWeekStarts}
                 journalId={journalId}
               />
-              <div className="border-2 border-orange-300 bg-white rounded-2xl overflow-hidden shadow-sm">
+              <div className="rounded-2xl overflow-hidden shadow-sm" style={{ background: C.pageBg, border: `1px solid ${C.cream}` }}>
                 <WeeklyReflection
-                  currentDate={currentDate}
-                  wins={wins}
-                  setWins={setWins}
-                  challenge={challenge}
-                  setChallenge={setChallenge}
-                  challengeCause={challengeCause}
-                  setChallengeCause={setChallengeCause}
-                  gratitude={gratitude}
-                  setGratitude={setGratitude}
-                  insight={insight}
-                  setInsight={setInsight}
-                  balanceRating={balanceRating}
-                  setBalanceRating={setBalanceRating}
-                  weeklyStory={habitsText}
-                  setWeeklyStory={setHabitsText}
+                  currentDate={currentDate} wins={wins} setWins={setWins}
+                  challenge={challenge} setChallenge={setChallenge}
+                  challengeCause={challengeCause} setChallengeCause={setChallengeCause}
+                  gratitude={gratitude} setGratitude={setGratitude}
+                  insight={insight} setInsight={setInsight}
+                  balanceRating={balanceRating} setBalanceRating={setBalanceRating}
+                  weeklyStory={habitsText} setWeeklyStory={setHabitsText}
                 />
               </div>
-              <div className="border-2 border-purple-300 bg-purple-50/20 rounded-2xl overflow-hidden">
+              <div className="rounded-2xl overflow-hidden shadow-sm" style={{ background: C.pageBg, border: `1px solid ${C.cream}` }}>
                 <MissionHabitsConnection
-                  currentDate={currentDate}
-                  coreValue={coreValue}
-                  setCoreValue={setCoreValue}
-                  missionText={missionText}
-                  setMissionText={setMissionText}
-                  habitsText={habitsText}
-                  setHabitsText={setHabitsText}
+                  currentDate={currentDate} coreValue={coreValue} setCoreValue={setCoreValue}
+                  missionText={missionText} setMissionText={setMissionText}
+                  habitsText={habitsText} setHabitsText={setHabitsText}
                 />
               </div>
-              <div className="border-2 border-red-300 bg-red-50/20 rounded-2xl overflow-hidden">
-                <WeeklyPlanComponent
-                  data={weeklyPlanData}
-                  setData={setWeeklyPlanData}
-                />
+              <div className="rounded-2xl overflow-hidden shadow-sm" style={{ background: C.pageBg, border: `1px solid ${C.cream}` }}>
+                <WeeklyPlanComponent data={weeklyPlanData} setData={setWeeklyPlanData} />
               </div>
-              <div className="border-2 border-violet-300 bg-violet-50/20 rounded-2xl overflow-hidden">
-                <FocusAndBoundaries
-                  data={focusData}
-                  setData={setFocusData}
-                  apiGoals={goals}
-                />
+              <div className="rounded-2xl overflow-hidden shadow-sm" style={{ background: C.pageBg, border: `1px solid ${C.cream}` }}>
+                <FocusAndBoundaries data={focusData} setData={setFocusData} apiGoals={goals} />
               </div>
               <div className="rounded-2xl overflow-hidden">
                 <BucketListProgress />
@@ -961,29 +852,26 @@ const WeeklyJournal = () => {
           {/* ── PAST TAB ── */}
           <TabsContent value="past" className="focus:outline-none">
             {isLoadingPast ? (
-              <div className="py-20 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
+              <div className="py-20 text-center bg-white rounded-xl" style={{ border: `1px solid ${C.cream}` }}>
                 <div className="flex items-center justify-center gap-3">
-                  <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-                  <p className="text-gray-500 font-medium">
-                    Loading past entries...
-                  </p>
+                  <Loader2 className="h-6 w-6 animate-spin" style={{ color: C.coral }} />
+                  <p className="font-bold uppercase tracking-wider" style={{ color: C.charcoal }}>Loading past entries...</p>
                 </div>
               </div>
             ) : pastJournals.length === 0 ? (
-              <div className="py-20 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
-                <p className="text-gray-500 font-medium">
-                  No past entries yet.
-                </p>
+              <div className="py-20 text-center bg-white rounded-xl" style={{ border: `1px solid ${C.cream}` }}>
+                <div className="flex flex-col items-center justify-center gap-3 opacity-60">
+                  <CalendarDays className="h-10 w-10" style={{ color: C.stone }} strokeWidth={1.5} />
+                  <p className="font-medium text-[15px]" style={{ color: C.stone }}>
+                    No past reflections yet. Complete your first weekly reflection!
+                  </p>
+                </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4">
+              <div className="flex flex-col gap-3">
                 {pastJournals.map((journal) => (
-                  <PastJournalCard
-                    key={journal.id}
-                    journal={journal}
-                    onDelete={handleDeletePastJournal}
-                    onEdit={handleEditPastJournal}
-                  />
+                  <PastJournalCard key={journal.id} journal={journal}
+                    onDelete={handleDeletePastJournal} onEdit={handleEditPastJournal} />
                 ))}
               </div>
             )}
@@ -992,60 +880,53 @@ const WeeklyJournal = () => {
           {/* ── INSIGHTS TAB ── */}
           <TabsContent value="insights" className="focus:outline-none">
             <div className="space-y-4">
-              <div
-                className="rounded-2xl px-6 py-5"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #FFF3E0 0%, #FCE4EC 50%, #EDE7F6 100%)",
-                }}
-              >
+              <div className="rounded-2xl px-6 py-5" style={{ background: C.pageBg, border: `1px solid ${C.cream}` }}>
                 <div className="flex items-center gap-2.5 mb-1">
-                  <Lightbulb className="w-5 h-5 text-violet-500" />
-                  <h2 className="text-lg font-bold text-gray-900">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: `linear-gradient(135deg, ${C.coral}, ${C.sand})` }}>
+                    <Lightbulb className="w-4 h-4 text-white" />
+                  </div>
+                  <h2 className="text-[18px] font-bold" style={{ color: C.charcoal }}>
                     Weekly Challenges &amp; Key Insights
                   </h2>
                 </div>
-                <p className="text-sm text-gray-500 ml-7">
+                <p className="text-sm ml-10" style={{ color: C.stone }}>
                   Review your weekly challenges and learnings over time
                 </p>
               </div>
 
               {isLoadingPast ? (
-                <div className="py-16 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
-                  <Loader2 className="w-7 h-7 animate-spin text-violet-400 mx-auto mb-3" />
-                  <p className="text-gray-500 font-medium">
-                    Loading insights...
-                  </p>
+                <div className="py-16 text-center bg-white rounded-xl" style={{ border: `1px solid ${C.cream}` }}>
+                  <Loader2 className="w-7 h-7 animate-spin mx-auto mb-3" style={{ color: C.coral }} />
+                  <p className="font-bold uppercase tracking-wider" style={{ color: C.charcoal }}>Loading insights...</p>
                 </div>
               ) : pastJournals.length === 0 ? (
-                <div className="py-16 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
+                <div className="py-16 text-center bg-white rounded-xl" style={{ border: `1px solid ${C.cream}` }}>
                   <div className="text-4xl mb-3">💡</div>
-                  <p className="text-gray-500 font-medium">
-                    Complete a journal to see insights.
-                  </p>
+                  <p className="font-bold uppercase tracking-wider" style={{ color: C.charcoal }}>Complete a journal to see insights.</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="flex flex-col gap-3">
                   {pastJournals.map((journal) => {
                     const weekStart = new Date(journal.start_date);
-                    const balanceVal =
-                      journal.data?.life_balance_rating ??
-                      journal.alignment_score ??
-                      null;
+                    const balanceVal = journal.data?.life_balance_rating ?? journal.alignment_score ?? null;
                     return (
-                      <div
-                        key={journal.id}
-                        className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden"
-                      >
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                          <div className="flex items-center gap-2">
-                            <CalendarIcon className="w-4 h-4 text-gray-400" />
-                            <span className="font-bold text-gray-900 text-[15px]">
+                      <div key={journal.id} className="bg-white rounded-2xl shadow-sm overflow-hidden"
+                        style={{ border: `1px solid ${C.cream}` }}>
+                        <div className="flex items-center justify-between px-5 py-4"
+                          style={{ borderBottom: `1px solid ${C.cream}` }}>
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                              style={{ background: C.pageBg }}>
+                              <CalendarIcon className="w-4 h-4" style={{ color: C.coral }} />
+                            </div>
+                            <span className="font-bold text-[15px]" style={{ color: C.charcoal }}>
                               Week of {format(weekStart, "MMMM d, yyyy")}
                             </span>
                           </div>
                           {balanceVal !== null && (
-                            <span className="border border-blue-200 text-blue-700 bg-white px-3 py-0.5 rounded-full text-xs font-semibold">
+                            <span className="px-3 py-0.5 rounded-full text-xs font-semibold"
+                              style={{ border: `1px solid ${C.cream}`, color: C.charcoal, background: C.pageBg }}>
                               Balance: {balanceVal}/10
                             </span>
                           )}
@@ -1054,70 +935,48 @@ const WeeklyJournal = () => {
                           {journal.data?.biggest_challenge && (
                             <div>
                               <div className="flex items-center gap-2 mb-2">
-                                <AlertCircle className="w-4 h-4 text-red-500" />
-                                <span className="text-sm font-bold text-gray-800">
-                                  Biggest Challenge
-                                </span>
+                                <AlertCircle className="w-4 h-4" style={{ color: C.crimson }} />
+                                <span className="text-sm font-bold" style={{ color: C.charcoal }}>Biggest Challenge</span>
                               </div>
-                              <div className="bg-red-50/60 border border-red-100 rounded-xl px-4 py-3">
-                                <p className="text-sm text-gray-700">
-                                  {journal.data.biggest_challenge}
-                                </p>
+                              <div className="rounded-xl px-4 py-3"
+                                style={{ background: C.crimson8, border: `1px solid rgba(183,43,45,0.18)` }}>
+                                <p className="text-sm" style={{ color: C.charcoal }}>{journal.data.biggest_challenge}</p>
                                 {journal.data.challenge_cause && (
-                                  <p className="text-xs text-gray-500 mt-1.5 border-t border-red-100 pt-1.5">
-                                    <span className="font-semibold">
-                                      Cause:
-                                    </span>{" "}
-                                    {journal.data.challenge_cause}
+                                  <p className="text-xs mt-1.5 pt-1.5" style={{ color: C.stone, borderTop: `1px solid rgba(183,43,45,0.1)` }}>
+                                    <span className="font-semibold">Cause:</span> {journal.data.challenge_cause}
                                   </p>
                                 )}
                               </div>
                             </div>
                           )}
-                          {journal.data?.biggest_challenge &&
-                            journal.data?.wins &&
-                            journal.data.wins.length > 0 && (
-                              <div className="border-t border-gray-100" />
-                            )}
-                          {journal.data?.wins &&
-                            journal.data.wins.length > 0 && (
-                              <div>
-                                <div className="flex items-center gap-2 mb-2">
-                                  <TrendingUp className="w-4 h-4 text-green-500" />
-                                  <span className="text-sm font-bold text-gray-800">
-                                    Top Wins This Week
-                                  </span>
-                                </div>
-                                <div className="space-y-1.5">
-                                  {journal.data.wins.map((win, i) => (
-                                    <div
-                                      key={i}
-                                      className="flex items-start gap-2"
-                                    >
-                                      <div className="mt-1 w-2.5 h-2.5 rounded-sm bg-green-400 shrink-0" />
-                                      <div>
-                                        <span className="text-xs font-semibold text-green-700 capitalize mr-1.5">
-                                          {win.category}
-                                        </span>
-                                        <span className="text-sm text-gray-700">
-                                          {win.description}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
+                          {journal.data?.biggest_challenge && journal.data?.wins && journal.data.wins.length > 0 && (
+                            <div style={{ borderTop: `1px solid ${C.cream}` }} />
+                          )}
+                          {journal.data?.wins && journal.data.wins.length > 0 && (
+                            <div>
+                              <div className="flex items-center gap-2 mb-2">
+                                <TrendingUp className="w-4 h-4" style={{ color: C.forest }} />
+                                <span className="text-sm font-bold" style={{ color: C.charcoal }}>Top Wins This Week</span>
                               </div>
-                            )}
+                              <div className="space-y-1.5">
+                                {journal.data.wins.map((win, i) => (
+                                  <div key={i} className="flex items-start gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5" style={{ background: C.coral }} />
+                                    <div>
+                                      <span className="text-xs font-semibold capitalize mr-1.5" style={{ color: C.coral }}>{win.category}</span>
+                                      <span className="text-sm" style={{ color: C.charcoal }}>{win.description}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                           {journal.data?.key_insight && (
                             <>
-                              <div className="border-t border-gray-100" />
+                              <div style={{ borderTop: `1px solid ${C.cream}` }} />
                               <div>
-                                <p className="text-xs font-bold text-violet-600 mb-1.5 uppercase tracking-wide">
-                                  Key Insight
-                                </p>
-                                <p className="text-sm text-gray-700 italic">
-                                  "{journal.data.key_insight}"
-                                </p>
+                                <p className="text-xs font-bold mb-1.5 uppercase tracking-wide" style={{ color: "#5034BB" }}>Key Insight</p>
+                                <p className="text-sm italic" style={{ color: C.charcoal }}>"{journal.data.key_insight}"</p>
                               </div>
                             </>
                           )}
@@ -1132,36 +991,34 @@ const WeeklyJournal = () => {
         </Tabs>
       </div>
 
-      {/* ✅ CHANGE 3: Save button — disabled + gray when future week */}
+      {/* Save bar */}
       {activeTab === "new" && (
-        <div className="z-30 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] p-4 flex justify-center">
+        <div className="bg-white/95 backdrop-blur-md p-4 flex justify-center z-50"
+          style={{ borderTop: `1px solid ${C.cream}` }}>
           <div className="w-full flex justify-end gap-3 px-4">
             <button
               onClick={() => navigate(-1)}
-              className="px-6 py-2.5 rounded-lg border border-red-200 bg-white text-red-700 font-semibold text-sm hover:bg-red-50 transition-colors shadow-sm"
+              className="px-6 py-2.5 rounded-lg font-bold text-sm transition-colors shadow-sm uppercase tracking-wider bg-white"
+              style={{ border: `1px solid ${C.cream}`, color: C.charcoal }}
+              onMouseEnter={e => (e.currentTarget.style.background = C.pageBg)}
+              onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
             >
               Cancel
             </button>
             <button
               onClick={handleSavePlan}
               disabled={isSaving || isFutureWeek}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-red-500 hover:bg-red-600 text-white font-bold text-sm transition-colors shadow-sm disabled:opacity-50 disabled:bg-gray-400"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-white font-bold text-sm transition-all shadow-md uppercase tracking-wider disabled:opacity-50"
+              style={{
+                background: isFutureWeek ? C.stone : `linear-gradient(135deg, ${C.coral}, ${C.sand})`,
+                cursor: isFutureWeek ? "not-allowed" : "pointer",
+              }}
             >
               {isSaving ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  strokeWidth="2.5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                  />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                 </svg>
               )}
               {isSaving

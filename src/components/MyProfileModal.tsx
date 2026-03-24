@@ -138,18 +138,18 @@ export default function MyProfileModal({ setIsProfileModalOpen }: MyProfileModal
   const modalContent = (
     <div
       onClick={() => setIsProfileModalOpen(false)}
-      className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 p-4 sm:p-6"
+      className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 p-4 sm:p-6 font-sans animate-in fade-in"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-[600px] bg-white rounded-xl shadow-2xl flex flex-col max-h-[85vh] relative"
+        className="w-full max-w-[600px] bg-[#FEF4EE] rounded-2xl shadow-2xl flex flex-col max-h-[85vh] relative border border-[#D6B99D] animate-in zoom-in-95"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white rounded-t-xl z-10 shrink-0">
-          <h2 className="text-xl font-bold text-gray-900">My Profile</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#D6B99D] bg-white rounded-t-2xl z-10 shrink-0">
+          <h2 className="text-xl font-bold text-[#2C2C2A]">My Profile</h2>
           <button
             onClick={() => setIsProfileModalOpen(false)}
-            className="text-gray-500 hover:text-gray-800 transition-colors rounded-md hover:bg-gray-100 p-1"
+            className="text-[#888780] hover:text-[#2C2C2A] transition-colors rounded-md hover:bg-[#FEF4EE] p-1 outline-none"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -158,22 +158,22 @@ export default function MyProfileModal({ setIsProfileModalOpen }: MyProfileModal
         </div>
 
         {/* Scrollable Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="flex-1 overflow-y-auto px-6 py-6 bg-[#FEF4EE]/50">
 
           {/* ── Loading ── */}
           {isLoading && (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-[#3bc2a2]" />
+              <Loader2 className="w-8 h-8 animate-spin text-[#DA7756]" />
             </div>
           )}
 
           {/* ── Error ── */}
           {!isLoading && error && (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <p className="text-sm text-red-500 font-medium">{error}</p>
+              <p className="text-sm text-[#A32D2D] font-bold">{error}</p>
               <button
                 onClick={() => window.location.reload()}
-                className="px-4 py-2 text-sm font-medium bg-gray-900 text-white rounded-md hover:bg-gray-700 transition-colors"
+                className="px-5 py-2.5 text-sm font-bold bg-[#DA7756] text-white rounded-xl hover:bg-[#C26547] transition-colors shadow-sm outline-none"
               >
                 Retry
               </button>
@@ -192,11 +192,11 @@ export default function MyProfileModal({ setIsProfileModalOpen }: MyProfileModal
                     className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md mb-4"
                   />
                 ) : (
-                  <div className="w-24 h-24 bg-[#3bc2a2] rounded-full flex items-center justify-center text-white text-2xl font-bold mb-4 shadow-md">
+                  <div className="w-24 h-24 bg-[#DA7756] rounded-full flex items-center justify-center text-white text-2xl font-extrabold mb-4 shadow-md">
                     {getInitials(profile.name)}
                   </div>
                 )}
-                <label className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+                <label className="flex items-center gap-2 px-4 py-2 border border-[#D6B99D] rounded-xl text-sm font-bold text-[#2C2C2A] bg-white hover:bg-[#FEF4EE] hover:text-[#DA7756] hover:border-[#DA7756] transition-colors cursor-pointer shadow-sm">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                   </svg>
@@ -215,7 +215,7 @@ export default function MyProfileModal({ setIsProfileModalOpen }: MyProfileModal
                   />
                 </label>
                 {imageBase64 && imageBase64.startsWith("data:") && (
-                  <p className="text-xs text-[#3bc2a2] font-medium mt-1">✓ New photo selected</p>
+                  <p className="text-xs text-[#0B5D41] font-bold mt-2">✓ New photo selected</p>
                 )}
               </div>
 
@@ -223,88 +223,88 @@ export default function MyProfileModal({ setIsProfileModalOpen }: MyProfileModal
                 {/* Name — editable */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-1.5">First Name</label>
+                    <label className="block text-sm font-bold text-[#2C2C2A] mb-1.5">First Name</label>
                     <input
                       type="text"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       placeholder="First name"
-                      className="w-full p-3 bg-white border border-gray-200 rounded-lg text-gray-900 outline-none focus:border-[#3bc2a2] focus:ring-1 focus:ring-[#3bc2a2] transition-colors"
+                      className="w-full p-3 bg-white border border-[#D6B99D] rounded-xl text-[#2C2C2A] placeholder:text-[#888780] outline-none focus:border-[#DA7756] focus:ring-1 focus:ring-[#DA7756]/30 transition-all shadow-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-1.5">Last Name</label>
+                    <label className="block text-sm font-bold text-[#2C2C2A] mb-1.5">Last Name</label>
                     <input
                       type="text"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       placeholder="Last name"
-                      className="w-full p-3 bg-white border border-gray-200 rounded-lg text-gray-900 outline-none focus:border-[#3bc2a2] focus:ring-1 focus:ring-[#3bc2a2] transition-colors"
+                      className="w-full p-3 bg-white border border-[#D6B99D] rounded-xl text-[#2C2C2A] placeholder:text-[#888780] outline-none focus:border-[#DA7756] focus:ring-1 focus:ring-[#DA7756]/30 transition-all shadow-sm"
                     />
                   </div>
                 </div>
 
                 {/* Email — read only */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1.5">Email</label>
+                  <label className="block text-sm font-bold text-[#2C2C2A] mb-1.5">Email</label>
                   <input
                     type="email"
                     value={profile.email ?? ""}
                     disabled
-                    className="w-full p-3 bg-gray-50 border border-gray-100 rounded-lg text-gray-400 cursor-not-allowed outline-none"
+                    className="w-full p-3 bg-[#FEF4EE] border border-[#D6B99D] rounded-xl text-[#888780] cursor-not-allowed outline-none shadow-sm"
                   />
-                  <p className="mt-1.5 text-xs text-gray-400">Email cannot be changed</p>
+                  <p className="mt-1.5 text-xs text-[#888780] font-medium">Email cannot be changed</p>
                 </div>
 
                 {/* Birthday — editable */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1.5">Birthday</label>
+                  <label className="block text-sm font-bold text-[#2C2C2A] mb-1.5">Birthday</label>
                   <input
                     type="date"
                     value={birthday}
                     onChange={(e) => setBirthday(e.target.value)}
-                    className="w-full p-3 bg-white border border-gray-200 rounded-lg text-gray-900 outline-none focus:border-[#3bc2a2] focus:ring-1 focus:ring-[#3bc2a2] transition-colors"
+                    className="w-full p-3 bg-white border border-[#D6B99D] rounded-xl text-[#2C2C2A] placeholder:text-[#888780] outline-none focus:border-[#DA7756] focus:ring-1 focus:ring-[#DA7756]/30 transition-all shadow-sm"
                   />
                 </div>
 
                 {/* Phone — editable */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1.5">Phone Number</label>
+                  <label className="block text-sm font-bold text-[#2C2C2A] mb-1.5">Phone Number</label>
                   <input
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="9999999999"
-                    className="w-full p-3 bg-white border border-gray-200 rounded-lg text-gray-900 outline-none focus:border-[#3bc2a2] focus:ring-1 focus:ring-[#3bc2a2] transition-colors"
+                    className="w-full p-3 bg-white border border-[#D6B99D] rounded-xl text-[#2C2C2A] placeholder:text-[#888780] outline-none focus:border-[#DA7756] focus:ring-1 focus:ring-[#DA7756]/30 transition-all shadow-sm"
                   />
                 </div>
 
                 {/* Bio — editable */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1.5">Bio</label>
+                  <label className="block text-sm font-bold text-[#2C2C2A] mb-1.5">Bio</label>
                   <textarea
                     rows={4}
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
                     placeholder="Tell us a bit about yourself..."
-                    className="w-full p-3 bg-white border border-gray-200 rounded-lg text-gray-900 outline-none focus:border-[#3bc2a2] focus:ring-1 focus:ring-[#3bc2a2] resize-none transition-colors"
+                    className="w-full p-3 bg-white border border-[#D6B99D] rounded-xl text-[#2C2C2A] placeholder:text-[#888780] outline-none focus:border-[#DA7756] focus:ring-1 focus:ring-[#DA7756]/30 resize-none transition-all shadow-sm"
                   />
                 </div>
               </div>
 
               {/* Footer Buttons */}
-              <div className="flex justify-end gap-3 mt-8">
+              <div className="flex justify-end gap-3 mt-8 border-t border-[#D6B99D] pt-6">
                 <button
                   onClick={() => setIsProfileModalOpen(false)}
                   disabled={isSaving}
-                  className="px-5 py-2.5 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-colors disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl text-[#2C2C2A] font-bold border border-[#D6B99D] bg-white hover:bg-[#FEF4EE] hover:text-[#DA7756] transition-colors disabled:opacity-50 shadow-sm outline-none"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="px-5 py-2.5 bg-red-500 text-white font-medium rounded-lg hover:bg-red-600 transition-colors shadow-sm disabled:opacity-60 flex items-center gap-2"
+                  className="px-6 py-2.5 bg-[#DA7756] text-white font-extrabold rounded-xl hover:bg-[#C26547] transition-colors shadow-sm disabled:opacity-60 flex items-center gap-2 uppercase tracking-wider outline-none"
                 >
                   {isSaving ? (
                     <>
@@ -324,17 +324,17 @@ export default function MyProfileModal({ setIsProfileModalOpen }: MyProfileModal
       {/* Toast */}
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 z-[999999] flex items-start gap-3 px-4 py-3 rounded-xl shadow-xl min-w-[280px] max-w-sm ${
-            toast.type === "success" ? "bg-green-500" : "bg-red-500"
+          className={`fixed bottom-6 right-6 z-[999999] flex items-start gap-3 px-5 py-4 rounded-xl shadow-xl min-w-[280px] max-w-sm animate-in slide-in-from-bottom-5 fade-in duration-300 ${
+            toast.type === "success" ? "bg-[#0B5D41]" : "bg-[#A32D2D]"
           } text-white`}
         >
           <div className="flex-1">
-            <p className="text-sm font-bold">{toast.type === "success" ? "Success" : "Error"}</p>
-            <p className="text-sm opacity-90">{toast.message}</p>
+            <p className="text-[15px] font-bold tracking-wide">{toast.type === "success" ? "Success" : "Error"}</p>
+            <p className="text-sm font-medium opacity-90 mt-0.5">{toast.message}</p>
           </div>
-          <button onClick={() => setToast(null)} className="opacity-70 hover:opacity-100 transition-opacity">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+          <button onClick={() => setToast(null)} className="opacity-70 hover:opacity-100 transition-opacity outline-none mt-0.5">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>

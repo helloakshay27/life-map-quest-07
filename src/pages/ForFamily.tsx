@@ -14,7 +14,7 @@ import FinanceSection from "@/components/ForFamilySections/FinanceSection";
 import BenefitsSection from "@/components/ForFamilySections/BenefitsSection";
 import LegalSection from "@/components/ForFamilySections/LegalSection";
 import FinalWishesSection from "@/components/ForFamilySections/FinalWishesSection";
-import OtherInfoSection from "@/components/ForFamilySections/OtherInfoSection"; // <-- Naya Import
+import OtherInfoSection from "@/components/ForFamilySections/OtherInfoSection";
 
 // --- Types ---
 interface Sibling { id: string; name: string; aadhar: string; address: string; phone: string; relation: string; }
@@ -34,7 +34,7 @@ interface FinalWish { id: string; name: string; placeOfWorship: string; religiou
 interface UploadedDocument { id: string; fileName: string; uploadedAt: string; }
 interface PersonalInfo { fullName: string; aadharNumber: string; panNumber: string; dateOfBirth: string; placeOfBirth: string; drivingLicenseNumber: string; drivingLicenseValidity: string; currentHomeAddress: string; mobileNumber: string; workPhone: string; nativeAddress: string; maritalStatus: string; marriageDate: string; spouseName: string; spouseMobile: string; spouseAadharNumber: string; spousePanNumber: string; spouseDrivingLicenseNumber: string; spouseDrivingLicenseValidity: string; spouseAddress: string; spouseEmployer: string; spouseWorkPhone: string; spouseEmployerAddress: string; formerSpouseName: string; formerSpouseContact: string; formerSpouseAddress: string; formerSpouseMarriageDate: string; formerSpouseDivorceDate: string; }
 
-// Define Steps for Stepper (Added Other Info)
+// Define Steps for Stepper
 const FORM_STEPS = [
   { id: "personal", label: "Personal", icon: "👤" },
   { id: "family", label: "Family", icon: "👪" },
@@ -86,7 +86,7 @@ export default function ForFamily() {
   const [investmentsDocuments, setInvestmentsDocuments] = useState<InvestmentsDocuments>({ fixedDepositDetails: "", fdBank: "", fdCertificateKeptAt: "", bankLockerNumber: "", lockerBankBranch: "", lockerAccessibleBy: "", lockerKeyLocation: "", dematPortfolioLocation: "", bondsDebenturesLocation: "", ppfAccountLocation: "", npsEpfGratuityDetails: "", goldJewelleryDetails: "", uploadedDocuments: [] });
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   
-  // Naya state Notes ke liye
+  // Other Info
   const [otherInfo, setOtherInfo] = useState({ notes: "" }); 
 
   const createId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -315,7 +315,7 @@ export default function ForFamily() {
           final_wishes: finalWishes.map(w => ({
             person_name: w.name, religious_affiliation: w.religiousAffiliation, place_of_worship: w.placeOfWorship, priest_name: w.panditName, priest_phone: w.panditPhone, service_location_address: w.serviceLocationAddress, contact_phone: w.contactPhone, last_rites_preference: w.lastRitesPreference, cremation_or_burial_choice: w.cremationGroundChoice, pallbearers: w.pallbearers, musical_selections: w.musicalSelections, special_requests: w.specialRequests
           })),
-          other_info: { notes: otherInfo.notes } // Notes mapping
+          other_info: { notes: otherInfo.notes } 
         }
       };
 
@@ -337,11 +337,9 @@ export default function ForFamily() {
 
  // --- Download Handler (.txt Format) ---
   const handleDownload = () => {
-    // Format today's date (e.g., "16 March 2026")
     const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     const separator = "============================================================";
 
-    // Start building the text document
     let txt = `WHAT MY FAMILY SHOULD KNOW\nA Guide to Getting Affairs in Order\n\n`;
     txt += `Prepared by: ${personalInfo.fullName || 'Unknown'}\n`;
     txt += `Date: ${today}\n\n`;
@@ -549,60 +547,69 @@ export default function ForFamily() {
   const updateFinalWish = (id: string, field: keyof FinalWish, value: string | boolean) => setFinalWishes(prev => prev.map(w => (w.id === id ? { ...w, [field]: value } : w)));
 
   return (
-    <div className="relative w-full animate-fade-in space-y-8">
+    <div className="relative w-full animate-fade-in space-y-8 font-sans">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">For My Family</h1>
-          <p className="text-sm text-muted-foreground">A guide to getting your affairs in order</p>
+          <h1 className="text-3xl font-extrabold text-[#2C2C2A]">For My Family</h1>
+          <p className="text-sm font-medium text-[#888780] mt-0.5">A guide to getting your affairs in order</p>
         </div>
         
         <div className="flex gap-2">
-          {/* ---> Download Button Updated Here <--- */}
           <Button 
             variant="outline" 
             size="sm" 
-            className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" 
+            className="border-[#D6B99D] text-[#2C2C2A] hover:bg-[#FEF4EE] hover:border-[#DA7756] hover:text-[#DA7756] transition-colors outline-none" 
             disabled={isFetching || isSaving}
             onClick={handleDownload}
           >
             Download
           </Button>
-          <Button size="sm" className="bg-red-500 hover:bg-red-600" onClick={handleSave} disabled={isFetching || isSaving}>
+          <Button 
+            size="sm" 
+            className="bg-[#DA7756] hover:bg-[#C26547] text-white font-extrabold transition-colors outline-none" 
+            onClick={handleSave} 
+            disabled={isFetching || isSaving}
+          >
             {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {hasExistingProfile ? "Updating..." : "Saving..."}</> : hasExistingProfile ? "Update Profile" : "Save Profile"}
           </Button>
         </div>
       </div>
 
       {/* Progress Card */}
-      <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100">
-        <div className="space-y-2">
+      <div className="rounded-2xl bg-[#FEF4EE] p-6 shadow-sm border border-[#D6B99D]">
+        <div className="space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-sm font-medium text-gray-700">Completion Progress</span>
-            <span className="text-sm font-bold text-purple-600">{completionProgress}%</span>
+            <span className="text-sm font-bold text-[#2C2C2A]">Completion Progress</span>
+            <span className="text-sm font-extrabold text-[#DA7756]">{completionProgress}%</span>
           </div>
-          <Progress value={completionProgress} className="h-2" />
+          <Progress 
+            value={completionProgress} 
+            className="h-2.5 bg-[#D6B99D]/30" 
+            // Inline style logic assuming Progress component forwards style to its indicator
+            indicatorStyle={{ backgroundColor: "#DA7756" }}
+          />
         </div>
       </div>
 
       {/* Info Banners */}
       <div className="space-y-4">
         {showPrivacyAlert && (
-          <div className="rounded-2xl border border-emerald-300 bg-emerald-50/80 p-5">
+          <div className="rounded-2xl border border-[#0B5D41]/30 bg-[#0B5D41]/[0.05] p-5 shadow-sm">
             <div className="flex items-start gap-4">
-              <div className="rounded-xl bg-emerald-100 p-3 text-emerald-700">
-                <Shield className="h-5 w-5" />
+              <div className="rounded-xl bg-[#0B5D41]/10 p-3 text-[#0B5D41]">
+                <Shield className="h-5 w-5" strokeWidth={2.5}/>
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-medium text-emerald-900">Your data is completely private & secure</h3>
-                <p className="mt-1 text-base font-normal text-emerald-800/90">
+                <h3 className="text-[16px] font-bold text-[#0B5D41]">Your data is completely private & secure</h3>
+                <p className="mt-1 text-sm font-medium text-[#2C2C2A] leading-relaxed">
                   This information is encrypted and stored securely. Only you can access it — no one else, including admins, can view this data. Use the Download button to share with your family when needed.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowPrivacyAlert(false)}
-                className="rounded-md p-1 text-emerald-500 transition-colors hover:bg-emerald-100 hover:text-emerald-700"
+                className="rounded-md p-1.5 text-[#0B5D41]/70 transition-colors hover:bg-[#0B5D41]/10 hover:text-[#0B5D41] outline-none"
                 aria-label="Dismiss privacy notice"
               >
                 <X className="h-5 w-5" />
@@ -612,21 +619,21 @@ export default function ForFamily() {
         )}
 
         {showInfoAlert && (
-          <div className="rounded-2xl border border-amber-300 bg-amber-50/80 p-5">
+          <div className="rounded-2xl border border-[#BA7517]/30 bg-[#BA7517]/[0.05] p-5 shadow-sm">
             <div className="flex items-start gap-4">
-              <div className="rounded-xl bg-amber-100 p-3 text-amber-700">
-                <Info className="h-5 w-5" />
+              <div className="rounded-xl bg-[#BA7517]/10 p-3 text-[#BA7517]">
+                <Info className="h-5 w-5" strokeWidth={2.5}/>
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-medium text-amber-900">Why fill this out?</h3>
-                <p className="mt-1 text-base font-normal text-amber-800/90">
+                <h3 className="text-[16px] font-bold text-[#BA7517]">Why fill this out?</h3>
+                <p className="mt-1 text-sm font-medium text-[#2C2C2A] leading-relaxed">
                   Most people leave their families without the information they need in a crisis. This guide helps you record your personal, financial, and legal affairs so your loved ones are never left wondering. Fill it in sections — save as you go!
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowInfoAlert(false)}
-                className="rounded-md p-1 text-amber-500 transition-colors hover:bg-amber-100 hover:text-amber-700"
+                className="rounded-md p-1.5 text-[#BA7517]/70 transition-colors hover:bg-[#BA7517]/10 hover:text-[#BA7517] outline-none"
                 aria-label="Dismiss why fill this out notice"
               >
                 <X className="h-5 w-5" />
@@ -638,25 +645,25 @@ export default function ForFamily() {
 
         {/* Content */}
         {isFetching ? (
-          <div className="flex flex-col items-center justify-center py-20 rounded-2xl bg-white border border-gray-100">
-            <Loader2 className="h-10 w-10 animate-spin text-purple-600 mb-4" />
-            <p className="text-gray-500 font-medium">Fetching your data...</p>
+          <div className="flex flex-col items-center justify-center py-20 rounded-2xl bg-[#FEF4EE] border border-[#D6B99D] shadow-sm">
+            <Loader2 className="h-10 w-10 animate-spin text-[#DA7756] mb-4" />
+            <p className="text-[#888780] font-medium">Fetching your data...</p>
           </div>
         ) : (
-          <div className="w-full min-h-[400px] flex flex-col bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div className="w-full min-h-[400px] flex flex-col bg-white rounded-2xl border border-[#D6B99D] overflow-hidden shadow-sm">
             {/* Stepper Tabs */}
-            <div className="p-4 border-b border-gray-100 bg-white">
-              <div className="flex gap-1 overflow-x-auto">
+            <div className="p-4 border-b border-[#D6B99D] bg-[#FEF4EE]">
+              <div className="flex gap-1 overflow-x-auto hide-scrollbar">
                 {FORM_STEPS.map((tab, index) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${
+                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2 outline-none ${
                       activeTab === tab.id 
-                        ? "bg-gray-100 text-gray-900 shadow-sm border border-gray-200" 
+                        ? "bg-[#DA7756] text-white shadow-md" 
                         : index < currentStepIndex 
-                          ? "text-gray-700 hover:bg-gray-50" 
-                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                          ? "text-[#2C2C2A] hover:bg-white border border-transparent hover:border-[#D6B99D]" 
+                          : "text-[#888780] hover:text-[#2C2C2A] hover:bg-white border border-transparent hover:border-[#D6B99D]"
                     }`}
                   >
                     <span className="text-base leading-none">{tab.icon}</span>
@@ -667,7 +674,7 @@ export default function ForFamily() {
             </div>
 
             {/* Main Content Area */}
-            <div className="p-6 space-y-6 min-h-[400px] bg-[#fafafa]">
+            <div className="p-6 space-y-6 min-h-[400px] bg-[#FEF4EE]/30">
               {activeTab === "personal" && <PersonalSection personalInfo={personalInfo} personalDocuments={personalDocuments} spouseDocuments={spouseDocuments} expandedSections={expandedSections} onUpdatePersonalInfo={updatePersonalInfo} onAddPersonalDocument={addPersonalDocument} onRemovePersonalDocument={removePersonalDocument} onAddSpouseDocument={addSpouseDocument} onRemoveSpouseDocument={removeSpouseDocument} onToggleSection={toggleSection} />}
               {activeTab === "family" && <FamilySection husbandSiblings={husbandSiblings} wifeSiblings={wifeSiblings} children={children} grandchildren={grandchildren} expandedSections={expandedSections} onAddHusbandSibling={addHusbandSibling} onRemoveHusbandSibling={removeHusbandSibling} onUpdateHusbandSibling={updateHusbandSibling} onAddWifeSibling={addWifeSibling} onRemoveWifeSibling={removeWifeSibling} onUpdateWifeSibling={updateWifeSibling} onAddChild={addChild} onRemoveChild={removeChild} onUpdateChild={updateChild} onAddGrandchild={addGrandchild} onRemoveGrandchild={removeGrandchild} onUpdateGrandchild={updateGrandchild} onToggleSection={toggleSection} />}
               {activeTab === "emergency" && <EmergencySection emergencyContacts={emergencyContacts} onAddEmergencyContact={addEmergencyContact} onRemoveEmergencyContact={removeEmergencyContact} onUpdateEmergencyContact={updateEmergencyContact} />}
@@ -678,7 +685,6 @@ export default function ForFamily() {
               {activeTab === "legal" && <LegalSection legalDetails={legalDetails} onUpdateLegalDetails={updateLegalDetails} onHandleWillDocumentUpload={handleWillDocumentUpload} />}
               {activeTab === "final" && <FinalWishesSection finalWishes={finalWishes} onAddFinalWish={addFinalWish} onRemoveFinalWish={removeFinalWish} onUpdateFinalWish={updateFinalWish} />}
               
-              {/* Naya Render Component */}
               {activeTab === "other" && (
                 <OtherInfoSection 
                   otherInfo={otherInfo} 

@@ -31,6 +31,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
+// Pallette-matched icons based on screenshots
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Daily Journal", url: "/daily-journal", icon: BookOpen },
@@ -51,16 +52,16 @@ const navItems = [
 ];
 
 export function AppSidebar() {
-  const { setOpenMobile, openMobile, state, toggleSidebar, isMobile } =
-    useSidebar();
+  const { setOpenMobile, state, toggleSidebar, isMobile } = useSidebar();
   const isCollapsed = state === "collapsed";
 
   return (
     <>
-      {/* ── Mobile/Tablet trigger button — fixed top-left, only shows below md ── */}
+      {/* ── Mobile Trigger button — Terracotta/Cream colors ── */}
       <button
         onClick={toggleSidebar}
-        className="fixed bottom-4 left-4 z-50 md:hidden flex items-center justify-center h-8 w-8 rounded-md bg-background border border-border shadow-sm hover:bg-accent transition-colors"
+        // Background white, Tan border, muted olive default text, Terracotta text on cream hover
+        className="fixed bottom-4 left-4 z-50 md:hidden flex items-center justify-center h-8 w-8 rounded-md bg-white border border-[#D6B99D] shadow-sm text-[#888780] hover:bg-[#FEF4EE] hover:text-[#DA7756] transition-colors outline-none"
         aria-label="Open sidebar"
       >
         <PanelLeft className="h-4 w-4" />
@@ -68,21 +69,24 @@ export function AppSidebar() {
 
       <Sidebar
         collapsible="icon"
-        className="border-r border-sidebar-border flex flex-col"
+        // White background, Tan right border
+        className="border-r border-[#D6B99D] bg-white flex flex-col"
       >
         <SidebarContent
-          className="pt-[56px] w-full flex-1 overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          // Content background white, hiding scrollbar
+          className="pt-[56px] w-full flex-1 overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden bg-white"
           style={{ overflowY: "auto" }}
         >
-          {/* Toggle button — only desktop */}
+          {/* Toggle button — desktop header. White bg, Tan border bottom. */}
           <div
-            className={`hidden md:flex h-9 shrink-0 items-center border-b border-sidebar-border mb-1 ${
+            className={`hidden md:flex h-9 shrink-0 items-center border-b border-[#D6B99D] bg-white mb-1 ${
               isCollapsed ? "justify-center px-2" : "justify-end px-3"
             }`}
           >
             <button
               onClick={toggleSidebar}
-              className="flex h-6 w-6 items-center justify-center rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+              // Icon muted olive gray, Cream background hover, Terracotta text hover
+              className="flex h-6 w-6 items-center justify-center rounded-md text-[#888780] hover:bg-[#FEF4EE] hover:text-[#DA7756] transition-colors outline-none"
               title="Toggle sidebar"
             >
               {isCollapsed ? (
@@ -103,13 +107,17 @@ export function AppSidebar() {
                         to={item.url}
                         end={item.url === "/" || item.url === "/dashboard"}
                         onClick={() => setOpenMobile(false)}
-                        className={`flex items-center w-full rounded-lg py-2.5 text-sidebar-foreground transition-all hover:bg-sidebar-accent overflow-hidden ${
+                        // Refined item base styling: Font medium, Charcoal foreground, Cream hover background.
+                        // Icons use nesting arbitrary selector [&_svg]:text-color for default state.
+                        className={`flex items-center w-full rounded-lg py-2.5 transition-all overflow-hidden font-medium text-[#2C2C2A] hover:bg-[#FEF4EE] [&_svg]:text-[#888780] hover:[&_svg]:text-[#DA7756] outline-none ${
                           isCollapsed && !isMobile
                             ? "justify-center px-0"
                             : "px-3 gap-3"
                         }`}
-                        activeClassName="bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary"
+                        // Refined active styling: Terracotta background, White text, White icon via arbitrary active nesting.
+                        activeClassName="bg-[#DA7756] text-white hover:bg-[#DA7756]/90 [&_svg]:text-white shadow-sm"
                       >
+                        {/* Icon conditional color handled by NavLink specificity arbitrary variants */}
                         <item.icon className="h-4 w-4 shrink-0" />
                         {(!isCollapsed || isMobile) && (
                           <span className="truncate text-sm">{item.title}</span>

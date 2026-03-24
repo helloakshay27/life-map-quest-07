@@ -1,47 +1,58 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  TrendingUp,
-  Calendar,
-  Zap,
-  Settings,
-  BookOpen,
-  CalendarDays,
-  Trophy,
-  Sparkles,
-  Play,
-  ChevronLeft,
-  ChevronRight,
-  Target,
-  CalendarIcon,
-  ListTodo,
-  ArrowRight,
-  Heart,
-  Lock,
-  Flame,
-  Lightbulb,
-  Plus,
-  ListOrdered,
-  AlertCircle,
+  TrendingUp, Calendar, Zap, Settings, BookOpen, CalendarDays,
+  Trophy, Sparkles, Play, ChevronLeft, ChevronRight, Target,
+  CalendarIcon, ListTodo, ArrowRight, Heart, Lock, Flame,
+  Lightbulb, Plus, ListOrdered, AlertCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useMemo } from "react";
 
+// ─── Brand Palette ────────────────────────────────────────────────────────────
+const C = {
+  coral:      "#D5474E",
+  coral8:     "rgba(213,71,78,0.08)",
+  coral15:    "rgba(213,71,78,0.15)",
+  coral25:    "rgba(213,71,78,0.25)",
+  charcoal:   "#2A2A2A",
+  cream:      "#F5CECA",
+  forest:     "#0B5541",
+  forest8:    "rgba(11,85,65,0.08)",
+  forest15:   "rgba(11,85,65,0.15)",
+  violet:     "#5534B7",
+  violet8:    "rgba(85,52,183,0.08)",
+  violet15:   "rgba(85,52,183,0.15)",
+  sand:       "#C5AB92",
+  sand30:     "rgba(197,171,146,0.30)",
+  dune:       "#E8C0A8",
+  mist:       "#D1D4A6",
+  stone:      "#888765",
+  sky:        "#2B6CC5",
+  sky8:       "rgba(43,108,197,0.08)",
+  sky15:      "rgba(43,108,197,0.15)",
+  amber:      "#F4A94C",
+  amber8:     "rgba(244,169,76,0.08)",
+  amber15:    "rgba(244,169,76,0.15)",
+  leaf:       "#3A6011",
+  lavender:   "#C0CBEB",
+  success:    "#44AF90",
+  crimson:    "#C72540",
+  pageBg:     "#FAF7F3",
+};
+
 const Dashboard = () => {
   const { user, token, login } = useAuth();
-
   const navigate = useNavigate();
 
-  // Debug: Check what user data we have
   useEffect(() => {
     console.log("Dashboard - User from AuthContext:", user);
     console.log("Dashboard - Token:", token);
     console.log("Dashboard - LocalStorage user:", localStorage.getItem("user"));
   }, [user, token]);
 
-  // If the user's name is generic, try fetching true profile info
   useEffect(() => {
     if (user && (user.name === "User" || user.name === "Guest") && token) {
       const fetchProfile = async () => {
@@ -51,28 +62,15 @@ const Dashboard = () => {
           });
           if (res.ok) {
             const data = await res.json();
-            const bestName =
-              [
-                data.name,
-                data.full_name,
-                [data.first_name, data.last_name].filter(Boolean).join(" "),
-                data.username,
-                data.given_name,
-              ].find((n) => n && typeof n === "string" && n.trim() !== "") ||
-              user.name;
-
-            if (bestName !== user.name) {
-              login(token, { ...user, name: bestName });
-            }
+            const bestName = [
+              data.name, data.full_name,
+              [data.first_name, data.last_name].filter(Boolean).join(" "),
+              data.username, data.given_name,
+            ].find((n) => n && typeof n === "string" && n.trim() !== "") || user.name;
+            if (bestName !== user.name) login(token, { ...user, name: bestName });
           }
-        } catch (err) {
-          console.error(
-            "Dashboard - Failed to fetch profile to update name:",
-            err,
-          );
-        }
+        } catch (err) { console.error("Dashboard - Failed to fetch profile:", err); }
       };
-
       fetchProfile();
     }
   }, [user, token, login]);
@@ -84,55 +82,24 @@ const Dashboard = () => {
     highest_badge?: string | null;
     current_streak?: number;
     longest_streak?: number;
-    life_balance?: {
-      career?: number;
-      health?: number;
-      relationships?: number;
-      growth?: number;
-      finance?: number;
-    };
+    life_balance?: { career?: number; health?: number; relationships?: number; growth?: number; finance?: number };
   } | null>(null);
 
-  const [setupCount, setSetupCount] = useState<{
-    completed: number;
-    total: number;
-  }>({
-    completed: 2,
-    total: 5,
-  });
+  const [setupCount, setSetupCount] = useState<{ completed: number; total: number }>({ completed: 2, total: 5 });
 
-  // Load setup count from localStorage
   useEffect(() => {
-    const completed = parseInt(
-      localStorage.getItem("setupCompletedCount") || "2",
-    );
+    const completed = parseInt(localStorage.getItem("setupCompletedCount") || "2");
     const total = parseInt(localStorage.getItem("setupTotalCount") || "5");
     setSetupCount({ completed, total });
-
-    // Listen for changes from other tabs/windows
     const handleStorageChange = () => {
-      const updatedCompleted = parseInt(
-        localStorage.getItem("setupCompletedCount") || "2",
-      );
-      const updatedTotal = parseInt(
-        localStorage.getItem("setupTotalCount") || "5",
-      );
-      setSetupCount({ completed: updatedCompleted, total: updatedTotal });
+      setSetupCount({
+        completed: parseInt(localStorage.getItem("setupCompletedCount") || "2"),
+        total: parseInt(localStorage.getItem("setupTotalCount") || "5"),
+      });
     };
-
-    // Listen for visibility changes to refresh when tab becomes active
     const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        const updatedCompleted = parseInt(
-          localStorage.getItem("setupCompletedCount") || "2",
-        );
-        const updatedTotal = parseInt(
-          localStorage.getItem("setupTotalCount") || "5",
-        );
-        setSetupCount({ completed: updatedCompleted, total: updatedTotal });
-      }
+      if (!document.hidden) handleStorageChange();
     };
-
     window.addEventListener("storage", handleStorageChange);
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
@@ -142,1544 +109,954 @@ const Dashboard = () => {
   }, []);
 
   const [insightsData, setInsightsData] = useState<{
-    recent_journals: Array<{
-      id: number;
-      title?: string;
-      created_at?: string;
-      journal_date?: string;
-      [key: string]: unknown;
-    }>;
-    personalized_insights: Array<{
-      id?: number;
-      insight?: string;
-      text?: string;
-      [key: string]: unknown;
-    }>;
-    journaling_status: {
-      monthly_entries: number;
-      weekly_entries: number;
-    };
-  }>({
-    recent_journals: [],
-    personalized_insights: [],
-    journaling_status: { monthly_entries: 0, weekly_entries: 0 },
-  });
+    recent_journals: Array<{ id: number; title?: string; created_at?: string; journal_date?: string; [key: string]: unknown }>;
+    personalized_insights: Array<{ id?: number; insight?: string; text?: string; [key: string]: unknown }>;
+    journaling_status: { monthly_entries: number; weekly_entries: number };
+  }>({ recent_journals: [], personalized_insights: [], journaling_status: { monthly_entries: 0, weekly_entries: 0 } });
 
   const [previewData, setPreviewData] = useState<{
     daily_motivator: string | null;
-    priorities: Array<{
-      id?: number;
-      title?: string;
-      description?: string;
-      [key: string]: unknown;
-    }>;
-    upcoming_dates: Array<{
-      id?: number;
-      title?: string;
-      date?: string;
-      [key: string]: unknown;
-    }>;
+    priorities: Array<{ id?: number; title?: string; description?: string; [key: string]: unknown }>;
+    upcoming_dates: Array<{ id?: number; title?: string; date?: string; [key: string]: unknown }>;
     story_of_the_day: string | null;
     mission: string | null;
-    bucket_preview: Array<{
-      id: number;
-      title?: string;
-      category?: string;
-      status?: string;
-      [key: string]: unknown;
-    }>;
+    bucket_preview: Array<{ id: number; title?: string; category?: string; status?: string; [key: string]: unknown }>;
     leaderboard_preview: Array<{ name: string; points: number }>;
     vision_images: string[];
     vision_statement: string | null;
   }>({
-    daily_motivator: null,
-    priorities: [],
-    upcoming_dates: [],
-    story_of_the_day: null,
-    mission: null,
-    bucket_preview: [],
-    leaderboard_preview: [],
-    vision_images: [],
-    vision_statement: null,
+    daily_motivator: null, priorities: [], upcoming_dates: [],
+    story_of_the_day: null, mission: null, bucket_preview: [],
+    leaderboard_preview: [], vision_images: [], vision_statement: null,
   });
 
-  // Fetch Actual Recent Journals from /user_journals for the UI update
   const [recentJournals, setRecentJournals] = useState<any[]>([]);
   const [weeklyJournals, setWeeklyJournals] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchAllJournals = async () => {
       try {
-        const authHeader = {
-          Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
-        };
-
+        const authHeader = { Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}` };
         const [dailyRes, weeklyRes] = await Promise.all([
-          fetch("https://life-api.lockated.com/user_journals", {
-            headers: authHeader,
-          }),
-          fetch(
-            "https://life-api.lockated.com/user_journals?journal_type=weekly",
-            { headers: authHeader },
-          ),
+          fetch("https://life-api.lockated.com/user_journals", { headers: authHeader }),
+          fetch("https://life-api.lockated.com/user_journals?journal_type=weekly", { headers: authHeader }),
         ]);
-
-        if (dailyRes.ok) {
-          const data = await dailyRes.json();
-          setRecentJournals(
-            Array.isArray(data) ? data : data?.user_journals || [],
-          );
-        }
-
-        if (weeklyRes.ok) {
-          const data = await weeklyRes.json();
-          setWeeklyJournals(
-            Array.isArray(data) ? data : data?.user_journals || [],
-          );
-        }
-      } catch (err) {
-        console.error("Failed to fetch journals:", err);
-      }
+        if (dailyRes.ok) { const data = await dailyRes.json(); setRecentJournals(Array.isArray(data) ? data : data?.user_journals || []); }
+        if (weeklyRes.ok) { const data = await weeklyRes.json(); setWeeklyJournals(Array.isArray(data) ? data : data?.user_journals || []); }
+      } catch (err) { console.error("Failed to fetch journals:", err); }
     };
     fetchAllJournals();
   }, [token]);
 
-  // Calendar Logic
   const [calendarDate, setCalendarDate] = useState(new Date());
 
-  // Replace the existing weekData useMemo with this:
   const weekData = useMemo(() => {
     const start = new Date(calendarDate);
     start.setDate(calendarDate.getDate() - calendarDate.getDay());
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
+    const today = new Date(); today.setHours(0, 0, 0, 0);
     return Array.from({ length: 7 }).map((_, i) => {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      d.setHours(0, 0, 0, 0);
-
+      const d = new Date(start); d.setDate(start.getDate() + i); d.setHours(0, 0, 0, 0);
       const dateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       const isToday = d.toDateString() === today.toDateString();
       const isFuture = d > today;
-
-      // Check if journal exists for this date from real API data
       const hasJournal = recentJournals.some((j) => {
-        const journalDate =
-          j.start_date || (j.created_at ? j.created_at.split("T")[0] : "");
+        const journalDate = j.start_date || (j.created_at ? j.created_at.split("T")[0] : "");
         return journalDate === dateString;
       });
-
-      const state = isFuture ? "upcoming" : hasJournal ? "filled" : "missed";
-
-      return {
-        day: ["Su", "M", "Tu", "W", "Th", "F", "Sa"][i],
-        date: d.getDate().toString(),
-        fullDate: d,
-        active: isToday,
-        state,
-      };
+      return { day: ["Su", "M", "Tu", "W", "Th", "F", "Sa"][i], date: d.getDate().toString(), fullDate: d, active: isToday, state: isFuture ? "upcoming" : hasJournal ? "filled" : "missed" };
     });
-  }, [calendarDate, recentJournals]); // <-- add recentJournals as dependency
+  }, [calendarDate, recentJournals]);
 
-  const handlePrevWeek = () => {
-    const newDate = new Date(calendarDate);
-    newDate.setDate(calendarDate.getDate() - 7);
-    setCalendarDate(newDate);
-  };
-
-  const handleNextWeek = () => {
-    const newDate = new Date(calendarDate);
-    newDate.setDate(calendarDate.getDate() + 7);
-    setCalendarDate(newDate);
-  };
-
+  const handlePrevWeek = () => { const d = new Date(calendarDate); d.setDate(d.getDate() - 7); setCalendarDate(d); };
+  const handleNextWeek = () => { const d = new Date(calendarDate); d.setDate(d.getDate() + 7); setCalendarDate(d); };
   const getWeekLabel = () => {
     const today = new Date();
-    const start = new Date(calendarDate);
-    start.setDate(calendarDate.getDate() - calendarDate.getDay());
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-
-    const isCurrentWeek =
-      today >= start && today <= new Date(end.setHours(23, 59, 59, 999));
-
+    const start = new Date(calendarDate); start.setDate(calendarDate.getDate() - calendarDate.getDay());
+    const end = new Date(start); end.setDate(start.getDate() + 6);
+    const isCurrentWeek = today >= start && today <= new Date(end.setHours(23, 59, 59, 999));
     if (isCurrentWeek) return "This Week";
-
     return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
   };
 
   useEffect(() => {
-    const fetchSummary = async () => {
+    const fetch_ = async (url: string, setter: (d: any) => void) => {
       try {
-        const res = await fetch(
-          "https://life-api.lockated.com/dashboard/summary",
-          {
-            headers: {
-              Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
-            },
-          },
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setSummaryData(data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch summary:", err);
-      }
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}` } });
+        if (res.ok) setter(await res.json());
+      } catch (err) { console.error("Fetch failed:", url, err); }
     };
-    fetchSummary();
+    fetch_("https://life-api.lockated.com/dashboard/summary", (data) => setSummaryData(data));
+    fetch_("https://life-api.lockated.com/dashboard/insights", (data) => setInsightsData({
+      recent_journals: data.recent_journals || [],
+      personalized_insights: data.personalized_insights || [],
+      journaling_status: data.journaling_status || { monthly_entries: 0, weekly_entries: 0 },
+    }));
+    fetch_("https://life-api.lockated.com/dashboard/preview", (data) => setPreviewData((prev) => ({
+      ...prev, daily_motivator: data.daily_motivator || null,
+      upcoming_dates: data.upcoming_dates || [], story_of_the_day: data.story_of_the_day || null,
+      mission: data.mission || prev.mission, bucket_preview: data.bucket_preview || [],
+    })));
   }, [token]);
 
-  useEffect(() => {
-    const fetchInsights = async () => {
-      try {
-        const res = await fetch(
-          "https://life-api.lockated.com/dashboard/insights",
-          {
-            headers: {
-              Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
-            },
-          },
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setInsightsData({
-            recent_journals: data.recent_journals || [],
-            personalized_insights: data.personalized_insights || [],
-            journaling_status: data.journaling_status || {
-              monthly_entries: 0,
-              weekly_entries: 0,
-            },
-          });
-        }
-      } catch (err) {
-        console.error("Failed to fetch insights:", err);
-      }
-    };
-    fetchInsights();
-  }, [token]);
-
-  useEffect(() => {
-    const fetchPreview = async () => {
-      try {
-        const res = await fetch(
-          "https://life-api.lockated.com/dashboard/preview",
-          {
-            headers: {
-              Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
-            },
-          },
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setPreviewData((prev) => ({
-            ...prev,
-            daily_motivator: data.daily_motivator || null,
-            upcoming_dates: data.upcoming_dates || [],
-            story_of_the_day: data.story_of_the_day || null,
-            mission: data.mission || prev.mission,
-            bucket_preview: data.bucket_preview || [],
-          }));
-        }
-      } catch (err) {
-        console.error("Failed to fetch preview:", err);
-      }
-    };
-    fetchPreview();
-  }, [token]);
-
-  // Fetch Vision Data specifically for images and statement
   useEffect(() => {
     const fetchVision = async () => {
       try {
-        const authToken = token || localStorage.getItem("auth_token") || "";
-        const res = await fetch("https://life-api.lockated.com/vision.json", {
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-          },
-        });
-
+        const res = await fetch("https://life-api.lockated.com/vision.json", { headers: { Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}` } });
         if (res.ok) {
           const data = await res.json();
           const vision = Array.isArray(data) ? data[0] : data?.vision || data;
-
           if (vision) {
-            // FIX: Extract URL from the images array of objects
             let imageUrls: string[] = [];
-            if (Array.isArray(vision.images)) {
-              imageUrls = vision.images
-                .map((img: any) => (typeof img === "object" ? img.url : img))
-                .filter(Boolean);
-            } else if (vision.image) {
-              imageUrls =
-                typeof vision.image === "object"
-                  ? [vision.image.url]
-                  : [vision.image];
-            }
-
-            // Grab the mission statement
-            const missionText =
-              vision.mission_statement ||
-              vision.life_mission ||
-              vision.mission ||
-              null;
-
-            setPreviewData((prev) => ({
-              ...prev,
-              vision_images: imageUrls,
-              mission: missionText,
-            }));
+            if (Array.isArray(vision.images)) imageUrls = vision.images.map((img: any) => (typeof img === "object" ? img.url : img)).filter(Boolean);
+            else if (vision.image) imageUrls = typeof vision.image === "object" ? [vision.image.url] : [vision.image];
+            setPreviewData((prev) => ({ ...prev, vision_images: imageUrls, mission: vision.mission_statement || vision.life_mission || vision.mission || null }));
           }
         }
-      } catch (err) {
-        console.error("Failed to fetch vision data:", err);
-      }
+      } catch (err) { console.error("Failed to fetch vision:", err); }
     };
-
     fetchVision();
-
-    const handleVisibilityChange = () => {
-      if (!document.hidden) fetchVision();
-    };
-    const handleStorageChange = () => fetchVision();
-    const handleVisionUpdated = () => fetchVision();
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("vision_data_updated", handleVisionUpdated);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("vision_data_updated", handleVisionUpdated);
-    };
+    const onVisibility = () => { if (!document.hidden) fetchVision(); };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("storage", fetchVision);
+    window.addEventListener("vision_data_updated", fetchVision);
+    return () => { document.removeEventListener("visibilitychange", onVisibility); window.removeEventListener("storage", fetchVision); window.removeEventListener("vision_data_updated", fetchVision); };
   }, [token]);
-  // Fetch actual dreams API to populate Bucket List Dreams directly from source
+
   useEffect(() => {
     const fetchDreams = async () => {
       try {
-        const response = await fetch("https://life-api.lockated.com/dreams", {
-          headers: {
-            Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
-          },
-        });
-        if (!response.ok) throw new Error("Failed to fetch dreams");
+        const response = await fetch("https://life-api.lockated.com/dreams", { headers: { Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}` } });
+        if (!response.ok) return;
         const data = await response.json();
-
-        const mappedItems: Array<{
-          id: number;
-          title?: string;
-          category?: string;
-          status?: string;
-        }> = [];
-
+        const mappedItems: Array<{ id: number; title?: string; category?: string; status?: string }> = [];
         const mapCategory = (itemsArray: unknown[], statusStr: string) => {
           if (!Array.isArray(itemsArray)) return;
-          itemsArray.forEach((itemObj: unknown) => {
-            const item = itemObj as {
-              id: number;
-              title: string;
-              category: string;
-            };
-            mappedItems.push({
-              id: item.id,
-              title: item.title,
-              category: item.category,
-              status: statusStr,
-            });
-          });
+          itemsArray.forEach((itemObj: unknown) => { const item = itemObj as { id: number; title: string; category: string }; mappedItems.push({ id: item.id, title: item.title, category: item.category, status: statusStr }); });
         };
-
-        mapCategory(data.dreaming, "Dreaming");
-        mapCategory(data.planning, "Planning");
-        mapCategory(data.in_progress, "In Progress");
-        mapCategory(data.achieved, "Achieved");
-
-        setPreviewData((prev) => ({
-          ...prev,
-          bucket_preview: mappedItems,
-        }));
-      } catch (error) {
-        console.error("Error fetching dreams:", error);
-      }
+        mapCategory(data.dreaming, "Dreaming"); mapCategory(data.planning, "Planning");
+        mapCategory(data.in_progress, "In Progress"); mapCategory(data.achieved, "Achieved");
+        setPreviewData((prev) => ({ ...prev, bucket_preview: mappedItems }));
+      } catch (error) { console.error("Error fetching dreams:", error); }
     };
     fetchDreams();
   }, [token]);
 
-  // Fetch Today's Accomplishments (mapped into Priorities UI)
   useEffect(() => {
-    const fetchDailyAccomplishments = async () => {
+    const fetchAccomplishments = async () => {
       try {
         const d = new Date();
         const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-
-        // 1. Fetch all user journals to find today's entry
-        const listResponse = await fetch(
-          `https://life-api.lockated.com/user_journals`,
-          {
-            headers: {
-              Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
-            },
-          },
-        );
-
+        const listResponse = await fetch("https://life-api.lockated.com/user_journals", { headers: { Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}` } });
         if (listResponse.ok) {
           const listData = await listResponse.json();
-          const journals = Array.isArray(listData)
-            ? listData
-            : listData?.user_journals || [];
-
-          // Find the journal that matches today's date
-          const todayJournal = journals.find(
-            (j: any) => j.start_date === todayStr,
-          );
-
-          if (todayJournal && todayJournal.id) {
-            // 2. Fetch the detailed journal for today using its specific ID
-            const detailRes = await fetch(
-              `https://life-api.lockated.com/user_journals/${todayJournal.id}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
-                },
-              },
-            );
-
+          const journals = Array.isArray(listData) ? listData : listData?.user_journals || [];
+          const todayJournal = journals.find((j: any) => j.start_date === todayStr);
+          if (todayJournal?.id) {
+            const detailRes = await fetch(`https://life-api.lockated.com/user_journals/${todayJournal.id}`, { headers: { Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}` } });
             if (detailRes.ok) {
               const detailData = await detailRes.json();
               const detailedJournal = detailData?.user_journal || detailData;
-
-              let extractedAccomplishments = [];
-              if (
-                detailedJournal &&
-                Array.isArray(detailedJournal.accomplishments)
-              ) {
-                extractedAccomplishments = detailedJournal.accomplishments;
-              }
-
-              const formatted = extractedAccomplishments.map(
-                (a: any, idx: number) => {
-                  if (typeof a === "string") return { id: idx, title: a };
-                  return {
-                    id: a.id || idx,
-                    title: a.title || a.name || "Unnamed",
-                  };
-                },
-              );
-
-              setPreviewData((prev) => ({
-                ...prev,
-                priorities: formatted,
-              }));
-              return;
+              const formatted = (Array.isArray(detailedJournal.accomplishments) ? detailedJournal.accomplishments : []).map((a: any, idx: number) => typeof a === "string" ? { id: idx, title: a } : { id: a.id || idx, title: a.title || a.name || "Unnamed" });
+              setPreviewData((prev) => ({ ...prev, priorities: formatted })); return;
             }
           }
         }
-
-        // Fallback: Clear if not found
-        setPreviewData((prev) => ({
-          ...prev,
-          priorities: [],
-        }));
-      } catch (error) {
-        console.error("Dashboard accomplishments API error:", error);
-      }
+        setPreviewData((prev) => ({ ...prev, priorities: [] }));
+      } catch (error) { console.error("Dashboard accomplishments API error:", error); }
     };
-    fetchDailyAccomplishments();
+    fetchAccomplishments();
   }, [token]);
 
-  // Add People Fetch Logic
   const [people, setPeople] = useState<any[]>([]);
   const [isLoadingPeople, setIsLoadingPeople] = useState(true);
-
   useEffect(() => {
     const fetchPeople = async () => {
       try {
-        const res = await fetch("https://life-api.lockated.com/people", {
-          headers: {
-            Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
-          },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setPeople(Array.isArray(data) ? data : (data.data ?? []));
-        }
-      } catch (err) {
-        console.error("Failed to fetch people:", err);
-      } finally {
-        setIsLoadingPeople(false);
-      }
+        const res = await fetch("https://life-api.lockated.com/people", { headers: { Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}` } });
+        if (res.ok) { const data = await res.json(); setPeople(Array.isArray(data) ? data : (data.data ?? [])); }
+      } catch (err) { console.error("Failed to fetch people:", err); } finally { setIsLoadingPeople(false); }
     };
-
     fetchPeople();
   }, [token]);
 
-  const peopleHandler = () => {
-    navigate("/people");
-  };
-
-  // Add Habits Fetch Logic
   const [habitsData, setHabitsData] = useState<any[]>([]);
-
   useEffect(() => {
     const fetchHabits = async () => {
       try {
-        const res = await fetch("https://life-api.lockated.com/habits", {
-          headers: {
-            Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
-          },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setHabitsData(Array.isArray(data) ? data : data.data || []);
-        }
-      } catch (err) {
-        console.error("Failed to fetch habits:", err);
-      }
+        const res = await fetch("https://life-api.lockated.com/habits", { headers: { Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}` } });
+        if (res.ok) { const data = await res.json(); setHabitsData(Array.isArray(data) ? data : data.data || []); }
+      } catch (err) { console.error("Failed to fetch habits:", err); }
     };
     fetchHabits();
   }, [token]);
 
-  // Add Leaderboard Fetch Logic
-  const [leaderboardData, setLeaderboardData] = useState<{
-    top: any[];
-    currentUser: any;
-  }>({ top: [], currentUser: null });
-
+  const [leaderboardData, setLeaderboardData] = useState<{ top: any[]; currentUser: any }>({ top: [], currentUser: null });
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const res = await fetch(
-          "https://life-api.lockated.com/leaderboard/rankings",
-          {
-            headers: {
-              Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}`,
-            },
-          },
-        );
+        const res = await fetch("https://life-api.lockated.com/leaderboard/rankings", { headers: { Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}` } });
         if (res.ok) {
           const data = await res.json();
-          let list = [];
-          let cu = null;
-
-          if (Array.isArray(data)) {
-            list = data;
-          } else if (data.data && Array.isArray(data.data)) {
-            list = data.data;
-            cu = data.current_user || null;
-          } else if (data.rankings && Array.isArray(data.rankings)) {
-            list = data.rankings;
-            cu = data.current_user || null;
-          }
-
-          setLeaderboardData({
-            top: list.slice(0, 5),
-            currentUser: cu,
-          });
+          let list = [], cu = null;
+          if (Array.isArray(data)) list = data;
+          else if (data.data && Array.isArray(data.data)) { list = data.data; cu = data.current_user || null; }
+          else if (data.rankings && Array.isArray(data.rankings)) { list = data.rankings; cu = data.current_user || null; }
+          setLeaderboardData({ top: list.slice(0, 5), currentUser: cu });
         }
-      } catch (err) {
-        console.error("Failed to fetch leaderboard", err);
-      }
+      } catch (err) { console.error("Failed to fetch leaderboard", err); }
     };
     fetchLeaderboard();
   }, [token]);
 
-  // --- Calculations for Habit Tracking ---
   const activeHabitsCount = habitsData.length;
-  const avgHabitCompletion =
-    activeHabitsCount > 0
-      ? Math.round(
-          habitsData.reduce(
-            (acc, h) =>
-              acc + (h.completion_percentage || h.completion_rate || 0),
-            0,
-          ) / activeHabitsCount,
-        )
-      : 0;
+  const avgHabitCompletion = activeHabitsCount > 0 ? Math.round(habitsData.reduce((acc, h) => acc + (h.completion_percentage || h.completion_rate || 0), 0) / activeHabitsCount) : 0;
+  const dailyHabits = habitsData.filter((h) => { const f = (h.repeat_type || h.frequency || "").toLowerCase(); return f === "daily" || !f; });
+  const weeklyHabits = habitsData.filter((h) => (h.repeat_type || h.frequency || "").toLowerCase() === "weekly");
 
-  const dailyHabits = habitsData.filter((h) => {
-    const freq = (h.repeat_type || h.frequency || "").toLowerCase();
-    return freq === "daily" || !freq;
-  });
-
-  const weeklyHabits = habitsData.filter((h) => {
-    const freq = (h.repeat_type || h.frequency || "").toLowerCase();
-    return freq === "weekly";
-  });
-
-  // --- Journaling Status Calculations ---
   const statusToday = new Date();
-
-  // 1. Daily Track (Last 7 Days)
-  const last7Days = Array.from({ length: 7 }).map((_, i) => {
-    const d = new Date(statusToday);
-    d.setDate(statusToday.getDate() - 6 + i);
-    return d;
-  });
-
-  const formatShortDate = (d: Date) =>
-    `${d.getDate()} ${d.toLocaleDateString("en-US", { month: "short" })}`;
+  const last7Days = Array.from({ length: 7 }).map((_, i) => { const d = new Date(statusToday); d.setDate(statusToday.getDate() - 6 + i); return d; });
+  const formatShortDate = (d: Date) => `${d.getDate()} ${d.toLocaleDateString("en-US", { month: "short" })}`;
   const dailyDateRangeStr = `${formatShortDate(last7Days[0])} - ${formatShortDate(last7Days[6])}`;
-
   const dailyCompletion = last7Days.map((date) => {
     const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-    const hasEntry = recentJournals.some(
-      (j) =>
-        (j.journal_type === "daily" || !j.journal_type) &&
-        (j.start_date === dateString ||
-          (j.created_at && j.created_at.startsWith(dateString))),
-    );
-    return {
-      dayLabel: date.toLocaleDateString("en-US", { weekday: "short" }),
-      completed: hasEntry,
-    };
+    const hasEntry = recentJournals.some((j) => (j.journal_type === "daily" || !j.journal_type) && (j.start_date === dateString || (j.created_at && j.created_at.startsWith(dateString))));
+    return { dayLabel: date.toLocaleDateString("en-US", { weekday: "short" }), completed: hasEntry };
   });
-
   const dailyCompletedCount = dailyCompletion.filter((d) => d.completed).length;
 
-  // 2. Weekly Track (Current Month)
   const currentMonthStatus = statusToday.getMonth();
   const currentYearStatus = statusToday.getFullYear();
-  const monthNameStatus = statusToday.toLocaleDateString("en-US", {
-    month: "long",
-  });
-
-  const getWeekNumber = (d: Date) => {
-    const date = new Date(d.getTime());
-    date.setHours(0, 0, 0, 0);
-    date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7));
-    const week1 = new Date(date.getFullYear(), 0, 4);
-    return (
-      1 +
-      Math.round(
-        ((date.getTime() - week1.getTime()) / 86400000 -
-          3 +
-          ((week1.getDay() + 6) % 7)) /
-          7,
-      )
-    );
-  };
-
+  const monthNameStatus = statusToday.toLocaleDateString("en-US", { month: "long" });
+  const getWeekNumber = (d: Date) => { const date = new Date(d.getTime()); date.setHours(0, 0, 0, 0); date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7)); const week1 = new Date(date.getFullYear(), 0, 4); return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7); };
   const weeklyBlocks = Array.from({ length: 5 }).map((_, i) => {
     const startD = new Date(currentYearStatus, currentMonthStatus, 1 + i * 7);
     const endD = new Date(currentYearStatus, currentMonthStatus, 7 + i * 7);
-
-    const hasEntry = weeklyJournals.some((j) => {
-      const jDate = new Date(j.start_date || j.created_at);
-      return jDate >= startD && jDate <= endD;
-    });
-
-    const datesLabel = `(${startD.toLocaleDateString("en-US", { month: "short" })} ${startD.getDate()}-${endD.getDate()})`;
-    const wkLabel = `WK#${getWeekNumber(startD)}`;
-
-    return {
-      label: wkLabel,
-      datesLabel,
-      completed: hasEntry,
-    };
+    const hasEntry = weeklyJournals.some((j) => { const jDate = new Date(j.start_date || j.created_at); return jDate >= startD && jDate <= endD; });
+    return { label: `WK#${getWeekNumber(startD)}`, datesLabel: `(${startD.toLocaleDateString("en-US", { month: "short" })} ${startD.getDate()}-${endD.getDate()})`, completed: hasEntry };
   });
-
   const weeklyCompletedCount = weeklyBlocks.filter((w) => w.completed).length;
+  const percentComplete = Math.round(((dailyCompletedCount + weeklyCompletedCount) / 12) * 100);
 
-  // 3. Overall Completion %
-  const totalComplete = dailyCompletedCount + weeklyCompletedCount;
-  const totalTarget = 7 + 5;
-  const percentComplete = Math.round((totalComplete / totalTarget) * 100);
-
-  // --- Consistency Calculations (Dynamic Last 30 days) ---
   const last30DaysCount = useMemo(() => {
-    if (insightsData.journaling_status.monthly_entries > 0) {
-      return insightsData.journaling_status.monthly_entries;
-    }
-    // Fallback: calculate from recentJournals
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    return recentJournals.filter((j) => {
-      const d = new Date(j.start_date || j.created_at);
-      return d >= thirtyDaysAgo;
-    }).length;
+    if (insightsData.journaling_status.monthly_entries > 0) return insightsData.journaling_status.monthly_entries;
+    const thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    return recentJournals.filter((j) => new Date(j.start_date || j.created_at) >= thirtyDaysAgo).length;
   }, [insightsData.journaling_status.monthly_entries, recentJournals]);
 
-  const consistencyScore = Math.min(
-    Math.round((last30DaysCount / 30) * 100),
-    100,
-  );
-  const longestStreak =
-    summaryData?.longest_streak ?? summaryData?.current_streak ?? 0;
-
-  const setupCompleted = parseInt(
-    localStorage.getItem("setupCompletedCount") || "0",
-  );
+  const consistencyScore = Math.min(Math.round((last30DaysCount / 30) * 100), 100);
+  const longestStreak = summaryData?.longest_streak ?? summaryData?.current_streak ?? 0;
+  const setupCompleted = parseInt(localStorage.getItem("setupCompletedCount") || "0");
   const setupTotal = parseInt(localStorage.getItem("setupTotalCount") || "5");
 
   return (
-    <div className="animate-fade-in w-full min-h-screen bg-white -m-6 p-8">
-      {/* Header Section */}
-      <div className="flex flex-row items-center justify-between gap-6 mb-8 overflow-x-hidden">
-        <div className="flex-shrink-0">
-          <h1 className="text-[28px] font-bold text-[#111111] leading-tight tracking-tight">
-            Welcome Back, {user?.name || "User"}
+    <div className="animate-fade-in space-y-6 w-full" style={{ background: C.pageBg }}>
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight" style={{ color: C.charcoal }}>
+            Welcome Back, {user?.name || "Guest"}
           </h1>
-          <p className="text-[#6B7280] text-[13px] mt-1">
-            Let's align your day with your purpose
-          </p>
+          <p className="text-sm mt-1" style={{ color: C.stone }}>Let's align your day with your purpose</p>
         </div>
 
-        <div className="flex flex-row items-center gap-2 flex-nowrap overflow-x-auto no-scrollbar pb-1">
-          <Button
-            onClick={() => navigate("/setup")}
-            variant="outline"
-            className="h-10 bg-[#F3F4F6] hover:bg-[#B91C1C] text-[#555555] hover:text-white border-[#E5E7EB] hover:border-[#B91C1C] rounded-lg px-4 gap-2 font-bold shadow-none transition-all duration-200"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Setup</span>
-            <span className="bg-[#555555] group-hover:bg-white text-white text-[10px] w-5 h-4 rounded-md flex items-center justify-center ml-0.5">
-              {setupCount.total - setupCount.completed}
-            </span>
-          </Button>
-
-          <Button
-            onClick={() => navigate("/daily-journal")}
-            variant="outline"
-            className="h-10 bg-[#F3F4F6] hover:bg-[#B91C1C] text-[#555555] hover:text-white border-[#E5E7EB] hover:border-[#B91C1C] rounded-lg px-4 gap-2 font-bold shadow-none transition-all duration-200"
-          >
-            <BookOpen className="w-4 h-4" />
-            <span>Daily</span>
-          </Button>
-
-          <Button
-            onClick={() => navigate("/weekly-journal")}
-            variant="outline"
-            className="h-10 bg-[#F3F4F6] hover:bg-[#B91C1C] text-[#555555] hover:text-white border-[#E5E7EB] hover:border-[#B91C1C] rounded-lg px-4 gap-2 font-bold shadow-none transition-all duration-200"
-          >
-            <CalendarDays className="w-4 h-4" />
-            <span>Weekly</span>
-          </Button>
-
-          <Button
-            onClick={() => navigate("/calendar")}
-            variant="outline"
-            className="h-10 bg-[#F3F4F6] hover:bg-[#B91C1C] text-[#555555] hover:text-white border-[#E5E7EB] hover:border-[#B91C1C] rounded-lg px-4 gap-2 font-bold shadow-none transition-all duration-200"
-          >
-            <CalendarIcon className="w-4 h-4" />
-            <span>Cal</span>
-          </Button>
-
-          <Button
-            onClick={() => navigate("/leaderboard")}
-            variant="outline"
-            className="h-10 bg-[#F3F4F6] hover:bg-[#B91C1C] text-[#555555] hover:text-white border-[#E5E7EB] hover:border-[#B91C1C] rounded-lg px-4 gap-2 font-bold shadow-none transition-all duration-200"
-          >
-            <Trophy className="w-4 h-4" />
-            <span>Score: {summaryData?.total_score || 0}</span>
-          </Button>
+        {/* Top Action Buttons */}
+        <div className="flex gap-2 items-center flex-wrap">
+          <Link to="/setup">
+            <Button variant="outline" className="gap-1.5 h-9 px-3 text-xs" style={{ background: C.sky8, color: C.sky, borderColor: C.sky15 }}>
+              <Settings className="w-3.5 h-3.5" />
+              Setup
+              <Badge className="ml-1 h-5 px-1.5 rounded-sm text-white" style={{ background: C.sky }}>
+                {setupCount.completed}/{setupCount.total}
+              </Badge>
+            </Button>
+          </Link>
+          <Link to="/daily-journal">
+            <Button variant="outline" className="gap-1.5 h-9 px-3 text-xs font-medium" style={{ background: C.coral8, color: C.coral, borderColor: C.coral15 }}>
+              <BookOpen className="w-3.5 h-3.5" /> Daily
+            </Button>
+          </Link>
+          <Link to="/weekly-journal">
+            <Button variant="outline" className="gap-1.5 h-9 px-3 text-xs" style={{ background: C.coral, color: "#fff", borderColor: C.coral }}>
+              <Calendar className="w-3.5 h-3.5" /> Weekly
+            </Button>
+          </Link>
+          <Link to="/calendar">
+            <Button variant="outline" className="gap-1.5 h-9 px-3 text-xs" style={{ background: C.sky, color: "#fff", borderColor: C.sky }}>
+              <CalendarDays className="w-3.5 h-3.5" /> Cal
+            </Button>
+          </Link>
+          <Link to="/leaderboard">
+            <Button variant="outline" className="gap-1.5 h-9 px-3 text-xs font-semibold" style={{ background: C.amber8, color: C.charcoal, borderColor: C.amber }}>
+              <Trophy className="w-3.5 h-3.5" /> Score: {summaryData?.total_score || 10}
+            </Button>
+          </Link>
         </div>
       </div>
 
-      {/* Top Row: Daily Motivator, Priorities, Journaling Status */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        {/* Daily Motivator */}
-        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-6 rounded-xl flex flex-col min-h-[220px] shadow-none">
-          <div className="flex items-center gap-2 mb-6">
-            <Sparkles className="w-5 h-5 text-[#BBA48B]" />
-            <h3 className="font-bold text-[#333333] text-[17px]">
-              Daily Motivator
-            </h3>
+      {/* ── Daily Focus & Inspiration ────────────────────────────────────── */}
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="w-5 h-5" style={{ color: C.coral }} />
+          <h2 className="text-lg font-semibold" style={{ color: C.charcoal }}>Daily Focus &amp; Inspiration</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Daily Motivator */}
+          <Card className="rounded-2xl overflow-hidden flex flex-col shadow-sm border-2" style={{ background: C.coral8, borderColor: C.coral15 }}>
+            <div className="p-4 flex-1 flex flex-col">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="p-1.5 rounded-lg text-white shadow-sm" style={{ background: C.coral }}>
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <h3 className="font-bold text-[10px] tracking-wider uppercase flex items-center gap-1.5" style={{ color: C.coral }}>
+                  DAILY MOTIVATOR <Sparkles className="w-3 h-3" style={{ color: C.amber }} />
+                </h3>
+              </div>
+              <div className="flex-1 relative pl-6 mb-4 mt-2">
+                <span className="text-4xl absolute -top-4 left-0 font-serif opacity-50" style={{ color: C.coral }}>"</span>
+                <p className="text-sm font-bold leading-relaxed z-10 relative" style={{ color: C.charcoal }}>
+                  {previewData.daily_motivator || "The end of education is character."}
+                </p>
+                <p className="text-[10px] font-bold mt-2" style={{ color: C.coral }}>— Sathya Sai Baba</p>
+              </div>
+              <div className="rounded-xl p-3 border" style={{ background: C.coral15, borderColor: C.coral25 }}>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Target className="w-3 h-3" style={{ color: C.coral }} />
+                  <h4 className="font-black text-[9px] uppercase tracking-widest" style={{ color: C.coral }}>ACTION</h4>
+                </div>
+                <p className="text-[11px] font-medium leading-snug" style={{ color: C.charcoal }}>
+                  True education is about building strong values and character, not just academics.
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Priorities */}
+          <Card className="p-5 flex flex-col shadow-sm rounded-2xl min-h-[180px]" style={{ background: C.sky8, borderColor: C.sky15 }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-[17px] flex items-center gap-2.5 tracking-tight" style={{ color: C.charcoal }}>
+                <ListTodo className="w-5 h-5" style={{ color: C.sky }} strokeWidth={2.5} /> Priorities
+              </h3>
+              <Badge variant="secondary" className="hover:bg-transparent shadow-none font-semibold text-[12px] px-3 py-1 rounded-full pointer-events-none border-0" style={{ background: C.sky15, color: C.sky }}>
+                For: {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              </Badge>
+            </div>
+            {previewData.priorities.length > 0 ? (
+              <div className="flex-1 flex flex-col gap-3 mt-2">
+                {previewData.priorities.map((todo: { id?: string | number; title?: string }, idx) => (
+                  <div key={todo.id || idx} className="flex items-start gap-3">
+                    <div className="mt-0.5 flex-shrink-0" style={{ color: C.sky }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>
+                      </svg>
+                    </div>
+                    <p className="text-[15px] font-medium leading-snug" style={{ color: C.stone }}>{todo.title}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-center mt-2">
+                <p className="text-sm mb-1.5 font-medium" style={{ color: C.stone }}>No accomplishments recorded yet today.</p>
+                <Link to="/daily-journal" className="text-xs font-bold hover:underline flex items-center gap-1 mt-1" style={{ color: C.sky }}>
+                  Go to Daily Journal <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+            )}
+          </Card>
+
+          {/* Upcoming Dates / People */}
+          {isLoadingPeople ? (
+            <Card className="p-4 flex flex-col items-center justify-center min-h-[180px] animate-pulse" style={{ background: C.coral8, borderColor: C.coral15 }}>
+              <CalendarIcon className="w-10 h-10 mb-3" style={{ color: C.coral15 }} strokeWidth={1.5} />
+            </Card>
+          ) : people.length === 0 ? (
+            <Card className="p-4 flex flex-col items-center justify-center min-h-[180px]" style={{ background: C.coral8, borderColor: C.coral15 }}>
+              <CalendarIcon className="w-10 h-10 mb-3" style={{ color: C.sand }} strokeWidth={1.5} />
+              <p className="text-sm text-center" style={{ color: C.stone }}>No people added yet</p>
+            </Card>
+          ) : (
+            <Card className="p-5 flex flex-col min-h-[180px] rounded-[16px]" style={{ background: C.dune + "40", borderColor: C.sand }}>
+              <div className="flex items-center justify-between mb-auto">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-[30px] h-[30px] rounded-[8px] flex items-center justify-center shadow-sm" style={{ background: C.amber }}>
+                    <CalendarIcon className="w-[18px] h-[18px] text-white" strokeWidth={2} />
+                  </div>
+                  <span className="font-bold text-[15px]" style={{ color: C.charcoal }}>Upcoming Dates</span>
+                </div>
+                <button onClick={() => navigate("/people")} className="text-[13px] font-medium transition-colors" style={{ color: C.stone }}>View All</button>
+              </div>
+              <div className="flex-1 flex items-center justify-center text-center mt-4">
+                <p className="text-[14px]" style={{ color: C.stone }}>No upcoming dates in the next 30 days</p>
+              </div>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      {/* ── Story of the Day ─────────────────────────────────────────────── */}
+      <Card className="overflow-hidden flex flex-col mb-6 shadow-sm" style={{ background: C.amber8, borderColor: C.amber }}>
+        <div className="p-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${C.amber15}` }}>
+          <div className="flex gap-3 items-center">
+            <div className="p-2 rounded-lg text-white" style={{ background: C.amber }}>
+              <Play className="w-5 h-5 fill-current ml-0.5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h3 className="font-bold text-sm" style={{ color: C.charcoal }}>Story of the Day</h3>
+                <Sparkles className="w-3.5 h-3.5" style={{ color: C.amber }} />
+              </div>
+              <p className="text-xs mt-0.5" style={{ color: C.stone }}>
+                {previewData.story_of_the_day || "Story # 127: How can she be so calm ? वह इतनी शांत कैसे हो सकती है?"}
+              </p>
+            </div>
           </div>
-          <div className="flex-1 flex flex-col justify-center px-4">
-            <p className="text-[17px] italic text-[#444444] font-medium leading-relaxed mb-3">
-              "
-              {previewData.daily_motivator ||
-                "The only way to do great work is to love what you do."}
-              "
-            </p>
-            <p className="text-sm text-[#777777] font-medium">
-              — {previewData.daily_motivator ? "Source" : "Steve Jobs"}
-            </p>
+          <div className="flex items-center gap-1">
+            <button className="p-1.5 rounded-md transition-colors" style={{ color: C.charcoal }}>
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button className="p-1.5 rounded-md transition-colors" style={{ color: C.charcoal }}>
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
-          <p className="text-[13px] text-[#888888] mt-6 leading-relaxed">
-            Take a moment to reflect on what this means for your journey today.
-          </p>
+        </div>
+        <div className="relative w-full aspect-video md:aspect-[28/9] bg-black group overflow-hidden bg-cover bg-center cursor-pointer"
+          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1510915228340-29c85a43dcfe?auto=format&fit=crop&q=80')" }}>
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/30 transition-all">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: C.coral }}>
+              <Play className="w-8 h-8 text-white fill-current ml-1" />
+            </div>
+          </div>
+          <div className="absolute bottom-4 right-4 flex gap-4 text-white">
+            <div className="flex flex-col items-center"><CalendarIcon className="w-5 h-5 mb-1" /><span className="text-[10px] font-bold">Watch later</span></div>
+            <div className="flex flex-col items-center"><ArrowRight className="w-5 h-5 mb-1 -rotate-45" /><span className="text-[10px] font-bold">Share</span></div>
+          </div>
+        </div>
+      </Card>
+
+      {/* ── Progress & Stats ─────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        {/* Energy + Calendar */}
+        <Card className="p-5 rounded-2xl border-0 flex flex-col justify-between shadow-sm" style={{ background: `linear-gradient(135deg, ${C.amber8}, ${C.coral8})` }}>
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex gap-3 items-center">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-sm" style={{ background: C.amber }}>
+                <Zap className="w-6 h-6 fill-current" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold mb-0.5" style={{ color: C.stone }}>Avg Energy</p>
+                <p className="text-xl font-extrabold tracking-tight" style={{ color: C.charcoal }}>
+                  {summaryData?.energy_average != null ? Number(summaryData.energy_average).toFixed(1) : "-"}
+                </p>
+              </div>
+            </div>
+            <div className="h-10 w-px" style={{ background: C.sand }}></div>
+            <div className="flex gap-3 items-center">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-sm" style={{ background: C.violet }}>
+                <Heart className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold mb-0.5" style={{ color: C.stone }}>Alignment</p>
+                <p className="text-xl font-extrabold tracking-tight" style={{ color: C.charcoal }}>
+                  {summaryData?.alignment_average != null ? Number(summaryData.alignment_average).toFixed(1) : "-"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border shadow-sm" style={{ borderColor: C.mist }}>
+            <div className="flex justify-between items-center mb-4 px-2">
+              <ChevronLeft className="w-4 h-4 cursor-pointer hover:scale-110 transition-transform" style={{ color: C.amber }} onClick={handlePrevWeek} />
+              <h4 className="font-bold text-sm" style={{ color: C.charcoal }}>{getWeekLabel()}</h4>
+              <ChevronRight className="w-4 h-4 cursor-pointer hover:scale-110 transition-transform" style={{ color: C.amber }} onClick={handleNextWeek} />
+            </div>
+            <div className="flex justify-between gap-1 mb-4">
+              {weekData.map((d) => (
+                <div key={d.day + d.date} className="flex flex-col items-center justify-center py-2 px-1 w-9 rounded-xl transition-all"
+                  style={d.active ? { border: `1.5px solid ${C.amber}`, background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" } : {}}>
+                  <span className="text-[10px] font-bold mb-1" style={{ color: C.stone }}>{d.day}</span>
+                  <span className="text-sm font-extrabold" style={{ color: d.active ? C.amber : C.charcoal }}>{d.date}</span>
+                  <div className="w-1.5 h-1.5 rounded-full mt-1.5" style={{ background: d.state === "missed" ? C.coral : d.state === "filled" ? C.success : C.mist }}></div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-center gap-5 text-[10px] font-bold mt-2" style={{ color: C.stone }}>
+              <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full" style={{ background: C.success }}></div> Filled</div>
+              <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full" style={{ background: C.coral }}></div> Missed</div>
+              <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full" style={{ background: C.mist }}></div> Upcoming</div>
+            </div>
+          </div>
         </Card>
 
-        {/* Priorities */}
-        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-6 rounded-xl flex flex-col min-h-[220px] shadow-none relative overflow-hidden">
-          <div className="w-full flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <ListTodo className="w-5 h-5 text-[#BBA48B]" />
-              <h3 className="font-bold text-[#333333] text-[18px]">
-                Priorities
-              </h3>
-            </div>
-            <div className="bg-[#e8e4d9] text-[#BBA48B] px-3 py-1 rounded-full text-[12px] font-bold border border-[#E8E4D9]/50">
-              For:{" "}
-              {new Date().toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}
-            </div>
+        {/* Highest Rank */}
+        <Card className="p-5 rounded-2xl flex flex-col justify-between shadow-sm" style={{ background: C.amber8, borderColor: C.amber15 }}>
+          <div className="flex justify-between items-center mb-10">
+            <h3 className="font-bold flex items-center gap-2" style={{ color: C.amber }}>
+              <Trophy className="w-5 h-5" style={{ color: C.amber }} /> Highest Rank
+            </h3>
+            <Link to="/achievements" className="text-xs font-bold hover:underline" style={{ color: C.amber }}>View All</Link>
           </div>
-
-          <div className="flex-1 flex flex-col items-center justify-center -mt-4">
-            <p className="text-[#6B7280] font-medium text-[15px] mb-2">
-              No priorities or todos.
-            </p>
-            <Link
-              to="/daily-journal"
-              className="text-[#BBA48B] font-bold text-[14px] flex items-center gap-1 hover:underline transition-all"
-            >
-              Set in Daily Journal →
-            </Link>
+          <div className="flex flex-col items-center justify-center flex-1">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: C.amber15 }}>
+              <Lock className="w-6 h-6" style={{ color: C.amber }} strokeWidth={2.5} />
+            </div>
+            <h4 className="font-bold mb-1.5 text-base" style={{ color: C.charcoal }}>No badges yet</h4>
+            <p className="text-xs font-medium" style={{ color: C.stone }}>Start journaling to earn titles!</p>
+          </div>
+          <div className="flex justify-between items-center mt-10 pt-4" style={{ borderTop: `1px solid ${C.amber15}` }}>
+            <span className="text-xs font-bold" style={{ color: C.stone }}>Total Unlocked</span>
+            <span className="text-sm font-extrabold" style={{ color: C.charcoal }}>{summaryData?.highest_badge ? "1 / 19" : "0 / 19"}</span>
           </div>
         </Card>
 
         {/* Journaling Status */}
-        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-6 rounded-xl flex flex-col min-h-[220px] shadow-none">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-[#BBA48B]" />
-              <h3 className="font-bold text-[#333333] text-[17px]">
-                Journaling Status
-              </h3>
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-[13px] font-bold text-[#444444]">
-                Daily ({dailyDateRangeStr})
-              </span>
-              <span className="text-[13px] font-bold text-[#777777]">
-                {dailyCompletedCount}/7
-              </span>
-            </div>
-            <div className="grid grid-cols-7 gap-1">
-              {dailyCompletion.map((day, idx) => (
-                <div
-                  key={idx}
-                  className={`aspect-square rounded-full flex items-center justify-center ${day.completed ? "bg-[#D2B48C]" : "bg-[#EFEDE7]"}`}
-                >
-                  {day.completed && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-[13px] font-bold text-[#444444]">
-                Weekly ({monthNameStatus} {currentYearStatus})
-              </span>
-              <span className="text-[13px] font-bold text-[#777777]">
-                {weeklyCompletedCount}/4
-              </span>
-            </div>
-            <div className="grid grid-cols-4 gap-2">
-              {weeklyBlocks.slice(0, 4).map((wk, idx) => (
-                <div
-                  key={idx}
-                  className={`aspect-square rounded-md p-1.5 flex flex-col items-center justify-center text-center ${wk.completed ? "bg-[#D2B48C] text-white" : "bg-[#EFEDE7] text-[#AAAAAA]"}`}
-                >
-                  <BookOpen
-                    className={`w-3.5 h-3.5 mb-1 ${wk.completed ? "text-white" : "text-[#CCCCCC]"}`}
-                  />
-                  <span className="text-[9px] font-bold">{wk.label}</span>
-                  <span className="text-[7px] opacity-70">
-                    (
-                    {wk.label === "WK#06"
-                      ? "Feb 1-7"
-                      : wk.label === "WK#07"
-                        ? "Feb 8-14"
-                        : wk.label === "WK#08"
-                          ? "Feb 15-21"
-                          : "Feb 22-28"}
-                    )
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-auto pt-6 flex justify-between items-center border-t border-[#E8E4D9]/50">
-            <span className="font-bold text-[#333333] uppercase tracking-wider text-[10px]">
-              Keep Up The Momentum!
-            </span>
-            <span className="text-[11px] font-bold text-[#333333]">
-              {percentComplete}% Complete
-            </span>
-          </div>
-        </Card>
-      </div>
-
-      {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-8 rounded-xl flex flex-col min-h-[380px] shadow-none">
-          {/* Header Stats Block */}
-          <div className="flex items-center justify-between mb-8 pb-6 border-b border-[#EFEDE7]">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-[#D32F2F] rounded-xl flex items-center justify-center text-white shadow-sm">
-                <Zap className="w-6 h-6 fill-current" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[12px] font-bold text-[#6B7280] uppercase tracking-wider">
-                  Avg Energy
-                </span>
-                <span className="text-2xl font-bold text-[#111111]">
-                  {summaryData?.energy_average !== null &&
-                  summaryData?.energy_average !== undefined
-                    ? ` ${Number(summaryData.energy_average).toFixed(1)}`
-                    : " - "}
-                </span>
-              </div>
-            </div>
-
-            <div className="w-px h-10 bg-[#EFEDE7]" />
-
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-[#D32F2F] rounded-xl flex items-center justify-center text-white shadow-sm">
-                <Heart className="w-6 h-6 fill-current" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[12px] font-bold text-[#6B7280] uppercase tracking-wider">
-                  Alignment
-                </span>
-                <span className="text-2xl font-bold text-[#111111]">
-                  {summaryData?.alignment_average !== null &&
-                  summaryData?.alignment_average !== undefined
-                    ? ` ${Number(summaryData.alignment_average).toFixed(1)}`
-                    : " - "}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* This Week Calendar Widget */}
-          <div className="bg-white border border-[#EFEDE7] p-6 rounded-2xl flex-1 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <button
-                onClick={handlePrevWeek}
-                className="p-1 hover:bg-[#F9FAFB] rounded-full transition-colors"
-              >
-                <ChevronLeft className="w-5 h-5 text-[#C4b89D]" />
-              </button>
-              <h4 className="text-[15px] font-bold text-[#374151]">
-                {getWeekLabel()}
-              </h4>
-              <button
-                onClick={handleNextWeek}
-                className="p-1 hover:bg-[#F9FAFB] rounded-full transition-colors"
-              >
-                <ChevronRight className="w-5 h-5 text-[#C4b89D]" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-7 gap-2 mb-6">
-              {weekData.map((day, idx) => (
-                <div
-                  key={idx}
-                  className={`flex flex-col items-center p-2 rounded-xl transition-all ${day.active ? "border-2 border-[#C4b89D] bg-[#FFF7ED]" : "bg-[#F9FAFB] border border-transparent"}`}
-                >
-                  <span
-                    className={`text-[11px] font-bold mb-1 ${day.active ? "text-[#C4b89D]" : "text-[#6B7280]"}`}
-                  >
-                    {day.day}
-                  </span>
-                  <span
-                    className={`text-[14px] font-extrabold mb-1.5 ${day.active ? "text-[#111111]" : "text-[#374151]"}`}
-                  >
-                    {day.date}
-                  </span>
-                  <div
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      day.state === "filled"
-                        ? "bg-[#22C55E]"
-                        : day.state === "missed"
-                          ? "bg-[#EF4444]"
-                          : "bg-[#D1D5DB]"
-                    }`}
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="flex justify-center gap-6">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-[#22C55E]" />
-                <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
-                  Filled
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-[#EF4444]" />
-                <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
-                  Missed
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-[#D1D5DB]" />
-                <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
-                  Upcoming
-                </span>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-10 rounded-xl flex flex-col min-h-[320px] items-center justify-center text-center shadow-none relative">
-          <div className="absolute top-10 left-10 flex items-center justify-between w-[calc(100%-80px)]">
-            <div className="flex items-center gap-2">
-              <Trophy className="w-6 h-6 text-[#333333]" />
-              <h3 className="font-bold text-[#333333] text-[18px]">
-                Highest Rank
-              </h3>
-            </div>
-            <Link to="/achievements">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-[#BBA48B] font-bold text-[12px] hover:text-white hover:bg-red-700 h-auto p-0 px-2 uppercase tracking-wider"
-              >
-                View All
-              </Button>
-            </Link>
-          </div>
-          <div className="bg-white w-28 h-28 rounded-full border border-[#E8E4D9] flex items-center justify-center mb-6">
-            <Trophy className="w-12 h-12 text-[#EFEDE7]" />
-          </div>
-          <p className="text-[13px] text-[#AAAAAA] font-bold uppercase tracking-widest">
-            No rank achieved yet
-          </p>
-        </Card>
-
-        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-10 rounded-xl flex flex-col min-h-[320px] items-center justify-center text-center shadow-none relative">
-          <div className="absolute top-10 left-10 flex items-center gap-2">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#333333"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-            <h3 className="font-bold text-[#333333] text-[18px]">People</h3>
-          </div>
-          <div
-            className="bg-white w-28 h-28 rounded-full border border-[#E8E4D9] flex items-center justify-center mb-6"
-            onClick={peopleHandler}
-            style={{ cursor: "pointer" }}
-          >
-            <svg
-              width="36"
-              height="36"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#EFEDE7"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-          </div>
-          <p className="text-[13px] text-[#AAAAAA] font-bold uppercase tracking-widest">
-            No people added yet
-          </p>
-        </Card>
-      </div>
-
-      {/* Purpose & Direction Section */}
-      <div className="mb-4">
-        <h2 className="text-sm font-bold text-[#555555] opacity-80 uppercase tracking-widest">
-          Purpose & Direction
-        </h2>
-      </div>
-
-      <Card className="bg-[#FAF9F6] border-[#E8E4D9] rounded-xl shadow-none p-8 mb-10">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <Sparkles className="w-5 h-5 text-[#BBA48B]" />
-            <h3 className="font-bold text-[#333333] text-[18px]">My Mission</h3>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          <div>
-            <p className="text-[20px] font-bold text-[#333333] leading-tight">
-              {previewData.mission || "Define your mission to see it here."}
-            </p>
-          </div>
-          {previewData.vision_images &&
-            previewData.vision_images.length > 0 && (
-              <div className="bg-white rounded-xl p-4 border border-[#E8E4D9]">
-                <h4 className="font-bold text-[#333333] text-[14px] mb-4">
-                  Vision Board
-                </h4>
-                <div className="rounded-lg overflow-hidden">
-                  <img
-                    src={previewData.vision_images[0]}
-                    alt="Vision Board"
-                    className="w-full h-auto object-cover max-h-[200px]"
-                  />
-                </div>
-              </div>
-            )}
-        </div>
-      </Card>
-
-      {/* Execution & Tracking Section */}
-      <div className="mb-4">
-        <h2 className="text-sm font-bold text-[#555555] opacity-80 uppercase tracking-widest">
-          Execution & Tracking
-        </h2>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-        {/* Journaling Consistency */}
-        <Card className="bg-white border-[#E8E4D9] p-8 rounded-xl shadow-none">
-          <div className="flex items-center gap-2 mb-8">
-            <Sparkles className="w-5 h-5 text-[#BBA48B]" />
-            <h3 className="font-bold text-[#333333] text-[18px]">
-              Journaling Consistency
+        <Card className="p-5 flex flex-col justify-between rounded-[20px] shadow-sm" style={{ background: C.forest8, border: `1.5px solid ${C.forest}` }}>
+          <div className="flex justify-between items-center mb-5">
+            <h3 className="font-bold flex items-center gap-2.5 text-[17px]" style={{ color: C.forest }}>
+              <BookOpen className="w-5 h-5" style={{ color: C.forest }} strokeWidth={2.5} /> Journaling Status
             </h3>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-8">
-            <div className="bg-white border border-[#EFEDE7] p-4 rounded-md text-center">
-              <span className="text-2xl font-bold text-[#333333]">
-                {summaryData?.current_streak || 0}
-              </span>
-              <span className="font-bold text-[#333333] ml-2 uppercase tracking-wide text-[10px]">
-                Current Streak
-              </span>
+          {/* Daily Track */}
+          <div className="mb-5">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-[14px] font-bold" style={{ color: C.forest }}>Daily ({dailyDateRangeStr})</span>
+              <span className="text-[14px] font-bold" style={{ color: C.charcoal }}>{dailyCompletedCount}/7</span>
             </div>
-            <div className="bg-white border border-[#EFEDE7] p-4 rounded-md text-center">
-              <span className="text-2xl font-bold text-[#333333]">
-                {last30DaysCount}
-              </span>
-              <span className="font-bold text-[#333333] ml-2 uppercase tracking-wide text-[10px]">
-                Last 30 Days
-              </span>
-            </div>
-          </div>
-
-          <div className="mb-10">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[14px] font-bold text-[#444444]">
-                Consistency Score
-              </span>
-              <span className="text-[14px] font-bold text-[#444444]">
-                {consistencyScore}%
-              </span>
-            </div>
-            <div className="w-full bg-[#EFEDE7] h-2.5 rounded-full overflow-hidden">
-              <div
-                className="bg-[#D2B48C] h-full rounded-full transition-all duration-500"
-                style={{ width: `${consistencyScore}%` }}
-              ></div>
+            <div className="flex justify-between gap-1 sm:gap-1.5 w-full">
+              {dailyCompletion.map((day, idx) => (
+                <div key={idx} className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                  <div className="w-full aspect-square max-w-[42px] rounded-[8px] sm:rounded-[10px] flex items-center justify-center transition-all"
+                    style={{ background: day.completed ? C.forest : "#fff", border: day.completed ? "none" : `1.5px solid ${C.mist}` }}>
+                    {day.completed ? (
+                      <svg width="50%" height="50%" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2" />
+                        <path d="M8 12L11 15L16 9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    ) : <div className="w-[50%] h-[50%] rounded-full border-[1.5px]" style={{ borderColor: C.mist }}></div>}
+                  </div>
+                  <span className="text-[10px] sm:text-[11px] font-semibold truncate w-full text-center" style={{ color: C.forest }}>{day.dayLabel}</span>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="pt-6 border-t border-[#EFEDE7]">
-            <h4 className="text-[12px] font-bold text-[#555555] mb-8 text-center uppercase tracking-widest">
-              Life Balance (Last 7 Days)
-            </h4>
-            <div className="flex justify-center">
-              <div className="relative w-64 h-64">
-                <svg viewBox="0 0 100 100" className="w-full h-full">
-                  {[20, 40, 60, 80, 100].map((r) => (
-                    <polygon
-                      key={r}
-                      points="50,10 90,40 75,90 25,90 10,40"
-                      transform={`scale(${r / 100}) translate(${(100 - r) / 2},${(100 - r) / 2})`}
-                      fill="none"
-                      stroke="#EFEDE7"
-                      strokeWidth="0.5"
-                    />
-                  ))}
-                  {[0, 72, 144, 216, 288].map((angle) => {
-                    const x2 =
-                      50 + 50 * Math.cos((angle - 90) * (Math.PI / 180));
-                    const y2 =
-                      50 + 50 * Math.sin((angle - 90) * (Math.PI / 180));
-                    return (
-                      <line
-                        key={angle}
-                        x1="50"
-                        y1="50"
-                        x2={x2}
-                        y2={y2}
-                        stroke="#EFEDE7"
-                        strokeWidth="0.5"
-                      />
-                    );
-                  })}
+          {/* Weekly Track */}
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-[14px] font-bold" style={{ color: C.forest }}>Weekly ({monthNameStatus} {currentYearStatus})</span>
+              <span className="text-[14px] font-bold" style={{ color: C.charcoal }}>{weeklyCompletedCount}/5</span>
+            </div>
+            <div className="flex justify-between gap-1 sm:gap-1.5 w-full">
+              {weeklyBlocks.map((wk, idx) => (
+                <div key={idx} className="flex flex-col items-center gap-1 flex-1 min-w-0">
+                  <div className="w-full aspect-square max-w-[48px] rounded-[8px] sm:rounded-[10px] flex items-center justify-center transition-all"
+                    style={{ background: wk.completed ? C.forest : "#fff", border: wk.completed ? "none" : `1.5px solid ${C.mist}` }}>
+                    {wk.completed ? (
+                      <svg width="50%" height="50%" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2" />
+                        <path d="M8 12L11 15L16 9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    ) : <Calendar className="w-[45%] h-[45%]" style={{ color: C.mist }} strokeWidth={2} />}
+                  </div>
+                  <div className="text-center mt-1 w-full">
+                    <div className="text-[9px] sm:text-[10px] font-bold leading-tight mb-0.5 truncate" style={{ color: C.forest }}>{wk.label}</div>
+                    <div className="text-[8px] sm:text-[9px] font-medium leading-tight truncate opacity-90" style={{ color: C.forest }}>{wk.datesLabel}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center mt-auto pt-4" style={{ borderTop: `1px solid ${C.forest15}` }}>
+            <span className="text-[14px] font-bold" style={{ color: C.forest }}>Keep up the momentum!</span>
+            <span className="text-[15px] font-extrabold" style={{ color: C.charcoal }}>{percentComplete}% Complete</span>
+          </div>
+        </Card>
+      </div>
+
+      {/* ── Purpose & Direction ───────────────────────────────────────────── */}
+      <div className="mt-8 mb-8">
+        <div className="flex items-center gap-2 mb-3">
+          <Heart className="w-[18px] h-[18px]" style={{ color: C.coral }} strokeWidth={2} />
+          <h2 className="text-[15px] font-bold" style={{ color: C.charcoal }}>Purpose &amp; Direction</h2>
+        </div>
+        <Card className="rounded-[16px] shadow-sm transition-all hover:shadow-md p-4 sm:p-5" style={{ background: C.coral8, border: `1px solid ${C.coral}` }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <Sparkles className="w-[18px] h-[18px]" style={{ color: C.charcoal }} strokeWidth={2.5} />
+              <h3 className="font-bold text-[18px] tracking-tight" style={{ color: C.charcoal }}>My Mission</h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-[14px] h-[14px]" style={{ color: C.charcoal }} strokeWidth={2.5} />
+              <span className="text-[14px] font-extrabold" style={{ color: C.charcoal }}>
+                {summaryData?.alignment_average != null ? Number(summaryData.alignment_average).toFixed(1) : "5.0"}/10
+              </span>
+              <div className="w-6 sm:w-10 h-[2.5px] rounded-full ml-1" style={{ background: C.charcoal }}></div>
+            </div>
+          </div>
+          <div className="mt-6 flex flex-col gap-6">
+            {previewData.mission && <p className="text-xl font-bold" style={{ color: C.charcoal }}>{previewData.mission}</p>}
+            {previewData.vision_images?.length > 0 && (
+              <div className="bg-white rounded-[16px] p-5 shadow-sm border" style={{ borderColor: C.coral15 }}>
+                <div className="flex items-center gap-2.5 mb-4">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: C.coral8 }}>
+                    <Heart className="w-4 h-4" style={{ color: C.coral }} strokeWidth={2.5} />
+                  </div>
+                  <h4 className="font-bold text-[16px]" style={{ color: C.charcoal }}>Vision Board</h4>
+                </div>
+                <div className="relative rounded-[8px] overflow-hidden border" style={{ borderColor: C.mist }}>
+                  <img src={previewData.vision_images[0]} alt="Vision Board" className="w-full h-auto object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
+
+      {/* ── Execution & Tracking ─────────────────────────────────────────── */}
+      <div>
+        <div className="flex items-center gap-2 mb-3 mt-8">
+          <Zap className="w-4 h-4" style={{ color: C.coral }} strokeWidth={2.5} />
+          <h2 className="text-sm font-bold" style={{ color: C.charcoal }}>Execution &amp; Tracking</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* Journaling Consistency */}
+          <Card className="p-5 shadow-sm flex flex-col rounded-[20px] transition-all hover:shadow-md" style={{ background: C.amber8, border: `1px solid ${C.amber}` }}>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-8 h-8 rounded-[8px] flex items-center justify-center text-white shadow-sm" style={{ background: C.amber }}>
+                <Flame className="w-4 h-4 fill-current" />
+              </div>
+              <h3 className="font-bold text-[16px]" style={{ color: C.charcoal }}>Journaling Consistency</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="bg-white rounded-xl p-4 flex flex-col items-center justify-center shadow-sm border" style={{ borderColor: C.mist }}>
+                <div className="flex items-center gap-2 mb-1" style={{ color: C.charcoal }}>
+                  <Flame className="w-5 h-5" style={{ color: C.amber }} strokeWidth={2.5} />
+                  <span className="text-[22px] font-extrabold leading-none">{summaryData?.current_streak || 0}</span>
+                </div>
+                <span className="text-[12px] font-medium mt-1" style={{ color: C.stone }}>Current Streak</span>
+              </div>
+              <div className="bg-white rounded-xl p-4 flex flex-col items-center justify-center shadow-sm border" style={{ borderColor: C.mist }}>
+                <div className="flex items-center gap-2 mb-1" style={{ color: C.charcoal }}>
+                  <Calendar className="w-5 h-5" style={{ color: C.sky }} strokeWidth={2.5} />
+                  <span className="text-[22px] font-extrabold leading-none">{last30DaysCount}</span>
+                </div>
+                <span className="text-[12px] font-medium mt-1" style={{ color: C.stone }}>Last 30 Days</span>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-sm border mb-4" style={{ borderColor: C.mist }}>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-[13px] font-bold" style={{ color: C.charcoal }}>Consistency Score</span>
+                <span className="font-extrabold text-[14px]" style={{ color: C.charcoal }}>{consistencyScore}%</span>
+              </div>
+              <div className="w-full rounded-full h-2.5 mb-3" style={{ background: C.sand30 }}>
+                <div className="h-2.5 rounded-full transition-all duration-500" style={{ width: `${consistencyScore}%`, background: C.amber }}></div>
+              </div>
+              <div className="flex justify-center items-center gap-1.5 text-[11px] font-semibold" style={{ color: C.amber }}>
+                <span>🏆</span> Longest streak: {longestStreak} days
+              </div>
+            </div>
+
+            {/* Life Balance Radar */}
+            <div className="bg-white rounded-xl p-5 shadow-sm border" style={{ borderColor: C.mist }}>
+              <h4 className="text-[13px] font-bold mb-6 text-center" style={{ color: C.charcoal }}>Life Balance (Last 7 Days)</h4>
+              <div className="relative w-full aspect-square max-w-[200px] mx-auto">
+                <svg viewBox="0 0 100 100" className="w-full h-full fill-none" style={{ stroke: C.mist }} strokeWidth="0.5">
+                  <polygon points="50,10 90,40 75,90 25,90 10,40" strokeDasharray="2,2" />
+                  <polygon points="50,30 70,45 62,70 38,70 30,45" strokeDasharray="1,1" />
+                  <line x1="50" y1="50" x2="50" y2="10" /><line x1="50" y1="50" x2="90" y2="40" />
+                  <line x1="50" y1="50" x2="75" y2="90" /><line x1="50" y1="50" x2="25" y2="90" />
+                  <line x1="50" y1="50" x2="10" y2="40" />
                   {summaryData?.life_balance && (
                     <polygon
-                      points={`
-                        ${50 + (summaryData.life_balance.career || 0) * 4 * Math.cos((0 - 90) * (Math.PI / 180))},${50 + (summaryData.life_balance.career || 0) * 4 * Math.sin((0 - 90) * (Math.PI / 180))}
-                        ${50 + (summaryData.life_balance.growth || 0) * 4 * Math.cos((72 - 90) * (Math.PI / 180))},${50 + (summaryData.life_balance.growth || 0) * 4 * Math.sin((72 - 90) * (Math.PI / 180))}
-                        ${50 + (summaryData.life_balance.relationships || 0) * 4 * Math.cos((144 - 90) * (Math.PI / 180))},${50 + (summaryData.life_balance.relationships || 0) * 4 * Math.sin((144 - 90) * (Math.PI / 180))}
-                        ${50 + (summaryData.life_balance.growth || 0) * 4 * Math.cos((216 - 90) * (Math.PI / 180))},${50 + (summaryData.life_balance.growth || 0) * 4 * Math.sin((216 - 90) * (Math.PI / 180))}
-                        ${50 + (summaryData.life_balance.finance || 0) * 4 * Math.cos((288 - 90) * (Math.PI / 180))},${50 + (summaryData.life_balance.finance || 0) * 4 * Math.sin((288 - 90) * (Math.PI / 180))}
-                      `}
-                      fill="rgba(210, 180, 140, 0.4)"
-                      stroke="#BBA48B"
-                      strokeWidth="1.5"
+                      points={`50,${50 - (summaryData.life_balance.career || 0) * 4} ${50 + (summaryData.life_balance.health || 0) * 4},${50 - (summaryData.life_balance.health || 0) * 1} ${50 + (summaryData.life_balance.relationships || 0) * 2.5},${50 + (summaryData.life_balance.relationships || 0) * 4} ${50 - (summaryData.life_balance.growth || 0) * 2.5},${50 + (summaryData.life_balance.growth || 0) * 4} ${50 - (summaryData.life_balance.finance || 0) * 4},${50 - (summaryData.life_balance.finance || 0) * 1}`}
+                      fill={C.forest8} stroke={C.forest} strokeWidth="1.5" className="transition-all duration-1000"
                     />
                   )}
-                  <text
-                    x="50"
-                    y="5"
-                    textAnchor="middle"
-                    fontSize="4"
-                    fontWeight="bold"
-                    fill="#777777"
-                  >
-                    Career
-                  </text>
-                  <text
-                    x="95"
-                    y="42"
-                    textAnchor="start"
-                    fontSize="4"
-                    fontWeight="bold"
-                    fill="#777777"
-                  >
-                    Growth
-                  </text>
-                  <text
-                    x="75"
-                    y="93"
-                    textAnchor="middle"
-                    fontSize="4"
-                    fontWeight="bold"
-                    fill="#777777"
-                  >
-                    Relationships
-                  </text>
-                  <text
-                    x="25"
-                    y="93"
-                    textAnchor="middle"
-                    fontSize="4"
-                    fontWeight="bold"
-                    fill="#777777"
-                  >
-                    Personal Growth
-                  </text>
-                  <text
-                    x="5"
-                    y="42"
-                    textAnchor="end"
-                    fontSize="4"
-                    fontWeight="bold"
-                    fill="#777777"
-                  >
-                    Finance
-                  </text>
                 </svg>
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[9px] font-bold" style={{ color: C.stone }}>Career</span>
+                <span className="absolute top-[35%] -right-4 text-[9px] font-bold" style={{ color: C.stone }}>Health</span>
+                <span className="absolute -bottom-3 -right-2 text-[9px] font-bold" style={{ color: C.stone }}>Relationships</span>
+                <span className="absolute -bottom-3 -left-4 text-[9px] font-bold" style={{ color: C.stone }}>Personal Growth</span>
+                <span className="absolute top-[35%] -left-3 text-[9px] font-bold" style={{ color: C.stone }}>Finance</span>
+              </div>
+            </div>
+          </Card>
+
+          {/* Strategic Focus */}
+          <Card className="p-6 shadow-sm rounded-[20px] flex flex-col min-h-[400px] transition-all hover:shadow-md" style={{ background: C.coral8, border: `1px solid ${C.coral15}` }}>
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="w-[42px] h-[42px] rounded-[12px] flex items-center justify-center text-white shadow-sm" style={{ background: C.coral }}>
+                  <Target className="w-[22px] h-[22px]" strokeWidth={2} />
+                </div>
+                <h3 className="font-bold text-[17px] tracking-tight" style={{ color: C.charcoal }}>This Week's Strategic Focus</h3>
+              </div>
+            </div>
+            <div className="flex-1 flex flex-col items-center justify-center text-center">
+              <Target className="w-[100px] h-[100px] stroke-[0.8] mb-6" style={{ color: C.coral15 }} />
+              <p className="text-[14px] font-medium max-w-[280px] leading-relaxed" style={{ color: C.stone }}>
+                Complete your weekly reflection to see your focus areas here
+              </p>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* ── Habit Tracking ───────────────────────────────────────────────── */}
+      <div className="mt-8 mb-8">
+        <Card className="rounded-[20px] overflow-hidden transition-all hover:shadow-md" style={{ background: C.forest8, border: `1.5px solid ${C.forest}` }}>
+          <div className="p-4 md:p-5 flex items-center justify-between bg-white/50" style={{ borderBottom: `1px solid ${C.forest15}` }}>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-[8px] flex items-center justify-center text-white shadow-sm" style={{ background: C.forest }}>
+                <Zap className="w-4 h-4 fill-current" />
+              </div>
+              <h3 className="font-bold text-[16px]" style={{ color: C.charcoal }}>Habit Tracking</h3>
+            </div>
+            <Button variant="outline" size="sm" className="h-7 text-[11px] font-bold rounded-full px-4 bg-white" style={{ color: C.charcoal, borderColor: C.sand }} asChild>
+              <Link to="/goals-habits">View All</Link>
+            </Button>
+          </div>
+          <div className="p-5 bg-white">
+            <div className="grid grid-cols-2 gap-4 mb-6 pb-6" style={{ borderBottom: `1px solid ${C.mist}` }}>
+              <div>
+                <p className="text-[11px] font-bold mb-1 tracking-wide" style={{ color: C.stone }}>Active Habits</p>
+                <p className="text-[26px] font-extrabold leading-none" style={{ color: C.forest }}>{activeHabitsCount}</p>
+              </div>
+              <div>
+                <p className="text-[11px] font-bold mb-1 tracking-wide" style={{ color: C.stone }}>Avg. Completion</p>
+                <p className="text-[26px] font-extrabold leading-none" style={{ color: C.forest }}>{avgHabitCompletion}%</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {[{ label: "Daily Habits", list: dailyHabits }, { label: "Weekly Habits", list: weeklyHabits }].map(({ label, list }) => (
+                <div key={label}>
+                  <h4 className="text-[13px] font-bold mb-4" style={{ color: C.charcoal }}>{label}</h4>
+                  {list.length > 0 ? (
+                    <div className="space-y-5">
+                      {list.map((habit, idx) => (
+                        <div key={idx} className="flex flex-col gap-2.5">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[13px] font-extrabold" style={{ color: C.charcoal }}>{habit.name || habit.title}</span>
+                            <Badge variant="outline" className="text-[10px] px-2.5 py-0 h-[18px] rounded-full font-bold bg-white" style={{ color: C.stone, borderColor: C.sand }}>
+                              {habit.category || habit.habit_category || "Other"}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 rounded-full h-1.5 overflow-hidden" style={{ background: C.mist }}>
+                              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${habit.completion_percentage || habit.completion_rate || 0}%`, background: C.charcoal }}></div>
+                            </div>
+                            <span className="text-[11px] font-bold min-w-[28px] text-right" style={{ color: C.forest }}>
+                              {habit.completion_percentage || habit.completion_rate || 0}%
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p className="text-[12px] italic" style={{ color: C.stone }}>No {label.toLowerCase()}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* ── Review & Growth ───────────────────────────────────────────────── */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <BookOpen className="w-5 h-5" style={{ color: C.coral }} strokeWidth={2} />
+          <h2 className="text-[15px] font-bold" style={{ color: C.charcoal }}>Review &amp; Growth</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* Recent Journal Entries */}
+          <Card className="p-6 shadow-sm flex flex-col min-h-[220px] rounded-[20px]" style={{ background: C.amber8, border: `2px solid ${C.amber}` }}>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-bold text-[16px]" style={{ color: C.charcoal }}>Recent Journal Entries</h3>
+              <Link to="/daily-journal">
+                <Button variant="outline" size="sm" className="h-8 text-xs font-semibold rounded-full px-4 bg-white hover:bg-slate-50" style={{ color: C.charcoal, borderColor: C.sand }}>
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Add Entry
+                </Button>
+              </Link>
+            </div>
+            <div className="flex-1 flex flex-col gap-4">
+              {recentJournals.length > 0 ? recentJournals.slice(0, 3).map((journal) => {
+                const d = new Date(journal.start_date || journal.created_at);
+                const month = d.toLocaleDateString("en-US", { month: "short" }).toUpperCase();
+                const date = d.getDate();
+                const weekday = d.toLocaleDateString("en-US", { weekday: "long" });
+                const year = d.getFullYear();
+                const energy = journal.energy_score ?? 5;
+                const alignment = journal.alignment_score ?? 5;
+                const note = journal.data?.description || journal.description || journal.gratitude_note || journal.affirmation;
+                return (
+                  <div key={journal.id} className="bg-white rounded-[16px] p-4 shadow-sm border flex flex-col gap-3" style={{ borderColor: C.mist }}>
+                    <div className="flex items-start gap-4">
+                      <div className="rounded-xl py-2 px-3 flex flex-col items-center justify-center min-w-[54px]" style={{ background: C.amber15 }}>
+                        <span className="text-[10px] font-bold" style={{ color: C.amber }}>{month}</span>
+                        <span className="text-lg font-extrabold leading-none mt-0.5" style={{ color: C.charcoal }}>{date}</span>
+                      </div>
+                      <div className="flex-1 pt-0.5">
+                        <h4 className="font-bold text-[15px] mb-2" style={{ color: C.charcoal }}>{weekday}, {year}</h4>
+                        <div className="flex gap-2">
+                          <Badge variant="secondary" className="hover:bg-transparent border-0 px-2 py-0.5 text-[11px] gap-1 font-bold" style={{ background: C.amber15, color: C.amber }}>
+                            <Zap className="w-3 h-3 fill-current" /> {energy}/10
+                          </Badge>
+                          <Badge variant="secondary" className="hover:bg-transparent border-0 px-2 py-0.5 text-[11px] gap-1 font-bold" style={{ background: C.forest8, color: C.forest }}>
+                            <Target className="w-3 h-3" /> {alignment}/10
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="h-px w-full" style={{ background: C.mist }}></div>
+                    <div className="flex items-center gap-2.5">
+                      {note ? (
+                        <>
+                          <div className="w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0" style={{ background: C.forest8, borderColor: C.forest15 }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={C.forest} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                          </div>
+                          <span className="text-[13px] font-medium truncate" style={{ color: C.stone }}>{note}</span>
+                        </>
+                      ) : <span className="text-[13px] italic" style={{ color: C.stone }}>No detailed notes recorded.</span>}
+                    </div>
+                  </div>
+                );
+              }) : (
+                <p className="text-[13px] font-medium text-center py-6 bg-white rounded-xl border" style={{ color: C.stone, borderColor: C.mist }}>
+                  No entries yet. Start journaling today!
+                </p>
+              )}
+            </div>
+          </Card>
+
+          {/* Personalized Insights */}
+          <Card className="p-6 shadow-sm flex flex-col min-h-[220px] rounded-[20px] transition-all hover:shadow-md" style={{ background: C.violet8, border: `1px solid ${C.violet15}` }}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-[42px] h-[42px] rounded-[12px] flex items-center justify-center text-white shadow-sm" style={{ background: C.violet }}>
+                <Lightbulb className="w-[20px] h-[20px] fill-current" />
+              </div>
+              <h3 className="font-bold text-[17px]" style={{ color: C.charcoal }}>Personalized Insights</h3>
+            </div>
+            {insightsData.personalized_insights.length > 0 ? (
+              <div className="flex-1 flex flex-col gap-3">
+                {insightsData.personalized_insights.slice(0, 3).map((insight, idx) => {
+                  const insightText = insight.insight || insight.text || JSON.stringify(insight);
+                  const isAlert = insightText.toLowerCase().includes("hasn't gotten much attention") || insightText.toLowerCase().includes("consider dedicating");
+                  return (
+                    <div key={insight.id ?? idx} className="text-[13px] font-medium bg-white rounded-[12px] px-4 py-3.5 border shadow-sm flex items-start gap-3" style={{ borderColor: C.violet15, color: C.stone }}>
+                      {isAlert ? <AlertCircle className="w-4 h-4 shrink-0 mt-[2px]" style={{ color: C.violet }} strokeWidth={2.5} /> : <TrendingUp className="w-4 h-4 shrink-0 mt-[2px]" style={{ color: C.violet }} strokeWidth={2.5} />}
+                      <span className="leading-snug">{insightText}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bg-white rounded-[12px] p-4 border shadow-sm flex items-center gap-3 mt-auto" style={{ borderColor: C.violet15 }}>
+                <TrendingUp className="w-5 h-5 shrink-0" style={{ color: C.violet }} strokeWidth={2.5} />
+                <p className="text-[13px] font-medium" style={{ color: C.stone }}>Start journaling to discover patterns and insights about your journey!</p>
+              </div>
+            )}
+          </Card>
+        </div>
+      </div>
+
+      {/* ── Bucket List & Leaderboard ─────────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+
+        {/* Bucket List */}
+        <Card className="p-6 shadow-sm flex flex-col min-h-[350px] rounded-[20px] transition-all hover:shadow-md" style={{ background: C.coral8, border: `1px solid ${C.coral15}` }}>
+          <div className="flex justify-between items-start mb-8">
+            <div className="flex gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm" style={{ background: `linear-gradient(135deg, ${C.coral}, #e87c5a)` }}>
+                <ListOrdered className="w-5 h-5 fill-current" />
+              </div>
+              <div>
+                <h3 className="font-bold text-[15px]" style={{ color: C.charcoal }}>Bucket List Progress</h3>
+                <p className="text-xs font-medium" style={{ color: C.stone }}>{previewData.bucket_preview.length} dreams</p>
+              </div>
+            </div>
+            <Link to="/bucket-list" className="font-bold text-xs hover:underline mt-1 mr-1" style={{ color: C.coral }}>View All</Link>
+          </div>
+          <div className="flex-1 flex flex-col gap-3">
+            {previewData.bucket_preview.length > 0 ? previewData.bucket_preview.slice(0, 3).map((item) => (
+              <div key={item.id} className="bg-white rounded-[16px] p-4 shadow-sm border flex justify-between items-center transition-all" style={{ borderColor: C.cream }}>
+                <span className="font-extrabold text-sm tracking-tight" style={{ color: C.charcoal }}>{item.title}</span>
+                <div className="flex gap-2 flex-wrap justify-end">
+                  {item.status && <Badge className="text-white text-[10px] px-2.5 py-0.5 rounded-full capitalize font-bold shadow-sm border-0" style={{ background: C.coral }}>{item.status.replace(/_/g, " ")}</Badge>}
+                  {item.category && <Badge variant="outline" className="text-[10px] px-2.5 py-0.5 rounded-full capitalize font-bold" style={{ color: C.coral, borderColor: C.coral15, background: C.coral8 }}>{item.category}</Badge>}
+                </div>
+              </div>
+            )) : (
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-[13px] font-medium" style={{ color: C.stone }}>No bucket list items yet. Let's dream!</p>
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* Leaderboard */}
+        <Card className="p-6 bg-white border shadow-sm rounded-[20px] transition-all hover:shadow-md flex flex-col min-h-[350px]" style={{ borderColor: C.mist }}>
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-[42px] h-[42px] rounded-[12px] flex items-center justify-center text-white shadow-sm" style={{ background: C.violet }}>
+                <Trophy className="w-[20px] h-[20px] fill-current" />
+              </div>
+              <h3 className="font-bold text-[17px]" style={{ color: C.charcoal }}>Leaderboard</h3>
+            </div>
+            <Button variant="outline" size="sm" className="h-[30px] text-[11px] font-bold px-4 rounded-full shadow-none bg-white hover:bg-slate-50" style={{ color: C.charcoal, borderColor: C.sand }} asChild>
+              <Link to="/leaderboard">View All</Link>
+            </Button>
+          </div>
+          <div className="rounded-[16px] p-4 flex flex-col justify-center border mb-6" style={{ background: C.violet8, borderColor: C.violet15 }}>
+            <div className="flex items-center gap-4">
+              <div className="w-[42px] h-[42px] rounded-full flex items-center justify-center text-white font-extrabold text-[13px] shadow-sm tracking-tight" style={{ background: C.violet }}>
+                #{leaderboardData.currentUser?.rank || "232"}
+              </div>
+              <div>
+                <p className="font-bold text-[15px] leading-tight mb-0.5 tracking-tight" style={{ color: C.violet }}>Your Rank</p>
+                <p className="text-[13px] font-semibold leading-tight" style={{ color: C.violet }}>
+                  {leaderboardData.currentUser?.points ?? summaryData?.total_score ?? 10} pts
+                </p>
               </div>
             </div>
           </div>
-        </Card>
-
-        {/* Focus Areas */}
-        <Card className="bg-white border border-[#E8E4D9] rounded-xl shadow-none flex flex-col p-10 justify-center">
-          <div className="flex items-center gap-3 mb-4">
-            <Lightbulb className="w-6 h-6 text-[#BBA48B]" />
-            <h3 className="font-bold text-[#333333] text-[20px] max-w-sm leading-tight text-left">
-              Complete Your Weekly Reflection To See Your Focus Areas Here
-            </h3>
-          </div>
-        </Card>
-      </div>
-
-      {/* Habit Tracking Section */}
-      <div className="mb-4">
-        <h2 className="text-sm font-bold text-[#555555] opacity-80 uppercase tracking-widest">
-          Habit Tracking
-        </h2>
-      </div>
-
-      <Card className="bg-white border-[#E8E4D9] rounded-xl shadow-none overflow-hidden mb-10">
-        <div className="p-6 border-b border-[#EFEDE7] bg-[#FAF9F6]/50 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Zap className="w-5 h-5 text-[#BBA48B]" />
-            <h3 className="font-bold text-[#333333] text-[17px]">
-              Active Habits
-            </h3>
-          </div>
-          <div className="flex gap-8">
-            <div className="text-center">
-              <p className="text-[20px] font-bold text-[#333333]">
-                {activeHabitsCount}
-              </p>
-              <p className="text-[10px] font-bold text-[#AAAAAA] uppercase">
-                Total
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-[20px] font-bold text-[#BBA48B]">
-                {avgHabitCompletion}%
-              </p>
-              <p className="text-[10px] font-bold text-[#AAAAAA] uppercase">
-                Avg. Comp
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-10">
-          <div className="space-y-6">
-            <h4 className="text-[14px] font-bold text-[#555555] opacity-70 uppercase tracking-wider">
-              Daily Habits
-            </h4>
-            {dailyHabits.length > 0 ? (
-              dailyHabits.map((h, i) => (
-                <div key={i} className="space-y-2">
-                  <div className="flex justify-between items-center text-[14px] font-bold text-[#333333]">
-                    <span>{h.name}</span>
-                    <span>{h.completion_percentage}%</span>
+          <div className="flex-1 flex flex-col px-2 gap-1">
+            {leaderboardData.top.length > 0 ? leaderboardData.top.map((person, idx) => (
+              <div key={idx} className="flex justify-between items-center py-3 last:border-b-0" style={{ borderBottom: `1px solid ${C.mist}` }}>
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className="w-[26px] h-[26px] rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 shadow-sm"
+                    style={idx === 0 ? { background: "#FEF9C3", border: "1px solid #FDE047", color: "#A16207" } : idx === 1 ? { background: C.mist, border: `1px solid ${C.sand}`, color: C.charcoal } : idx === 2 ? { background: C.amber15, border: `1px solid ${C.amber}`, color: C.charcoal } : { background: C.coral8, border: `1px solid ${C.coral15}`, color: C.stone }}>
+                    {idx === 0 ? "👑" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : idx + 1}
                   </div>
-                  <div className="w-full bg-[#EFEDE7] h-1.5 rounded-full overflow-hidden">
-                    <div
-                      className="bg-[#D2B48C] h-full"
-                      style={{ width: `${h.completion_percentage}%` }}
-                    ></div>
-                  </div>
+                  <span className="font-bold text-[14px] truncate tracking-tight" style={{ color: C.charcoal }}>{person.name || person.user_name || "Unknown"}</span>
                 </div>
-              ))
-            ) : (
-              <p className="text-sm text-[#AAAAAA] italic font-medium">
-                No daily habits active.
-              </p>
-            )}
-          </div>
-          <div className="space-y-6">
-            <h4 className="text-[14px] font-bold text-[#555555] opacity-70 uppercase tracking-wider">
-              Weekly Habits
-            </h4>
-            {weeklyHabits.length > 0 ? (
-              weeklyHabits.map((h, i) => (
-                <div key={i} className="space-y-2">
-                  <div className="flex justify-between items-center text-[14px] font-bold text-[#333333]">
-                    <span>{h.name}</span>
-                    <span>{h.completion_percentage}%</span>
-                  </div>
-                  <div className="w-full bg-[#EFEDE7] h-1.5 rounded-full overflow-hidden">
-                    <div
-                      className="bg-[#D2B48C] h-full"
-                      style={{ width: `${h.completion_percentage}%` }}
-                    ></div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-[#AAAAAA] italic font-medium">
-                No weekly habits active.
-              </p>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      {/* Review & Growth Section */}
-      <div className="mb-4">
-        <h2 className="text-sm font-bold text-[#555555] opacity-80 uppercase tracking-widest">
-          Review & Growth
-        </h2>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-8 rounded-xl shadow-none">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <BookOpen className="w-5 h-5 text-[#BBA48B]" />
-              <h3 className="font-bold text-[#333333] text-[18px]">
-                Recent Journal Entries
-              </h3>
-            </div>
-            <Link to="/daily-journal">
-              <Button
-                size="sm"
-                className="bg-[#BBA48B] hover:bg-[#A68F76] text-white font-bold text-[12px] rounded-md px-3 h-8 shadow-sm"
-              >
-                <Plus className="w-3 h-3 mr-1" />
-                Add Entry
-              </Button>
-            </Link>
-          </div>
-          <div className="space-y-4">
-            {recentJournals.length > 0 ? (
-              recentJournals.slice(0, 3).map((j, i) => (
-                <div
-                  key={i}
-                  className="bg-white border border-[#EFEDE7] p-4 rounded-lg flex justify-between items-center"
-                >
-                  <div>
-                    <h4 className="font-bold text-[#333333] text-[14px] mb-1">
-                      {j.title || "Daily Journal"}
-                    </h4>
-                    <p className="text-[12px] text-[#888888] font-medium">
-                      {j.start_date || j.created_at}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-[#BBA48B] font-bold hover:bg-[#FAF9F6]"
-                  >
-                    View
-                  </Button>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-[#AAAAAA] italic font-medium px-2">
-                No entries yet.
-              </p>
-            )}
-          </div>
-        </Card>
-
-        <Card className="bg-white border-[#E8E4D9] p-8 rounded-xl shadow-none">
-          <div className="flex items-center gap-3 mb-8">
-            <Sparkles className="w-5 h-5 text-[#BBA48B]" />
-            <h3 className="font-bold text-[#333333] text-[18px]">
-              Personalized Insights
-            </h3>
-          </div>
-          <div className="space-y-4">
-            {insightsData.personalized_insights.length > 0 ? (
-              insightsData.personalized_insights.slice(0, 2).map((ins, i) => (
-                <div
-                  key={i}
-                  className="bg-[#FAF9F6] border border-[#EFEDE7] p-4 rounded-lg italic text-[14px] text-[#444444] leading-relaxed font-medium"
-                >
-                  "{ins.insight || ins.text}"
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-[#AAAAAA] italic font-medium px-2">
-                Complete more journals to unlock insights.
-              </p>
+                <span className="font-extrabold text-[14px] ml-4 flex-shrink-0" style={{ color: C.violet }}>{person.points ?? person.score ?? 0}</span>
+              </div>
+            )) : (
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-[13px] font-medium pb-2" style={{ color: C.stone }}>Loading leaderboard data...</p>
+              </div>
             )}
           </div>
         </Card>
       </div>
 
-      {/* Bucket List & Leaderboard Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-        <Card className="bg-[#FAF9F6] border-[#E8E4D9] p-8 rounded-xl shadow-none">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <Target className="w-5 h-5 text-[#BBA48B]" />
-              <h3 className="font-bold text-[#333333] text-[18px]">
-                Bucket List
-              </h3>
-            </div>
-            <Link to="/leaderboard">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-[#BBA48B] font-bold text-[12px] hover:text-white hover:bg-red-700 h-auto p-0 px-2 uppercase tracking-wider"
-              >
-                View All
-              </Button>
-            </Link>
-          </div>
-          <div className="space-y-4">
-            {previewData.bucket_preview.length > 0 ? (
-              previewData.bucket_preview.slice(0, 3).map((item, i) => (
-                <div
-                  key={i}
-                  className="flex justify-between items-center text-[14px] font-medium text-[#444444] border-b border-[#EFEDE7] pb-3"
-                >
-                  <span>{item.title}</span>
-                  <Badge
-                    variant="outline"
-                    className="border-[#E8E4D9] text-[#777777] bg-white text-[10px] font-bold uppercase"
-                  >
-                    {item.status}
-                  </Badge>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-[#AAAAAA] italic font-medium">
-                Your dreams will appear here.
-              </p>
-            )}
-          </div>
-        </Card>
-
-        <Card className="bg-white border-[#E8E4D9] p-8 rounded-xl shadow-none">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <Trophy className="w-5 h-5 text-[#BBA48B]" />
-              <h3 className="font-bold text-[#333333] text-[18px]">
-                Global Leaderboard
-              </h3>
-            </div>
-            <Link to="/leaderboard">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-[#BBA48B] font-bold text-[12px] hover:text-white hover:bg-red-700 h-auto p-0 px-2 uppercase tracking-wider"
-              >
-                View All
-              </Button>
-            </Link>
-          </div>
-          <div className="space-y-4">
-            {leaderboardData.top.length > 0 ? (
-              leaderboardData.top.map((player, i) => (
-                <div
-                  key={i}
-                  className="flex justify-between items-center text-[14px] font-bold text-[#333333]"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-[#AAAAAA] w-4">{i + 1}</span>
-                    <span>{player.name || "Anonymous"}</span>
-                  </div>
-                  <span>{player.points || player.score || 0} pts</span>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-[#AAAAAA] italic font-medium">
-                Leaderboard data coming soon.
-              </p>
-            )}
-          </div>
-        </Card>
-      </div>
-
-      {/* Beta Testing Notice */}
-      <Card className="p-4 bg-red-50 border-l-4 border-l-red-500 shadow-[0_4px_20px_rgba(0,0,0,0.06)] rounded-[16px]">
+      {/* ── Beta Notice ───────────────────────────────────────────────────── */}
+      <Card className="p-4 rounded-[16px]" style={{ background: C.amber8, borderLeft: `4px solid ${C.amber}`, border: `1px solid ${C.amber15}` }}>
         <div className="flex gap-3">
           <span className="text-lg flex-shrink-0">🔔</span>
           <div>
-            <h4 className="font-semibold text-sm text-red-800">
-              Beta Testing Notice
-            </h4>
-            <p className="text-xs text-red-700 mt-1">
-              We are continuously improving your experience. If you face any
-              challenges, we cannot provide performance guarantees at this
-              stage. We recommend bookmarking your regularly for safekeeping.
+            <h4 className="font-semibold text-sm" style={{ color: C.charcoal }}>Beta Testing Notice</h4>
+            <p className="text-xs mt-1" style={{ color: C.stone }}>
+              We are continuously improving your experience. If you face any challenges, we cannot provide performance guarantees at this stage. We recommend bookmarking your regularly for safekeeping.
             </p>
           </div>
         </div>
       </Card>
+
     </div>
   );
 };

@@ -35,15 +35,10 @@ export interface FocusData {
 
 export const defaultFocusData: FocusData = {
   matrix: {
-    q1: { value: 0, label: "Imp & Urgent", emoji: "🔥", color: "red" },
-    q2: { value: 1, label: "Imp not Urgent", emoji: "🎯", color: "green" },
-    q3: { value: 0, label: "Not imp Urgent", emoji: "⚡", color: "yellow" },
-    q4: {
-      value: 0,
-      label: "Not imp not Urgent",
-      emoji: "💤",
-      color: "gray",
-    },
+    q1: { value: 0, label: "Imp & Urgent",       emoji: "🔥", color: "red"    },
+    q2: { value: 1, label: "Imp not Urgent",      emoji: "🎯", color: "green"  },
+    q3: { value: 0, label: "Not imp Urgent",      emoji: "⚡", color: "yellow" },
+    q4: { value: 0, label: "Not imp not Urgent",  emoji: "💤", color: "gray"   },
   },
   balance: [
     { id: "1", emoji: "💼", score: 1 },
@@ -59,7 +54,7 @@ export const defaultFocusData: FocusData = {
 interface FocusAndBoundariesProps {
   data: FocusData;
   setData: React.Dispatch<React.SetStateAction<FocusData>>;
-  apiGoals?: any[]; // Kept for backwards compatibility but we fetch inside now
+  apiGoals?: any[];
 }
 
 function FocusAndBoundaries({ data, setData }: FocusAndBoundariesProps) {
@@ -69,7 +64,6 @@ function FocusAndBoundaries({ data, setData }: FocusAndBoundariesProps) {
   const [goalsList, setGoalsList] = useState<any[]>([]);
   const [isLoadingGoals, setIsLoadingGoals] = useState(true);
 
-  // Fetch Goals from API
   useEffect(() => {
     const fetchGoals = async () => {
       setIsLoadingGoals(true);
@@ -98,18 +92,13 @@ function FocusAndBoundaries({ data, setData }: FocusAndBoundariesProps) {
     fetchGoals();
   }, []);
 
-  // Update progress instantly in the UI while dragging
   const handleProgressChange = (id: number | string, newProgress: number) => {
     setGoalsList((prev) =>
       prev.map((g) => (g.id === id ? { ...g, progress: newProgress } : g)),
     );
   };
 
-  // Commit the progress to the API when the user releases the slider
-  const handleProgressCommit = async (
-    id: number | string,
-    finalProgress: number,
-  ) => {
+  const handleProgressCommit = async (id: number | string, finalProgress: number) => {
     try {
       const token = localStorage.getItem("auth_token") || "";
       const res = await fetch(`https://life-api.lockated.com/goals/${id}`, {
@@ -122,53 +111,37 @@ function FocusAndBoundaries({ data, setData }: FocusAndBoundariesProps) {
       });
 
       if (res.ok) {
-        toast({
-          title: "Goal Updated",
-          description: "Goal progress updated successfully",
-        });
+        toast({ title: "Goal Updated", description: "Goal progress updated successfully" });
       } else {
         throw new Error("Failed to update progress");
       }
     } catch (error) {
       console.error(error);
-      toast({
-        title: "Error",
-        description: "Failed to update goal progress",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to update goal progress", variant: "destructive" });
     }
   };
 
-  // Toggle goal completion checkbox
   const toggleGoalStatus = async (goal: any) => {
     const isCompleted = goal.status === "completed" || goal.completed;
     const newStatus = isCompleted ? "in_progress" : "completed";
     const newProgress = newStatus === "completed" ? 100 : goal.progress;
 
-    // Optimistic UI Update
     setGoalsList((prev) =>
       prev.map((g) =>
-        g.id === goal.id
-          ? { ...g, status: newStatus, progress: newProgress }
-          : g,
+        g.id === goal.id ? { ...g, status: newStatus, progress: newProgress } : g,
       ),
     );
 
     try {
       const token = localStorage.getItem("auth_token") || "";
-      const res = await fetch(
-        `https://life-api.lockated.com/goals/${goal.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            goal: { status: newStatus, progress: newProgress },
-          }),
+      const res = await fetch(`https://life-api.lockated.com/goals/${goal.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-      );
+        body: JSON.stringify({ goal: { status: newStatus, progress: newProgress } }),
+      });
 
       if (res.ok) {
         toast({
@@ -180,11 +153,7 @@ function FocusAndBoundaries({ data, setData }: FocusAndBoundariesProps) {
       }
     } catch (error) {
       console.error(error);
-      toast({
-        title: "Error",
-        description: "Failed to update goal status",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to update goal status", variant: "destructive" });
     }
   };
 
@@ -192,71 +161,72 @@ function FocusAndBoundaries({ data, setData }: FocusAndBoundariesProps) {
     setData((prev) => ({ ...prev, sayNoText: e.target.value }));
   };
 
+  // Matrix styles mapped to Semantic Tertiary colors & Mist
   const getMatrixStyles = (color: MatrixColor) => {
     const styles: Record<MatrixColor, string> = {
-      red: "bg-red-50 border-red-300 text-red-700",
-      green: "bg-emerald-50 border-emerald-300 text-emerald-700",
-      yellow: "bg-yellow-50 border-yellow-300 text-amber-700",
-      gray: "bg-slate-50 border-slate-300 text-slate-600",
+      red:    "bg-[#A32D2D]/[0.08] border-[#A32D2D]/30 text-[#A32D2D]", // Crimson
+      green:  "bg-[#0B5D41]/[0.08] border-[#0B5D41]/30 text-[#0B5D41]", // Forest
+      yellow: "bg-[#BA7517]/[0.08] border-[#BA7517]/30 text-[#BA7517]", // Amber
+      gray:   "bg-[#D5D8D8]/40 border-[#D6B99D] text-[#888780]",        // Mist / Stone
     };
     return styles[color];
   };
 
+  // Tooltip component
+  const Tooltip = ({ text, alignLeft = true }: { text: string; alignLeft?: boolean }) => (
+    <span className="relative group">
+      <Info className="w-4 h-4 text-[#DA7756] cursor-help" />
+      <span
+        className={`absolute ${alignLeft ? "left-0" : "left-1/2 -translate-x-1/2"} top-full mt-2 bg-[#2C2C2A] text-white text-xs font-medium rounded-lg px-3 py-2 w-80 text-center leading-relaxed opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 shadow-lg`}
+      >
+        {text}
+        <span className={`absolute ${alignLeft ? "left-3" : "left-1/2 -translate-x-1/2"} bottom-full w-0 h-0 border-4 border-transparent border-b-[#2C2C2A]`} />
+      </span>
+    </span>
+  );
+
   return (
-    <div className="w-full overflow-hidden font-sans">
-      {/* Violet Header */}
-      <div className="px-6 pt-5 pb-4 border-b border-violet-100 bg-white">
+    <div className="w-full overflow-hidden font-sans bg-[#FEF4EE]">
+
+      {/* Header */}
+      <div className="px-6 pt-5 pb-4 border-b border-[#D6B99D] bg-[#FEF4EE]">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-violet-600 shadow-sm shrink-0">
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#DA7756] shadow-sm shrink-0">
             <Target className="text-white w-5 h-5" strokeWidth={2.5} />
           </div>
           <div>
-            <div className="flex items-center gap-1.5">
-              <h2 className="text-[17px] font-bold text-gray-900">
-                Focus & Boundaries
+            <div className="flex items-center gap-2">
+              <h2 className="text-[18px] font-bold text-[#2C2C2A]">
+                Focus &amp; Boundaries
               </h2>
-              <span className="relative group">
-                <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                <span className="absolute left-0 top-full mt-2 bg-gray-900 text-white text-xs font-medium rounded-lg px-3 py-2 w-96 text-center leading-relaxed opacity-0 group-hover:opacity-100 -translate-y-1 group-hover:translate-y-0 pointer-events-none transition-all duration-200 ease-out z-50 shadow-lg whitespace-normal">
-                  Prioritize what matters most this week and set boundaries to
-                  protect your focus time.
-                  <span className="absolute left-3 bottom-full w-0 h-0 border-4 border-transparent border-b-gray-900" />
-                </span>
-              </span>{" "}
+              <Tooltip text="Prioritize what matters most this week and set boundaries to protect your focus time." />
             </div>
-            <p className="text-[13px] text-gray-500 mt-0.5">
+            <p className="text-[13px] text-[#888780] mt-0.5">
               Prioritize what matters and protect your focus
             </p>
           </div>
         </div>
       </div>
 
-      <div className="p-6 md:p-8 space-y-8 bg-violet-50/30">
+      <div className="p-6 md:p-8 space-y-8 bg-white">
+
         {/* Matrix + Life Balance */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white/70 rounded-xl p-4 border border-sky-200 shadow-sm">
+
+          {/* Eisenhower Matrix */}
+          <div className="bg-[#FEF4EE] rounded-xl p-4 border border-[#D6B99D] shadow-sm">
             <div className="flex items-center gap-2 mb-3">
-              <h3 className="text-[15px] font-bold text-gray-800">
+              <h3 className="text-sm font-semibold text-[#2C2C2A]">
                 Eisenhower Matrix
               </h3>
-              <span className="relative group">
-                <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                <span className="absolute left-0 top-full mt-2 bg-gray-900 text-white text-xs font-medium rounded-lg px-3 py-2 w-80 text-center leading-relaxed opacity-0 group-hover:opacity-100 -translate-y-1 group-hover:translate-y-0 pointer-events-none transition-all duration-200 ease-out z-50 shadow-lg whitespace-normal">
-                  Q1: Do immediately (urgent+important), Q2: Schedule it
-                  (important, not urgent - most impactful!), Q3: Delegate
-                  (urgent, not important), Q4: Eliminate (neither)
-                  <span className="absolute left-3 bottom-full w-0 h-0 border-4 border-transparent border-b-gray-900" />
-                </span>
-              </span>{" "}
+              <Tooltip text="Q1: Do immediately (urgent+important), Q2: Schedule it (important, not urgent - most impactful!), Q3: Delegate (urgent, not important), Q4: Eliminate (neither)" />
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
               {Object.entries(data.matrix).map(([key, item]) => (
                 <div
                   key={key}
-                  className={`min-h-[92px] rounded-xl border flex flex-col items-center justify-center px-2 ${getMatrixStyles(
-                    item.color,
-                  )}`}
+                  className={`min-h-[92px] rounded-xl border flex flex-col items-center justify-center px-2 ${getMatrixStyles(item.color)}`}
                 >
                   <span className="text-[26px] font-extrabold leading-none">
                     {item.value}
@@ -270,94 +240,76 @@ function FocusAndBoundaries({ data, setData }: FocusAndBoundariesProps) {
                 </div>
               ))}
             </div>
-            <p className="text-[13px] text-gray-500 italic mt-3">
+            <p className="text-[13px] text-[#888780] italic mt-3">
               Focus on Q2 for growth
             </p>
           </div>
 
-          <div className="bg-[#fff8f8] rounded-xl p-4 border border-rose-200 shadow-sm">
+          {/* Life Balance Overview */}
+          <div className="bg-[#FEF4EE] rounded-xl p-4 border border-[#D6B99D] shadow-sm">
             <div className="flex items-center gap-2 mb-3">
-              <h3 className="text-[15px] font-bold text-gray-800">
+              <h3 className="text-sm font-semibold text-[#2C2C2A]">
                 Life Balance Overview
               </h3>
-              <span className="relative group">
-                <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-gray-900 text-white text-xs font-medium rounded-lg px-3 py-2 w-96 text-center leading-relaxed opacity-0 group-hover:opacity-100 -translate-y-1 group-hover:translate-y-0 pointer-events-none transition-all duration-200 ease-out z-50 shadow-lg whitespace-normal">
-                  Shows how many priorities you've assigned to each life area.
-                  Aim for balance across all areas for holistic growth.
-                  <span className="absolute left-1/2 -translate-x-1/2 bottom-full w-0 h-0 border-4 border-transparent border-b-gray-900" />
-                </span>
-              </span>{" "}
+              <Tooltip
+                text="Shows how many priorities you've assigned to each life area. Aim for balance across all areas for holistic growth."
+                alignLeft={false}
+              />
             </div>
 
             <div className="space-y-3">
               {data.balance.map((item) => (
                 <div key={item.id} className="flex items-center gap-3">
                   <span className="text-lg w-5">{item.emoji}</span>
-                  <div className="flex-1 h-4 rounded-full border border-rose-200 bg-white overflow-hidden">
+                  <div className="flex-1 h-4 rounded-full border border-[#D6B99D] bg-white overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-rose-400 to-amber-400"
+                      className="h-full rounded-full bg-[#DA7756]"
                       style={{ width: `${(item.score / 5) * 100}%` }}
                     />
                   </div>
-                  <span className="w-4 text-right text-[22px] leading-none font-semibold text-gray-700">
+                  <span className="w-4 text-right text-[22px] leading-none font-semibold text-[#2C2C2A]">
                     {item.score}
                   </span>
                 </div>
               ))}
             </div>
-            <p className="text-[13px] text-gray-500 italic mt-4">
+            <p className="text-[13px] text-[#888780] italic mt-4">
               Balance across all areas
             </p>
           </div>
         </div>
 
-        {/* Goals List with Interactive Sliders */}
+        {/* Goals List */}
         <div>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-[16px] font-bold text-gray-800">
+              <h3 className="text-sm font-semibold text-[#2C2C2A]">
                 Goals in Focus
               </h3>
-              <span className="relative group">
-                <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                <span className="absolute left-0 top-full mt-2 bg-gray-900 text-white text-xs font-medium rounded-lg px-3 py-2 w-96 text-center leading-relaxed opacity-0 group-hover:opacity-100 -translate-y-1 group-hover:translate-y-0 pointer-events-none transition-all duration-200 ease-out z-50 shadow-lg whitespace-normal">
-                  Select 2-3 goals to prioritize this week. Update progress
-                  using the sliders. Focusing on fewer goals increases
-                  completion rate.
-                  <span className="absolute left-3 bottom-full w-0 h-0 border-4 border-transparent border-b-gray-900" />
-                </span>
-              </span>{" "}
+              <Tooltip text="Select 2-3 goals to prioritize this week. Update progress using the sliders. Focusing on fewer goals increases completion rate." />
             </div>
             <button
               onClick={() => navigate("/goals-habits")}
-              className="px-4 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-800 text-[13px] font-semibold shadow-sm hover:bg-gray-50 transition-colors"
+              className="text-[#DA7756] hover:text-[#C26547] text-xs font-semibold transition-colors"
             >
               Manage Goals
             </button>
           </div>
 
           {isLoadingGoals ? (
-            <div className="bg-white border border-violet-100 rounded-xl min-h-[190px] flex flex-col items-center justify-center text-center p-6 shadow-sm">
-              <Loader2 className="w-8 h-8 animate-spin text-violet-500 mb-3" />
-              <p className="text-[15px] text-gray-500">Loading your goals...</p>
+            <div className="bg-[#FEF4EE] border border-[#D6B99D] rounded-xl min-h-[190px] flex flex-col items-center justify-center text-center p-6 shadow-sm">
+              <Loader2 className="w-8 h-8 animate-spin text-[#DA7756] mb-3" />
+              <p className="text-sm text-[#888780]">Loading your goals...</p>
             </div>
           ) : goalsList.length === 0 ? (
-            <div className="bg-white border border-violet-100 rounded-xl min-h-[190px] flex flex-col items-center justify-center text-center p-6 shadow-sm">
-              <CircleDot
-                className="w-14 h-14 text-gray-300 mb-3"
-                strokeWidth={1.5}
-              />
-              <p className="text-[18px] font-medium text-gray-500 mb-3">
+            <div className="bg-[#FEF4EE] border border-[#D6B99D] rounded-xl min-h-[190px] flex flex-col items-center justify-center text-center p-6 shadow-sm">
+              <CircleDot className="w-14 h-14 text-[#D6B99D] mb-3" strokeWidth={1.5} />
+              <p className="text-[15px] font-medium text-[#888780] mb-3">
                 No goals yet. Create your first goal!
               </p>
               <button
-                onClick={() =>
-                  navigate("/goals-habits", {
-                    state: { openGoalDialog: true },
-                  })
-                }
-                className="px-5 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 text-[14px] font-semibold shadow-sm hover:bg-gray-50 transition-colors"
+                onClick={() => navigate("/goals-habits", { state: { openGoalDialog: true } })}
+                className="border border-[#D6B99D] hover:border-[#DA7756] bg-white text-[#2C2C2A] text-xs font-medium px-4 py-1.5 rounded-lg transition-colors"
               >
                 Create Goal
               </button>
@@ -365,23 +317,22 @@ function FocusAndBoundaries({ data, setData }: FocusAndBoundariesProps) {
           ) : (
             <div className="space-y-4">
               {goalsList.map((goal) => {
-                const isCompleted =
-                  goal.status === "completed" || goal.completed;
+                const isCompleted = goal.status === "completed" || goal.completed;
                 const progressValue = goal.progress || 0;
 
                 return (
                   <div
                     key={goal.id}
-                    className="bg-[#faf5ff] rounded-xl p-5 border border-purple-100 shadow-sm"
+                    className="bg-[#FEF4EE] rounded-xl p-5 border border-[#D6B99D] shadow-sm"
                   >
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => toggleGoalStatus(goal)}
-                          className={`flex items-center justify-center w-[22px] h-[22px] rounded-md border-2 transition-colors ${
+                          className={`flex items-center justify-center w-[22px] h-[22px] rounded-md border-2 transition-all ${
                             isCompleted
-                              ? "bg-gray-900 border-gray-900 text-white"
-                              : "bg-white border-gray-300 hover:border-gray-400"
+                              ? "bg-[#DA7756] border-[#DA7756] text-white"
+                              : "bg-white border-[#D6B99D] hover:border-[#DA7756]"
                           }`}
                         >
                           {isCompleted && (
@@ -389,22 +340,20 @@ function FocusAndBoundaries({ data, setData }: FocusAndBoundariesProps) {
                           )}
                         </button>
                         <span
-                          className={`text-[16px] font-bold ${isCompleted ? "text-gray-400 line-through" : "text-gray-900"}`}
+                          className={`text-[16px] font-bold ${
+                            isCompleted ? "text-[#888780] line-through" : "text-[#2C2C2A]"
+                          }`}
                         >
                           {goal.title}
                         </span>
                       </div>
-                      <span className="text-[12px] font-bold text-gray-700 bg-white border border-gray-200 shadow-sm px-2.5 py-1 rounded-md">
+                      <span className="text-xs font-semibold text-[#2C2C2A] bg-white border border-[#D6B99D] shadow-sm px-2.5 py-1 rounded-lg">
                         {goal.area || goal.category || "Relationships"}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-4 pl-9">
-                      <span className="text-[13px] text-gray-500 font-medium">
-                        Progress
-                      </span>
-
-                      {/* Interactive Native Slider matching the video */}
+                      <span className="text-[13px] text-[#888780] font-medium">Progress</span>
                       <div className="flex-1 relative flex items-center h-6">
                         <input
                           type="range"
@@ -412,33 +361,22 @@ function FocusAndBoundaries({ data, setData }: FocusAndBoundariesProps) {
                           max="100"
                           value={progressValue}
                           onChange={(e) =>
-                            handleProgressChange(
-                              goal.id,
-                              parseInt(e.target.value),
-                            )
+                            handleProgressChange(goal.id, parseInt(e.target.value))
                           }
                           onMouseUp={(e) =>
-                            handleProgressCommit(
-                              goal.id,
-                              parseInt((e.target as HTMLInputElement).value),
-                            )
+                            handleProgressCommit(goal.id, parseInt((e.target as HTMLInputElement).value))
                           }
                           onTouchEnd={(e) =>
-                            handleProgressCommit(
-                              goal.id,
-                              parseInt((e.target as HTMLInputElement).value),
-                            )
+                            handleProgressCommit(goal.id, parseInt((e.target as HTMLInputElement).value))
                           }
-                          className="w-full h-1.5 appearance-none rounded-full outline-none cursor-pointer bg-transparent z-10
-                                     [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
-                                     [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-gray-800 [&::-webkit-slider-thumb]:rounded-full
-                                     [&::-webkit-slider-thumb]:shadow-md"
+                          className="w-full h-1.5 appearance-none rounded-full outline-none cursor-pointer z-10"
                           style={{
-                            background: `linear-gradient(to right, #1f2937 0%, #1f2937 ${progressValue}%, #e5e7eb ${progressValue}%, #e5e7eb 100%)`,
+                            background: `linear-gradient(to right, #DA7756 0%, #DA7756 ${progressValue}%, #D6B99D ${progressValue}%, #D6B99D 100%)`,
                           }}
                         />
+                        <style>{`input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: white; border: 2px solid #DA7756; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }`}</style>
                       </div>
-                      <span className="text-[14px] font-bold text-purple-700 w-9 text-right">
+                      <span className="text-[14px] font-extrabold text-[#DA7756] w-9 text-right">
                         {progressValue}%
                       </span>
                     </div>
@@ -452,25 +390,19 @@ function FocusAndBoundaries({ data, setData }: FocusAndBoundariesProps) {
         {/* Say No */}
         <div className="pt-2">
           <div className="flex items-center gap-2 mb-3">
-            <h3 className="text-[16px] font-bold text-gray-800">
+            <h3 className="text-sm font-semibold text-[#2C2C2A]">
               What I'll Say NO To
             </h3>
-            <span className="relative group">
-              <Info className="w-4 h-4 text-gray-400 cursor-help" />
-              <span className="absolute left-0 top-full mt-2 bg-gray-900 text-white text-xs font-medium rounded-lg px-3 py-2 w-96 text-center leading-relaxed opacity-0 group-hover:opacity-100 -translate-y-1 group-hover:translate-y-0 pointer-events-none transition-all duration-200 ease-out z-50 shadow-lg whitespace-normal">
-                What distractions, commitments, or less important tasks will you
-                intentionally avoid or delegate?
-                <span className="absolute left-3 bottom-full w-0 h-0 border-4 border-transparent border-b-gray-900" />
-              </span>
-            </span>{" "}
+            <Tooltip text="What distractions, commitments, or less important tasks will you intentionally avoid or delegate?" />
           </div>
           <textarea
             value={data.sayNoText}
             onChange={handleSayNoChange}
             placeholder="List things you'll decline or avoid to create space for your priorities..."
-            className="w-full min-h-[100px] p-4 bg-white border border-gray-300 rounded-xl text-[14px] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-300 resize-y shadow-sm"
+            className="w-full min-h-[100px] p-4 bg-white border border-[#D6B99D] rounded-xl text-[14px] text-[#2C2C2A] placeholder:text-[#888780] focus:outline-none focus:border-[#DA7756] focus:ring-1 focus:ring-[#DA7756]/30 resize-y shadow-sm transition-all"
           />
         </div>
+
       </div>
     </div>
   );

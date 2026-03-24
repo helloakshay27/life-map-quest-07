@@ -4,7 +4,6 @@ import { Copy, Save, Plus, Trash2 } from "lucide-react";
 const API_BASE_URL = "https://life-api.lockated.com";
 
 function Vision() {
-  // Ab images state hamesha ek object rahegi: { id, url, isNew, data }
   const [images, setImages] = useState([]);
   const [imageUrl, setImageUrl] = useState("");
   const [visionStatement, setVisionStatement] = useState("");
@@ -27,9 +26,6 @@ function Vision() {
     setToast({ message, type });
   };
 
-  // =========================================
-  // FETCH VISION DATA (GET)
-  // =========================================
   const fetchVisionData = React.useCallback(async () => {
     try {
       const token = localStorage.getItem("auth_token");
@@ -46,11 +42,8 @@ function Vision() {
         let errMessage = "Could not load your vision board";
         try {
           const errData = await response.json();
-          errMessage =
-            errData.message || errData.error || errData.detail || errMessage;
-        } catch (e) {
-          // ignore
-        }
+          errMessage = errData.message || errData.error || errData.detail || errMessage;
+        } catch (e) {}
         throw new Error(errMessage);
       }
 
@@ -63,7 +56,6 @@ function Vision() {
         setMissionStatement(visionData.mission_statement || "");
         setLegacyStatement(visionData.legacy_statement || "");
 
-        // API se aayi images ko object format me store karo
         if (visionData.images && Array.isArray(visionData.images)) {
           setImages(
             visionData.images.map((img) => ({
@@ -88,9 +80,6 @@ function Vision() {
     fetchVisionData();
   }, [fetchVisionData]);
 
-  // =========================================
-  // FILE HELPERS & UPLOAD
-  // =========================================
   const fileToBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -124,7 +113,6 @@ function Vision() {
 
     try {
       const base64 = await fileToBase64(file);
-      // Nayi image ko object format me add karo
       setImages([...images, { url: base64, isNew: true, data: base64 }]);
       showToast("Image added successfully!", "success");
     } catch (error) {
@@ -135,9 +123,6 @@ function Vision() {
     }
   };
 
-  // =========================================
-  // HANDLE ADD URL
-  // =========================================
   const handleAddUrl = () => {
     const trimmedUrl = imageUrl.trim();
     if (!trimmedUrl) {
@@ -156,19 +141,14 @@ function Vision() {
       return;
     }
 
-    // URL ko bhi same object format me add karo
     setImages([...images, { url: trimmedUrl, isNew: true, data: trimmedUrl }]);
     setImageUrl("");
     showToast("URL added successfully!", "success");
   };
 
-  // =========================================
-  // DELETE API INTEGRATION
-  // =========================================
   const handleDeleteImage = async (index) => {
     const imageToDelete = images[index];
 
-    // Agar image server se aayi hai (id mojood hai), toh API call karke delete karo
     if (imageToDelete.id) {
       try {
         const token = localStorage.getItem("auth_token");
@@ -190,13 +170,12 @@ function Vision() {
       } catch (error) {
         console.error("Delete API Error:", error);
         showToast("Could not delete image. Try again.", "error");
-        return; // API fail hui toh UI se delete mat karo
+        return;
       }
     } else {
       showToast("Image removed", "success");
     }
 
-    // API success ho ya image naya ho, usko UI state se hata do
     setImages(images.filter((_, i) => i !== index));
   };
 
@@ -209,15 +188,11 @@ function Vision() {
     showToast("Prompt copied to clipboard!", "success");
   };
 
-  // =========================================
-  // SAVE VISION DATA (POST)
-  // =========================================
   const handleSave = async () => {
     setIsSaving(true);
     try {
       const token = localStorage.getItem("auth_token");
 
-      // Sirf un images ko filter karo jo nayi upload/add ki gayi hain
       const newImagesBase64 = images
         .filter((img) => img.isNew && img.data)
         .map((img) => img.data);
@@ -228,7 +203,7 @@ function Vision() {
           mission_statement: missionStatement,
           legacy_statement: legacyStatement,
         },
-        images: newImagesBase64, // API ko sirf naye images bhejo
+        images: newImagesBase64,
       };
 
       const response = await fetch(`${API_BASE_URL}/vision`, {
@@ -245,11 +220,7 @@ function Vision() {
         let errorMessage = "Failed to save. Please try again.";
         try {
           const errorData = await response.json();
-          errorMessage =
-            errorData.message ||
-            errorData.error ||
-            errorData.detail ||
-            errorMessage;
+          errorMessage = errorData.message || errorData.error || errorData.detail || errorMessage;
         } catch (e) {
           console.error("Could not parse error response JSON");
         }
@@ -257,8 +228,6 @@ function Vision() {
       }
 
       showToast("Vision & Mission saved successfully! 🎉", "success");
-
-      // Save hone ke baad data wapas fetch kar lo taaki naye images ki IDs mil jayein
       await fetchVisionData();
 
       window.dispatchEvent(new Event("vision_data_updated"));
@@ -273,8 +242,8 @@ function Vision() {
 
   if (isLoading) {
     return (
-      <div className="w-full h-64 flex items-center justify-center">
-        <p className="text-gray-500 font-medium animate-pulse">
+      <div className="w-full h-64 flex items-center justify-center font-sans">
+        <p className="text-[#888780] font-medium animate-pulse">
           Loading your Vision Board...
         </p>
       </div>
@@ -282,41 +251,38 @@ function Vision() {
   }
 
   return (
-    <div className="w-full font-sans text-gray-800 relative pb-10">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="w-full font-sans text-[#2C2C2A] relative pb-10 bg-[#FEF4EE]">
+      <div className="mx-auto space-y-6">
+
         {/* ===== VISION BOARD SECTION ===== */}
-        <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
+        <section className="bg-white p-6 rounded-2xl border border-[#D6B99D] shadow-sm space-y-5">
           <div>
-            <h2 className="text-xl font-bold flex items-center gap-2 text-gray-900 border-b border-gray-50 pb-3">
-              <span className="text-purple-600 text-2xl">👁️</span> Vision Board
+            <h2 className="text-[18px] font-bold flex items-center gap-2 text-[#2C2C2A] border-b border-[#D6B99D] pb-3">
+              <span className="text-2xl">👁️</span> Vision Board
             </h2>
-            <p className="text-gray-500 text-sm mt-3">
+            <p className="text-[#888780] text-sm mt-2 font-medium">
               Upload images or add URLs (max 12 images)
             </p>
           </div>
 
-          <div className="space-y-3">
-            <div className="bg-purple-50 border-l-4 border-purple-500 p-3 rounded-r-md">
-              <p className="text-sm text-purple-900 leading-relaxed">
-                <span className="font-semibold">
-                  💡 What is a Vision Board?
-                </span>{" "}
-                A collection of images that represent your dreams and
-                aspirations.
+          <div className="space-y-2">
+            <div className="bg-[#FEF4EE] border-l-4 border-[#DA7756] p-3 rounded-r-xl">
+              <p className="text-sm text-[#2C2C2A] leading-relaxed">
+                <span className="font-bold">💡 What is a Vision Board?</span>{" "}
+                A collection of images that represent your dreams and aspirations.
               </p>
             </div>
-            <div className="bg-blue-50 border-l-4 border-blue-500 p-3 rounded-r-md">
-              <p className="text-sm text-blue-900 leading-relaxed">
-                <span className="font-semibold">📥 Upload Images:</span> Files
-                must be under 1 MB.
+            <div className="bg-[#FEF4EE] border-l-4 border-[#DA7756] p-3 rounded-r-xl">
+              <p className="text-sm text-[#2C2C2A] leading-relaxed">
+                <span className="font-bold">📥 Upload Images:</span> Files must be under 1 MB.
               </p>
             </div>
           </div>
 
-          <div className="bg-gray-50 border border-gray-200 rounded-lg min-h-[200px] p-4">
+          <div className="bg-[#FEF4EE] border border-[#D6B99D] rounded-xl min-h-[200px] p-4">
             {images.length === 0 ? (
               <div className="flex items-center justify-center h-[200px]">
-                <p className="text-gray-400 text-sm font-medium">
+                <p className="text-[#888780] text-sm font-medium">
                   No vision board images yet
                 </p>
               </div>
@@ -325,22 +291,20 @@ function Vision() {
                 {images.map((imgObj, idx) => (
                   <div
                     key={idx}
-                    className="aspect-video bg-gray-200 rounded-md overflow-hidden relative group shadow-sm"
+                    className="aspect-video bg-[#D6B99D] rounded-xl overflow-hidden relative group shadow-sm border border-[#D6B99D]"
                   >
-                    {/* Yaha `img` ki jagah `imgObj.url` aayega */}
                     <img
                       src={imgObj.url}
                       alt={`Vision ${idx + 1}`}
                       className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src =
-                          "https://via.placeholder.com/300x200?text=Invalid+Image";
+                        e.target.src = "https://via.placeholder.com/300x200?text=Invalid+Image";
                       }}
                     />
                     <button
                       onClick={() => handleDeleteImage(idx)}
-                      className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                      className="absolute top-2 right-2 bg-[#A32D2D] hover:bg-[#8A2424] text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-md outline-none"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -350,28 +314,28 @@ function Vision() {
             )}
           </div>
 
-          <div className="space-y-4 pt-2">
+          <div className="space-y-4 pt-1">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
+              <label className="block text-sm font-bold text-[#2C2C2A] mb-1">
                 Upload Image File
               </label>
               <input
                 type="file"
                 accept="image/*"
                 onChange={handleImageUpload}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 border border-gray-200 rounded-md p-1 bg-white"
+                className="block w-full text-sm text-[#2C2C2A] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#FEF4EE] file:text-[#DA7756] hover:file:bg-[#FEF4EE]/70 border border-[#D6B99D] rounded-xl p-1 bg-white transition-all outline-none"
               />
-              <p className="text-xs text-gray-500 mt-2">📁 Max 1 MB per file</p>
+              <p className="text-xs text-[#888780] mt-1.5 font-medium">📁 Max 1 MB per file</p>
             </div>
 
-            <div className="flex items-center text-gray-400 text-sm font-medium">
-              <div className="flex-1 border-t border-gray-100"></div>
+            <div className="flex items-center text-[#888780] text-sm font-medium">
+              <div className="flex-1 border-t border-[#D6B99D]"></div>
               <span className="px-4">OR</span>
-              <div className="flex-1 border-t border-gray-100"></div>
+              <div className="flex-1 border-t border-[#D6B99D]"></div>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
+              <label className="block text-sm font-bold text-[#2C2C2A] mb-1">
                 Add Image URL
               </label>
               <div className="flex gap-2">
@@ -380,13 +344,13 @@ function Vision() {
                   value={imageUrl}
                   onChange={(e) => setImageUrl(e.target.value)}
                   placeholder="Paste image URL..."
-                  className="flex-1 border border-gray-200 rounded-md p-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  className="flex-1 border border-[#D6B99D] rounded-xl p-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#DA7756] focus:border-[#DA7756] placeholder:text-[#888780] transition-all text-[#2C2C2A]"
                 />
                 <button
                   onClick={handleAddUrl}
-                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md font-medium flex items-center gap-2 text-sm transition-colors"
+                  className="bg-[#DA7756] hover:bg-[#C26547] text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 text-sm transition-colors shadow-sm outline-none"
                 >
-                  <Plus size={16} />({images.length}/12)
+                  <Plus size={16} strokeWidth={2.5} />({images.length}/12)
                 </button>
               </div>
             </div>
@@ -394,23 +358,23 @@ function Vision() {
         </section>
 
         {/* ===== VISION STATEMENT SECTION ===== */}
-        <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
-          <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-            <h2 className="text-xl font-bold flex items-center gap-2 text-gray-900">
-              <span className="text-blue-400 text-2xl">✨</span> Your Vision
+        <section className="bg-white p-6 rounded-2xl border border-[#D6B99D] shadow-sm space-y-5">
+          <div className="flex justify-between items-center border-b border-[#D6B99D] pb-3">
+            <h2 className="text-[18px] font-bold flex items-center gap-2 text-[#2C2C2A]">
+              <span className="text-2xl">✨</span> Your Vision
             </h2>
             <button
               onClick={handleCopyPrompt}
-              className="bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium py-2 px-4 rounded-md flex items-center gap-2 transition-colors border border-blue-100"
+              className="bg-[#FEF4EE] hover:bg-[#FEF4EE]/70 text-[#2C2C2A] text-sm font-bold py-2 px-4 rounded-xl flex items-center gap-2 transition-colors border border-[#D6B99D] outline-none"
             >
-              <Copy size={16} /> Copy Prompt
+              <Copy size={16} className="text-[#DA7756]" /> Copy Prompt
             </button>
           </div>
 
           <div className="space-y-3">
-            <h3 className="font-semibold text-gray-800">Vision Statement</h3>
-            <div className="bg-blue-50 border-l-4 border-blue-400 p-3 rounded-r-md">
-              <p className="text-sm text-blue-900 leading-relaxed">
+            <h3 className="font-bold text-[#2C2C2A]">Vision Statement</h3>
+            <div className="bg-[#FEF4EE] border-l-4 border-[#DA7756] p-3 rounded-r-xl">
+              <p className="text-sm text-[#2C2C2A] leading-relaxed">
                 <span className="font-bold">💡 How to write your Vision:</span>{" "}
                 Describe your ideal future in vivid detail.
               </p>
@@ -419,62 +383,56 @@ function Vision() {
               value={visionStatement}
               onChange={(e) => setVisionStatement(e.target.value)}
               placeholder="What is your vision? What does your ideal future look like?"
-              className="w-full min-h-[140px] p-4 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 text-sm bg-gray-50/50"
+              className="w-full min-h-[140px] p-4 border border-[#D6B99D] rounded-xl focus:outline-none focus:ring-1 focus:ring-[#DA7756] focus:border-[#DA7756] text-sm bg-[#FEF4EE] placeholder:text-[#888780] text-[#2C2C2A] transition-all resize-y"
             />
           </div>
         </section>
 
         {/* ===== MISSION & LEGACY SECTION ===== */}
-        <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
-          <div className="border-b border-gray-50 pb-3">
-            <h2 className="text-xl font-bold flex items-center gap-2 text-gray-900">
-              <span className="text-teal-400 text-2xl">🧭</span> Your Life
-              Mission
+        <section className="bg-white p-6 rounded-2xl border border-[#D6B99D] shadow-sm space-y-5">
+          <div className="border-b border-[#D6B99D] pb-3">
+            <h2 className="text-[18px] font-bold flex items-center gap-2 text-[#2C2C2A]">
+              <span className="text-2xl">🧭</span> Your Life Mission
             </h2>
           </div>
 
           <div className="space-y-3">
-            <h3 className="font-semibold text-gray-800">Mission Statement</h3>
-            <div className="bg-teal-50/50 border-l-4 border-teal-400 p-3 rounded-r-md">
-              <p className="text-sm text-teal-900 leading-relaxed">
-                <span className="font-bold">💡 Your Mission:</span> Your purpose
-                - why you exist.
+            <h3 className="font-bold text-[#2C2C2A]">Mission Statement</h3>
+            <div className="bg-[#FEF4EE] border-l-4 border-[#DA7756] p-3 rounded-r-xl">
+              <p className="text-sm text-[#2C2C2A] leading-relaxed">
+                <span className="font-bold">💡 Your Mission:</span> Your purpose — why you exist.
               </p>
             </div>
             <textarea
               value={missionStatement}
               onChange={(e) => setMissionStatement(e.target.value)}
               placeholder="What is your life's mission?"
-              className="w-full min-h-[120px] p-4 border border-teal-100 bg-[#f4faf9] rounded-md focus:outline-none focus:ring-1 focus:ring-teal-400 text-sm"
+              className="w-full min-h-[120px] p-4 border border-[#D6B99D] rounded-xl focus:outline-none focus:ring-1 focus:ring-[#DA7756] focus:border-[#DA7756] text-sm bg-[#FEF4EE] placeholder:text-[#888780] text-[#2C2C2A] transition-all resize-y"
             />
           </div>
 
           <div className="space-y-3">
-            <h3 className="font-semibold text-gray-800">
-              How do I want to be remembered as?
-            </h3>
-            <div className="bg-teal-50/50 border-l-4 border-teal-400 p-3 rounded-r-md">
-              <p className="text-sm text-teal-900 leading-relaxed">
-                <span className="font-bold">💡 Your Legacy:</span> Your lasting
-                impact.
+            <h3 className="font-bold text-[#2C2C2A]">How do I want to be remembered as?</h3>
+            <div className="bg-[#FEF4EE] border-l-4 border-[#DA7756] p-3 rounded-r-xl">
+              <p className="text-sm text-[#2C2C2A] leading-relaxed">
+                <span className="font-bold">💡 Your Legacy:</span> Your lasting impact.
               </p>
             </div>
             <textarea
               value={legacyStatement}
               onChange={(e) => setLegacyStatement(e.target.value)}
               placeholder="How do you want people to remember you?"
-              className="w-full min-h-[120px] p-4 border border-teal-100 bg-[#f4faf9] rounded-md focus:outline-none focus:ring-1 focus:ring-teal-400 text-sm"
+              className="w-full min-h-[120px] p-4 border border-[#D6B99D] rounded-xl focus:outline-none focus:ring-1 focus:ring-[#DA7756] focus:border-[#DA7756] text-sm bg-[#FEF4EE] placeholder:text-[#888780] text-[#2C2C2A] transition-all resize-y"
             />
           </div>
 
-          <div className="pt-4 flex justify-end">
+          <div className="pt-2 flex justify-end">
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-md font-medium flex items-center gap-2 transition-colors shadow-sm disabled:opacity-70"
+              className="bg-[#DA7756] hover:bg-[#C26547] text-white px-8 py-3 rounded-xl font-extrabold flex items-center gap-2 transition-colors shadow-sm disabled:opacity-70 uppercase tracking-wider text-sm outline-none"
             >
-              <Save size={18} />
-              {/* Typo theek kar di gayi hai */}
+              <Save size={18} strokeWidth={2.5} />
               {isSaving ? "Saving..." : "Save Vision & Mission"}
             </button>
           </div>
@@ -483,7 +441,9 @@ function Vision() {
 
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 ${toast.type === "error" ? "bg-red-500" : "bg-green-500"} text-white px-4 py-3 rounded shadow-lg min-w-[250px] z-50 transition-opacity duration-300`}
+          className={`fixed bottom-6 right-6 ${
+            toast.type === "error" ? "bg-[#A32D2D]" : "bg-[#0B5D41]"
+          } text-white px-4 py-3 rounded-xl shadow-lg min-w-[250px] z-50 transition-opacity duration-300 font-sans`}
         >
           <span className="font-bold text-sm block">
             {toast.type === "error" ? "Error" : "Success"}

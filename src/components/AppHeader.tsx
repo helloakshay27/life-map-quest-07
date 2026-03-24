@@ -9,6 +9,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// ── Brand Palette ─────────────────────────────────────────────────────────────
+const C = {
+  coral:    "#D54744",
+  sand:     "#C5A881",
+  charcoal: "#1A1A2A",
+  cream:    "#F0CEAA",
+  stone:    "#888763",
+  pageBg:   "#ffff",
+  crimson:  "#B72B2D",
+};
+
 export const GophygitalLogo = (props: React.SVGProps<SVGSVGElement>) => {
   return (
     <svg
@@ -49,9 +60,7 @@ export function AppHeader() {
     try {
       await fetch("https://life-api.lockated.com/logout", {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       });
     } catch (error) {
       console.error("Failed to logout from server:", error);
@@ -62,61 +71,102 @@ export function AppHeader() {
   };
 
   const initials = user?.name
-    ? user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
+    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase()
     : "U";
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-card px-2 sm:px-3">
-      <div className="flex items-center gap-3">
-        {/* LOGO KE BAGAL SE SIDEBAR TRIGGER REMOVE KAR DIYA */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center justify-center overflow-visible w-32 h-8">
-            <GophygitalLogo className="h-full w-full object-contain text-primary" />
-          </div>
+    <header
+      className="sticky top-0 z-30 flex h-14 items-center justify-between px-2 sm:px-4"
+      style={{
+        background: C.pageBg,
+        borderBottom: `1px solid ${C.cream}`,
+      }}
+    >
+      {/* Logo */}
+      <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center overflow-visible w-32 h-8">
+          <GophygitalLogo
+            className="h-full w-full object-contain"
+            style={{ color: C.charcoal }}
+          />
         </div>
       </div>
 
+      {/* User menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-muted cursor-pointer">
+          <button
+            className="flex items-center gap-2 rounded-xl px-2.5 py-1.5 transition-all outline-none"
+            style={{ border: `1px solid transparent` }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = "#fff";
+              e.currentTarget.style.borderColor = C.cream;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.borderColor = "transparent";
+            }}
+          >
             <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-primary text-body-6 text-primary-foreground">
+              <AvatarFallback
+                className="text-xs font-bold text-white"
+                style={{ background: `linear-gradient(135deg, ${C.coral}, ${C.sand})` }}
+              >
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <span className="hidden text-body-5 sm:inline">{user?.name}</span>
+            <span
+              className="hidden text-sm font-semibold sm:inline"
+              style={{ color: C.charcoal }}
+            >
+              {user?.name}
+            </span>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-72">
-          <div className="px-3 py-3 border-b">
-            <div className="flex items-start gap-3 mb-2">
-              <Avatar className="h-10 w-10 flex-shrink-0">
-                <AvatarFallback className="bg-primary text-primary-foreground font-bold">
+
+        <DropdownMenuContent
+          align="end"
+          className="w-72 rounded-2xl shadow-xl p-0 overflow-hidden"
+          style={{ border: `1px solid ${C.cream}`, background: "#fff" }}
+        >
+          {/* Profile section */}
+          <div
+            className="px-4 py-4"
+            style={{ borderBottom: `1px solid ${C.cream}`, background: C.pageBg }}
+          >
+            <div className="flex items-start gap-3">
+              <Avatar className="h-11 w-11 flex-shrink-0">
+                <AvatarFallback
+                  className="font-bold text-white text-sm"
+                  style={{ background: `linear-gradient(135deg, ${C.coral}, ${C.sand})` }}
+                >
                   {initials}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground truncate">
+                <p className="text-sm font-bold truncate" style={{ color: C.charcoal }}>
                   {user?.name}
                 </p>
-                <p className="text-xs text-muted-foreground break-words line-clamp-2">
+                <p className="text-xs break-words line-clamp-2 mt-0.5" style={{ color: C.stone }}>
                   {user?.email}
                 </p>
               </div>
             </div>
           </div>
 
-          <DropdownMenuItem
-            onClick={handleLogout}
-            className="text-destructive cursor-pointer flex items-center gap-2 mt-2"
-          >
-            <LogOut className="h-4 w-4" />
-            <span>Logout</span>
-          </DropdownMenuItem>
+          {/* Logout */}
+          <div className="p-2">
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 cursor-pointer transition-all outline-none"
+              style={{ color: C.crimson }}
+              onMouseEnter={e => (e.currentTarget.style.background = "rgba(183,43,45,0.06)")}
+              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="text-sm font-semibold">Logout</span>
+            </DropdownMenuItem>
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>

@@ -22,30 +22,30 @@ function Values() {
     color: "teal",
   });
 
-  // ✅ UPDATED: Added pink and yellow to match your screenshot
+  // Mapped existing keys to Semantic/Tertiary palette colors to avoid breaking backend data
   const colorMap = {
-    teal:   { hex: "#14b8a6", bg: "bg-teal-500",   pillBg: "bg-teal-50",   text: "text-teal-600"   },
-    orange: { hex: "#f97316", bg: "bg-orange-500", pillBg: "bg-orange-50", text: "text-orange-600" },
-    purple: { hex: "#a855f7", bg: "bg-purple-500", pillBg: "bg-purple-50", text: "text-purple-600" },
-    blue:   { hex: "#3b82f6", bg: "bg-blue-500",   pillBg: "bg-blue-50",   text: "text-blue-600"   },
-    green:  { hex: "#22c55e", bg: "bg-green-500",  pillBg: "bg-green-50",  text: "text-green-600"  },
-    pink:   { hex: "#ec4899", bg: "bg-pink-500",   pillBg: "bg-pink-50",   text: "text-pink-600"   },
-    yellow: { hex: "#eab308", bg: "bg-yellow-500", pillBg: "bg-yellow-50", text: "text-yellow-600" },
-    red:    { hex: "#ef4444", bg: "bg-red-500",    pillBg: "bg-red-50",    text: "text-red-600"    },
+    teal:   { hex: "#0B5D41", bg: "bg-[#0B5D41]", pillBg: "bg-[#0B5D41]/10", text: "text-[#0B5D41]" }, // Forest
+    orange: { hex: "#DA7756", bg: "bg-[#DA7756]", pillBg: "bg-[#DA7756]/10", text: "text-[#DA7756]" }, // Coral
+    purple: { hex: "#534AB7", bg: "bg-[#534AB7]", pillBg: "bg-[#534AB7]/10", text: "text-[#534AB7]" }, // Violet
+    blue:   { hex: "#1858A5", bg: "bg-[#1858A5]", pillBg: "bg-[#1858A5]/10", text: "text-[#1858A5]" }, // Sky
+    green:  { hex: "#3B6D11", bg: "bg-[#3B6D11]", pillBg: "bg-[#3B6D11]/10", text: "text-[#3B6D11]" }, // Leaf
+    pink:   { hex: "#A32D2D", bg: "bg-[#A32D2D]", pillBg: "bg-[#A32D2D]/10", text: "text-[#A32D2D]" }, // Crimson
+    yellow: { hex: "#BA7517", bg: "bg-[#BA7517]", pillBg: "bg-[#BA7517]/10", text: "text-[#BA7517]" }, // Amber
+    red:    { hex: "#A32D2D", bg: "bg-[#A32D2D]", pillBg: "bg-[#A32D2D]/10", text: "text-[#A32D2D]" }, // Crimson
   };
 
   const getPriorityColor = (priority) => {
-    if (priority <= 3) return "text-green-500";
-    if (priority <= 6) return "text-yellow-500";
-    if (priority <= 8) return "text-orange-500";
-    return "text-red-500";
+    if (priority <= 3) return "text-[#0B5D41]"; // Forest
+    if (priority <= 6) return "text-[#BA7517]"; // Amber
+    if (priority <= 8) return "text-[#DA7756]"; // Coral
+    return "text-[#A32D2D]"; // Crimson
   };
 
   const getPriorityAccent = (priority) => {
-    if (priority <= 3) return "#22c55e";
-    if (priority <= 6) return "#eab308";
-    if (priority <= 8) return "#f97316";
-    return "#ef4444";
+    if (priority <= 3) return "#0B5D41";
+    if (priority <= 6) return "#BA7517";
+    if (priority <= 8) return "#DA7756";
+    return "#A32D2D";
   };
 
   const showToast = (message, type = "error") => {
@@ -53,7 +53,6 @@ function Values() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handleOutsideClick = (e) => {
       if (colorDropdownRef.current && !colorDropdownRef.current.contains(e.target)) {
@@ -232,30 +231,30 @@ function Values() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#faf9fc] flex items-center justify-center">
-        <p className="text-gray-500 font-medium">Loading your Core Values...</p>
+      <div className="min-h-[300px] bg-[#FEF4EE] flex items-center justify-center font-sans">
+        <p className="text-[#888780] font-medium animate-pulse">Loading your Core Values...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#faf9fc] p-4 md:p-8 font-sans animate-fade-in relative">
+    <div className="min-h-screen bg-[#FEF4EE] p-4 md:p-8 font-sans animate-fade-in relative">
       <div className="max-w-5xl mx-auto space-y-6">
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold flex items-center gap-2 text-gray-900">
-              <Heart className="text-orange-500" size={24} strokeWidth={2.5} />
+            <h2 className="text-2xl font-bold flex items-center gap-2 text-[#2C2C2A]">
+              <Heart className="text-[#DA7756]" size={24} strokeWidth={2.5} />
               Core Values
             </h2>
-            <p className="text-gray-500 text-sm mt-1">
+            <p className="text-[#888780] text-sm mt-1 font-medium">
               Maximum 10 values that guide your decisions
             </p>
           </div>
           <button
             onClick={openAddModal}
-            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors shadow-sm self-start sm:self-auto"
+            className="bg-[#DA7756] hover:bg-[#C26547] text-white px-4 py-2 rounded-xl font-semibold flex items-center gap-2 transition-colors shadow-sm self-start sm:self-auto text-sm outline-none"
           >
             <Plus size={18} />
             Add Value
@@ -263,8 +262,8 @@ function Values() {
         </div>
 
         {/* Info Banner */}
-        <div className="bg-orange-50 border-l-4 border-orange-400 p-4 rounded-r-md shadow-sm">
-          <p className="text-sm text-orange-900 leading-relaxed">
+        <div className="bg-[#FEF4EE] border-l-4 border-[#DA7756] p-4 rounded-r-xl shadow-sm border border-[#D6B99D]">
+          <p className="text-sm text-[#2C2C2A] leading-relaxed">
             <span className="mr-1">💡</span>
             <span className="font-bold">What are Core Values?</span> Your non-negotiable principles that guide every decision. Examples: Integrity, Family, Health, Growth, Freedom, Compassion. Rank them by priority (1 = most important). Your daily actions should reflect these values.
           </p>
@@ -272,7 +271,7 @@ function Values() {
 
         {/* Values Grid */}
         {values.length === 0 ? (
-          <div className="flex items-center justify-center p-12 border-2 border-dashed border-gray-200 rounded-xl bg-white text-gray-400 font-medium">
+          <div className="flex items-center justify-center p-12 border-2 border-dashed border-[#D6B99D] rounded-2xl bg-white text-[#888780] font-medium">
             No core values added yet. Click "Add Value" to create your first one.
           </div>
         ) : (
@@ -285,21 +284,21 @@ function Values() {
                   <div
                     key={val.id}
                     onClick={() => openEditModal(val)}
-                    className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow cursor-pointer flex flex-col gap-2"
+                    className="bg-white border border-[#D6B99D] rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow cursor-pointer flex flex-col gap-2"
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 font-bold flex items-center justify-center text-lg">
+                        <div className="w-8 h-8 rounded-lg bg-[#FEF4EE] border border-[#D6B99D] text-[#DA7756] font-bold flex items-center justify-center text-lg shadow-sm">
                           {val.priority}
                         </div>
-                        <h3 className="text-lg font-bold text-gray-800">{val.name}</h3>
+                        <h3 className="text-lg font-bold text-[#2C2C2A]">{val.name}</h3>
                       </div>
-                      <span className={`px-3 py-1 rounded-md text-xs font-semibold tracking-wide ${colors.pillBg} ${colors.text}`}>
+                      <span className={`px-3 py-1 rounded-lg text-xs font-semibold tracking-wide ${colors.pillBg} ${colors.text}`}>
                         {val.color}
                       </span>
                     </div>
                     {val.meaning && (
-                      <p className="text-gray-600 text-sm mt-1 ml-11">{val.meaning}</p>
+                      <p className="text-[#2C2C2A] text-sm mt-1 ml-11 leading-relaxed">{val.meaning}</p>
                     )}
                   </div>
                 );
@@ -310,21 +309,21 @@ function Values() {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/40 z-50  flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-visible flex flex-col relative">
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-visible flex flex-col relative border border-[#D6B99D]">
 
             {isFetchingDetails && (
-              <div className="absolute top-0 left-0 w-full h-1 bg-orange-100 overflow-hidden rounded-t-xl">
-                <div className="h-full bg-orange-500 animate-pulse w-full"></div>
+              <div className="absolute top-0 left-0 w-full h-1 bg-[#D6B99D] overflow-hidden rounded-t-2xl">
+                <div className="h-full bg-[#DA7756] animate-pulse w-full"></div>
               </div>
             )}
 
             {/* Modal Header */}
-            <div className="flex justify-between items-center p-5 border-b border-gray-100">
-              <h3 className="text-xl font-bold text-gray-900">
+            <div className="flex justify-between items-center p-5 border-b border-[#D6B99D]">
+              <h3 className="text-[18px] font-bold text-[#2C2C2A]">
                 {modalMode === "add" ? "Add Core Value" : "Edit Value"}
               </h3>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 transition-colors">
+              <button onClick={closeModal} className="text-[#888780] hover:text-[#2C2C2A] transition-colors outline-none">
                 <X size={24} />
               </button>
             </div>
@@ -334,8 +333,8 @@ function Values() {
 
               {/* Name */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Value Name <span className="text-red-500">*</span>
+                <label className="block text-sm font-semibold text-[#2C2C2A] mb-1">
+                  Value Name <span className="text-[#A32D2D]">*</span>
                 </label>
                 <input
                   type="text"
@@ -344,13 +343,13 @@ function Values() {
                   onChange={handleInputChange}
                   disabled={isFetchingDetails}
                   placeholder="e.g., Integrity, Growth, Family..."
-                  className="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-50"
+                  className="w-full border border-[#D6B99D] rounded-xl p-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#DA7756] focus:border-[#DA7756] disabled:bg-[#FEF4EE] placeholder:text-[#888780] text-[#2C2C2A] transition-all"
                 />
               </div>
 
               {/* Meaning */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-[#2C2C2A] mb-1">
                   What does this value mean to you?
                 </label>
                 <textarea
@@ -359,15 +358,15 @@ function Values() {
                   onChange={handleInputChange}
                   disabled={isFetchingDetails}
                   placeholder="e.g., Integrity means always being honest, even when it's difficult..."
-                  className="w-full h-24 border border-gray-300 rounded-md p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-y min-h-[96px] disabled:bg-gray-50"
+                  className="w-full h-24 border border-[#D6B99D] rounded-xl p-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#DA7756] focus:border-[#DA7756] resize-y min-h-[96px] disabled:bg-[#FEF4EE] placeholder:text-[#888780] text-[#2C2C2A] transition-all"
                 />
-                <p className="text-xs text-gray-400 mt-1">Optional: Add a personal definition to make this value more meaningful</p>
+                <p className="text-xs text-[#888780] mt-1 font-medium">Optional: Add a personal definition to make this value more meaningful</p>
               </div>
 
               {/* Priority Slider */}
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm font-semibold text-gray-700">Priority (1-10)</label>
+                  <label className="block text-sm font-semibold text-[#2C2C2A]">Priority (1-10)</label>
                   <span className={`font-bold text-lg ${getPriorityColor(Number(formData.priority))}`}>
                     {formData.priority}
                   </span>
@@ -381,56 +380,53 @@ function Values() {
                   onChange={handleInputChange}
                   disabled={isFetchingDetails}
                   style={{ accentColor: getPriorityAccent(Number(formData.priority)) }}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer disabled:opacity-50"
+                  className="w-full h-2 bg-[#D6B99D] rounded-lg appearance-none cursor-pointer disabled:opacity-50"
                 />
               </div>
 
-              {/* ✅ CUSTOM COLOR PICKER DROPDOWN */}
+              {/* Color Picker Dropdown */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-[#2C2C2A] mb-1">
                   Color Tag
                 </label>
                 <div className="relative" ref={colorDropdownRef}>
-
-                  {/* Trigger Button */}
                   <button
                     type="button"
                     disabled={isFetchingDetails}
                     onClick={() => setColorDropdownOpen((prev) => !prev)}
-                    className="w-full flex items-center justify-between border border-gray-300 rounded-md p-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-50 disabled:cursor-not-allowed hover:border-gray-400 transition-colors"
+                    className="w-full flex items-center justify-between border border-[#D6B99D] rounded-xl p-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#DA7756] disabled:bg-[#FEF4EE] disabled:cursor-not-allowed hover:border-[#DA7756] transition-colors outline-none"
                   >
                     <div className="flex items-center gap-2.5">
                       <span
                         className="w-5 h-5 rounded-md flex-shrink-0"
                         style={{ backgroundColor: colorMap[formData.color]?.hex || "#999" }}
                       />
-                      <span className="text-gray-700 capitalize">{formData.color}</span>
+                      <span className="text-[#2C2C2A] capitalize">{formData.color}</span>
                     </div>
                     <ChevronDown
                       size={16}
-                      className={`text-gray-400 transition-transform duration-200 ${colorDropdownOpen ? "rotate-180" : ""}`}
+                      className={`text-[#888780] transition-transform duration-200 ${colorDropdownOpen ? "rotate-180" : ""}`}
                     />
                   </button>
 
-                  {/* Dropdown List - MADE SCROLLABLE HERE */}
                   {colorDropdownOpen && (
-                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-[9999] overflow-y-auto max-h-52">
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#D6B99D] rounded-xl shadow-lg z-[9999] overflow-y-auto max-h-52">
                       {Object.entries(colorMap).map(([colorName, colorValues]) => (
                         <button
                           key={colorName}
                           type="button"
                           onClick={() => handleColorSelect(colorName)}
-                          className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+                          className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#FEF4EE] transition-colors outline-none"
                         >
                           <div className="flex items-center gap-3">
                             <span
-                              className="w-5 h-5 rounded-md flex-shrink-0"
+                              className="w-5 h-5 rounded-md flex-shrink-0 border border-[#D6B99D]/50"
                               style={{ backgroundColor: colorValues.hex }}
                             />
-                            <span className="text-gray-700 text-sm capitalize">{colorName}</span>
+                            <span className="text-[#2C2C2A] text-sm capitalize font-medium">{colorName}</span>
                           </div>
                           {formData.color === colorName && (
-                            <Check size={16} className="text-gray-600" />
+                            <Check size={16} className="text-[#DA7756]" />
                           )}
                         </button>
                       ))}
@@ -442,12 +438,12 @@ function Values() {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-5 border-t border-gray-100 flex justify-between items-center bg-gray-50 rounded-b-xl">
+            <div className="p-5 border-t border-[#D6B99D] flex justify-between items-center bg-[#FEF4EE] rounded-b-2xl">
               <div>
                 {modalMode === "edit" && (
                   <button
                     onClick={handleDeleteValue}
-                    className="flex items-center gap-1.5 text-red-500 hover:text-white hover:bg-red-500 border border-red-500 px-3 py-2 rounded-md transition-colors text-sm font-medium"
+                    className="flex items-center gap-1.5 text-[#A32D2D] hover:text-white hover:bg-[#A32D2D] border border-[#A32D2D] px-3 py-2 rounded-xl transition-colors text-sm font-semibold outline-none"
                   >
                     <Trash2 size={16} />
                     Delete
@@ -458,14 +454,14 @@ function Values() {
                 <button
                   onClick={closeModal}
                   disabled={isSaving}
-                  className="text-red-500 hover:text-red-700 text-sm font-medium px-4 py-2 disabled:opacity-50"
+                  className="text-[#888780] hover:text-[#2C2C2A] text-sm font-bold px-4 py-2 disabled:opacity-50 transition-colors outline-none"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveValue}
                   disabled={isSaving || isFetchingDetails}
-                  className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-md font-medium text-sm transition-colors shadow-sm disabled:opacity-70 flex items-center gap-2"
+                  className="bg-[#DA7756] hover:bg-[#C26547] text-white px-5 py-2 rounded-xl font-bold text-sm transition-colors shadow-sm disabled:opacity-70 flex items-center gap-2 uppercase tracking-wider outline-none"
                 >
                   {isSaving ? "Saving..." : modalMode === "add" ? "Create" : "Update"}
                 </button>
@@ -476,12 +472,12 @@ function Values() {
         </div>
       )}
 
-      {/* Toast Notification */}
+      {/* Toast */}
       {toast && (
         <div
           className={`fixed bottom-6 right-6 ${
-            toast.type === "error" ? "bg-red-500" : "bg-green-500"
-          } text-white px-4 py-3 rounded shadow-lg flex flex-col min-w-[250px] animate-fade-in z-50`}
+            toast.type === "error" ? "bg-[#A32D2D]" : "bg-[#0B5D41]"
+          } text-white px-4 py-3 rounded-xl shadow-lg flex flex-col min-w-[250px] animate-fade-in z-50`}
         >
           <span className="font-bold text-sm">{toast.type === "error" ? "Error" : "Success"}</span>
           <span className="text-sm">{toast.message}</span>

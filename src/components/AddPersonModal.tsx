@@ -100,7 +100,7 @@ const defaultForm: FormState = {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 const Label = ({ children }: { children: React.ReactNode }) => (
-  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
+  <label className="block text-[13px] font-bold text-[#2C2C2A] mb-1.5">
     {children}
   </label>
 );
@@ -108,7 +108,7 @@ const Label = ({ children }: { children: React.ReactNode }) => (
 const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
     {...props}
-    className={`w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-200 transition-all ${props.className ?? ""}`}
+    className={`w-full px-4 py-2.5 bg-white border border-[#D6B99D] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#DA7756]/30 focus:border-[#DA7756] transition-all text-sm text-[#2C2C2A] placeholder:text-[#888780] ${props.className ?? ""}`}
   />
 );
 
@@ -116,7 +116,7 @@ const Textarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
   <textarea
     rows={props.rows ?? 3}
     {...props}
-    className={`w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-200 resize-none transition-all ${props.className ?? ""}`}
+    className={`w-full px-4 py-2.5 bg-white border border-[#D6B99D] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#DA7756]/30 focus:border-[#DA7756] resize-none transition-all text-sm text-[#2C2C2A] placeholder:text-[#888780] ${props.className ?? ""}`}
   />
 );
 
@@ -226,8 +226,8 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
           key={star}
           className={`w-7 h-7 cursor-pointer transition-colors ${
             star <= value
-              ? "text-green-500 fill-green-500"
-              : "text-gray-200 fill-gray-200"
+              ? "text-[#DA7756] fill-[#DA7756]"
+              : "text-[#D6B99D] fill-transparent"
           }`}
           onClick={() => onChange(star)}
         />
@@ -260,7 +260,6 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
     setIsLoading(true);
     setError(null);
 
-    // EXACT Payload Format based on the JSON provided
     const payload = {
       name: form.name,
       relationship_type: form.relationship_type,
@@ -343,7 +342,6 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
 
       if (!res.ok) throw new Error("Failed to delete person.");
 
-      alert("Person deleted successfully!");
       onSuccess?.();
       onClose();
     } catch (err: any) {
@@ -354,15 +352,15 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
   };
 
   return ReactDOM.createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden max-h-[90vh]">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm font-sans">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden max-h-[90vh] border border-[#D6B99D]">
         {/* ── Header ── */}
-        <div className="flex-none flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-white">
+        <div className="flex-none flex justify-between items-center px-6 py-4 border-b border-[#D6B99D] bg-[#FEF4EE]">
           <div>
-            <h2 className="text-xl font-bold text-gray-700">
+            <h2 className="text-xl font-extrabold text-[#2C2C2A]">
               {isEditMode ? "Edit Person" : "Add New Person"}
             </h2>
-            <p className="text-xs text-gray-500 font-medium mt-0.5">
+            <p className="text-xs text-[#888780] font-bold mt-0.5">
               Step {currentStepIndex + 1} of {steps.length}
             </p>
           </div>
@@ -372,7 +370,7 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
                 onClick={handleDelete}
                 disabled={isDeleting}
                 title="Delete Person"
-                className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                className="p-2 text-[#A32D2D] hover:bg-[#A32D2D]/[0.08] rounded-full transition-colors outline-none"
               >
                 {isDeleting ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -383,7 +381,7 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
             )}
             <button
               onClick={onClose}
-              className="text-gray-400 hover:bg-gray-100 p-2 rounded-full transition-all"
+              className="text-[#888780] hover:text-[#2C2C2A] hover:bg-white p-2 rounded-full transition-all outline-none"
             >
               <X className="w-5 h-5" />
             </button>
@@ -391,7 +389,7 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
         </div>
 
         {/* ── Stepper Navigation ── */}
-        <div className="flex-none bg-white border-b border-gray-100">
+        <div className="flex-none bg-white border-b border-[#D6B99D]">
           <div className="flex px-2 overflow-x-auto hide-scrollbar">
             {steps.map((step, idx) => (
               <button
@@ -399,12 +397,12 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
                 onClick={() => {
                   if (idx <= currentStepIndex) setCurrentStepIndex(idx);
                 }}
-                className={`flex-1 min-w-[100px] px-2 py-3 text-sm font-semibold whitespace-nowrap border-b-2 transition-all ${
+                className={`flex-1 min-w-[100px] px-2 py-3 text-sm font-bold whitespace-nowrap border-b-2 transition-all outline-none ${
                   idx === currentStepIndex
-                    ? "border-red-500 text-red-500"
+                    ? "border-[#DA7756] text-[#DA7756]"
                     : idx < currentStepIndex
-                      ? "border-transparent text-gray-500 cursor-pointer hover:text-gray-600"
-                      : "border-transparent text-gray-300 cursor-not-allowed"
+                      ? "border-transparent text-[#888780] cursor-pointer hover:text-[#2C2C2A]"
+                      : "border-transparent text-[#D6B99D] cursor-not-allowed"
                 }`}
               >
                 {step}
@@ -414,12 +412,12 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
         </div>
 
         {/* ── Scrollable Body ── */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#fafafa]">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#FEF4EE]/50">
           {/* TAB 1: BASIC */}
           {activeTab === "Basic" && (
             <div className="space-y-5 animate-fade-in">
               <div>
-                <Label>Name *</Label>
+                <Label>Name <span className="text-[#A32D2D]">*</span></Label>
                 <Input
                   value={form.name}
                   onChange={(e) => set("name", e.target.value)}
@@ -429,11 +427,11 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <Label>Relationship *</Label>
+                  <Label>Relationship <span className="text-[#A32D2D]">*</span></Label>
                   <select
                     value={form.relationship_type}
                     onChange={(e) => set("relationship_type", e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-red-100"
+                    className="w-full px-4 py-2.5 bg-white border border-[#D6B99D] rounded-xl outline-none focus:ring-2 focus:ring-[#DA7756]/30 focus:border-[#DA7756] transition-all text-sm text-[#2C2C2A]"
                   >
                     <option value="">Select type</option>
                     <option value="Family">Family</option>
@@ -441,6 +439,7 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
                     <option value="Friend">Friend</option>
                     <option value="Colleague">Colleague</option>
                     <option value="Partner">Partner</option>
+                    <option value="Mentor">Mentor</option>
                     <option value="Acquaintance">Acquaintance</option>
                   </select>
                 </div>
@@ -471,8 +470,8 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
                 </div>
               </div>
 
-              <div className="border-t border-gray-200 pt-5">
-                <p className="text-sm font-bold text-gray-700 mb-4">
+              <div className="border-t border-[#D6B99D] pt-5">
+                <p className="text-sm font-bold text-[#2C2C2A] mb-4">
                   Contact Info
                 </p>
                 <div className="space-y-4">
@@ -532,7 +531,7 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
                         setInterestInput(""),
                       )
                     }
-                    className="px-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                    className="px-4 bg-[#DA7756] text-white rounded-xl hover:bg-[#C26547] transition-colors shadow-sm outline-none"
                   >
                     <Plus className="w-5 h-5" />
                   </button>
@@ -541,11 +540,11 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
                   {form.interests_preferences.map((item, i) => (
                     <span
                       key={i}
-                      className="flex items-center gap-1.5 bg-white border border-gray-200 shadow-sm text-sm px-3 py-1.5 rounded-md text-gray-700"
+                      className="flex items-center gap-1.5 bg-white border border-[#D6B99D] shadow-sm text-xs font-bold px-3 py-1.5 rounded-md text-[#2C2C2A]"
                     >
                       {item}{" "}
                       <X
-                        className="w-3.5 h-3.5 cursor-pointer text-gray-400 hover:text-red-500"
+                        className="w-3.5 h-3.5 cursor-pointer text-[#888780] hover:text-[#A32D2D]"
                         onClick={() =>
                           removeFromArray("interests_preferences", i)
                         }
@@ -569,7 +568,7 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
                         setGiftInput(""),
                       )
                     }
-                    className="px-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                    className="px-4 bg-[#DA7756] text-white rounded-xl hover:bg-[#C26547] transition-colors shadow-sm outline-none"
                   >
                     <Gift className="w-5 h-5" />
                   </button>
@@ -578,11 +577,11 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
                   {form.gift_ideas.map((item, i) => (
                     <span
                       key={i}
-                      className="flex items-center gap-1.5 bg-white border border-gray-200 shadow-sm text-sm px-3 py-1.5 rounded-md text-gray-700"
+                      className="flex items-center gap-1.5 bg-white border border-[#D6B99D] shadow-sm text-xs font-bold px-3 py-1.5 rounded-md text-[#2C2C2A]"
                     >
                       {item}{" "}
                       <X
-                        className="w-3.5 h-3.5 cursor-pointer text-gray-400 hover:text-red-500"
+                        className="w-3.5 h-3.5 cursor-pointer text-[#888780] hover:text-[#A32D2D]"
                         onClick={() => removeFromArray("gift_ideas", i)}
                       />
                     </span>
@@ -613,19 +612,19 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
           {/* TAB 3: FAMILY */}
           {activeTab === "Family" && (
             <div className="space-y-4 animate-fade-in">
-              <div className="flex justify-between items-center bg-pink-50 border border-pink-100 p-4 rounded-xl">
+              <div className="flex justify-between items-center bg-[#FEF4EE] border border-[#D6B99D] p-4 rounded-xl shadow-sm">
                 <div>
-                  <h3 className="font-bold text-gray-700 mb-1">
+                  <h3 className="font-bold text-[#2C2C2A] mb-1">
                     Family Members
                   </h3>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-[#888780] font-medium">
                     Keep track of their spouse, kids, or pets.
                   </p>
                 </div>
               </div>
 
               {form.family_members.length === 0 ? (
-                <div className="text-sm text-gray-400 italic text-center py-10 border-2 border-dashed border-gray-200 rounded-xl bg-white">
+                <div className="text-sm text-[#888780] font-medium text-center py-10 border border-dashed border-[#D6B99D] rounded-xl bg-white">
                   No family members added yet.
                 </div>
               ) : (
@@ -633,7 +632,7 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
                   {form.family_members.map((member, i) => (
                     <div
                       key={i}
-                      className="p-5 border border-gray-200 bg-white rounded-xl relative shadow-sm"
+                      className="p-5 border border-[#D6B99D] bg-white rounded-xl relative shadow-sm"
                     >
                       <button
                         onClick={() =>
@@ -644,7 +643,7 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
                             ),
                           }))
                         }
-                        className="absolute top-4 right-4 text-gray-400 hover:text-red-500 bg-gray-50 hover:bg-red-50 p-1.5 rounded-md transition-colors"
+                        className="absolute top-4 right-4 text-[#888780] hover:text-[#A32D2D] bg-[#FEF4EE] hover:bg-[#A32D2D]/[0.08] p-1.5 rounded-md transition-colors outline-none"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -701,7 +700,7 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
                     ],
                   }))
                 }
-                className="w-full flex items-center justify-center gap-2 text-sm font-semibold bg-white border border-gray-200 text-gray-600 py-3 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+                className="w-full flex items-center justify-center gap-2 text-sm font-bold bg-white border border-[#D6B99D] text-[#2C2C2A] py-3 rounded-xl hover:bg-[#FEF4EE] hover:border-[#DA7756] hover:text-[#DA7756] transition-colors shadow-sm outline-none"
               >
                 <Plus className="w-4 h-4" /> Add Family Member
               </button>
@@ -725,7 +724,7 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
                         setGoalInput(""),
                       )
                     }
-                    className="px-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                    className="px-4 bg-[#DA7756] text-white rounded-xl hover:bg-[#C26547] transition-colors shadow-sm outline-none"
                   >
                     <Plus className="w-5 h-5" />
                   </button>
@@ -734,11 +733,11 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
                   {form.relationship_goals.map((item, i) => (
                     <span
                       key={i}
-                      className="flex items-center gap-1.5 bg-white border border-gray-200 shadow-sm text-sm px-3 py-1.5 rounded-md text-gray-700"
+                      className="flex items-center gap-1.5 bg-white border border-[#D6B99D] shadow-sm text-xs font-bold px-3 py-1.5 rounded-md text-[#2C2C2A]"
                     >
                       {item}{" "}
                       <X
-                        className="w-3.5 h-3.5 cursor-pointer text-gray-400 hover:text-red-500"
+                        className="w-3.5 h-3.5 cursor-pointer text-[#888780] hover:text-[#A32D2D]"
                         onClick={() => removeFromArray("relationship_goals", i)}
                       />
                     </span>
@@ -774,7 +773,7 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
                     set("desired_contact_frequency", Number(e.target.value))
                   }
                 />
-                <p className="text-xs text-gray-500 mt-1.5">
+                <p className="text-xs text-[#888780] font-medium mt-1.5">
                   How often you'd like to connect with this person (used for
                   reminders)
                 </p>
@@ -786,22 +785,22 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
           {activeTab === "Behaviour" && (
             <div className="space-y-6 animate-fade-in">
               <div className="mb-4">
-                <h3 className="font-bold text-gray-700 mb-1">
+                <h3 className="font-bold text-[#2C2C2A] mb-1">
                   DISC Behavioural Profile
                 </h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-[#888780] font-medium">
                   Store their DISC assessment results to better understand and
                   communicate with them.
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label>Primary DISC Style</Label>
                   <select
                     value={form.disc_profile.primary_style}
                     onChange={(e) => setDisc("primary_style", e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-red-100"
+                    className="w-full px-4 py-2.5 bg-white border border-[#D6B99D] rounded-xl outline-none focus:ring-2 focus:ring-[#DA7756]/30 focus:border-[#DA7756] transition-all text-sm text-[#2C2C2A]"
                   >
                     <option value="">Select style</option>
                     <option value="D">D - Dominance</option>
@@ -820,10 +819,10 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
                 </div>
               </div>
 
-              {/* D I S C Colored Boxes */}
-              <div className="grid grid-cols-4 gap-4">
-                <div className="bg-red-50 border border-red-100 rounded-xl p-4">
-                  <p className="text-xs font-bold text-red-800 mb-2">
+              {/* D I S C Colored Boxes mapped to Semantic Palette */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-[#A32D2D]/[0.08] border border-[#A32D2D]/30 rounded-xl p-4 shadow-sm">
+                  <p className="text-xs font-bold text-[#A32D2D] mb-2 uppercase tracking-wide">
                     D - Dominance
                   </p>
                   <Input
@@ -833,11 +832,11 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
                     placeholder="1-7"
                     value={form.disc_profile.d_score || ""}
                     onChange={(e) => setDisc("d_score", Number(e.target.value))}
-                    className="bg-white border-red-200 focus:ring-red-200"
+                    className="bg-white border-[#D6B99D] focus:border-[#A32D2D] focus:ring-[#A32D2D]/30"
                   />
                 </div>
-                <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4">
-                  <p className="text-xs font-bold text-yellow-800 mb-2">
+                <div className="bg-[#BA7517]/[0.08] border border-[#BA7517]/30 rounded-xl p-4 shadow-sm">
+                  <p className="text-xs font-bold text-[#BA7517] mb-2 uppercase tracking-wide">
                     I - Influence
                   </p>
                   <Input
@@ -847,11 +846,11 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
                     placeholder="1-7"
                     value={form.disc_profile.i_score || ""}
                     onChange={(e) => setDisc("i_score", Number(e.target.value))}
-                    className="bg-white border-yellow-200 focus:ring-yellow-200"
+                    className="bg-white border-[#D6B99D] focus:border-[#BA7517] focus:ring-[#BA7517]/30"
                   />
                 </div>
-                <div className="bg-green-50 border border-green-100 rounded-xl p-4">
-                  <p className="text-xs font-bold text-green-800 mb-2">
+                <div className="bg-[#0B5D41]/[0.08] border border-[#0B5D41]/30 rounded-xl p-4 shadow-sm">
+                  <p className="text-xs font-bold text-[#0B5D41] mb-2 uppercase tracking-wide">
                     S - Steadiness
                   </p>
                   <Input
@@ -861,12 +860,12 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
                     placeholder="1-7"
                     value={form.disc_profile.s_score || ""}
                     onChange={(e) => setDisc("s_score", Number(e.target.value))}
-                    className="bg-white border-green-200 focus:ring-green-200"
+                    className="bg-white border-[#D6B99D] focus:border-[#0B5D41] focus:ring-[#0B5D41]/30"
                   />
                 </div>
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                  <p className="text-xs font-bold text-blue-800 mb-2">
-                    C - Conscientiousness
+                <div className="bg-[#1858A5]/[0.08] border border-[#1858A5]/30 rounded-xl p-4 shadow-sm">
+                  <p className="text-xs font-bold text-[#1858A5] mb-2 uppercase tracking-wide">
+                    C - Compliance
                   </p>
                   <Input
                     type="number"
@@ -875,7 +874,7 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
                     placeholder="1-7"
                     value={form.disc_profile.c_score || ""}
                     onChange={(e) => setDisc("c_score", Number(e.target.value))}
-                    className="bg-white border-blue-200 focus:ring-blue-200"
+                    className="bg-white border-[#D6B99D] focus:border-[#1858A5] focus:ring-[#1858A5]/30"
                   />
                 </div>
               </div>
@@ -935,10 +934,10 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
           {/* TAB 6: HISTORY */}
           {activeTab === "History" && (
             <div className="space-y-6 animate-fade-in flex flex-col items-center justify-center py-20 text-center">
-              <h3 className="text-lg font-semibold text-gray-600">
+              <h3 className="text-lg font-bold text-[#2C2C2A]">
                 No interactions logged yet
               </h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-[#888780] font-medium">
                 Click "Log Interaction" after saving to record your first
                 interaction
               </p>
@@ -948,21 +947,21 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
 
         {/* ── Error Banner ── */}
         {error && (
-          <div className="px-6 py-3 bg-red-50 text-red-600 text-sm font-medium border-t border-red-100">
+          <div className="px-6 py-3 bg-[#A32D2D] text-white text-sm font-bold shadow-inner">
             {error}
           </div>
         )}
 
         {/* ── Footer ── */}
-        <div className="flex-none p-4 border-t border-gray-200 bg-white flex justify-between items-center rounded-b-2xl">
+        <div className="flex-none p-5 border-t border-[#D6B99D] bg-white flex justify-between items-center rounded-b-2xl">
           <button
             onClick={handlePrev}
             disabled={currentStepIndex === 0}
-            className={`px-5 py-2.5 text-sm font-bold flex items-center gap-2 rounded-lg transition-colors ${currentStepIndex === 0 ? "text-transparent cursor-default" : "text-gray-600 hover:bg-gray-100"}`}
+            className={`px-5 py-2.5 text-sm font-bold flex items-center gap-2 rounded-xl transition-colors outline-none ${currentStepIndex === 0 ? "text-transparent cursor-default" : "text-[#888780] border border-[#D6B99D] hover:bg-[#FEF4EE] hover:text-[#2C2C2A]"}`}
           >
             {currentStepIndex !== 0 && (
               <>
-                <ArrowLeft className="w-4 h-4" /> Cancel
+                <ArrowLeft className="w-4 h-4" /> Back
               </>
             )}
           </button>
@@ -970,7 +969,7 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
           {currentStepIndex < steps.length - 1 ? (
             <button
               onClick={handleNext}
-              className="px-6 py-2.5 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg flex items-center gap-2 shadow-sm transition-colors"
+              className="px-6 py-2.5 text-sm font-extrabold text-white bg-[#DA7756] hover:bg-[#C26547] rounded-xl flex items-center gap-2 shadow-sm transition-colors outline-none"
             >
               Next <ArrowRight className="w-4 h-4" />
             </button>
@@ -978,16 +977,14 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
             <button
               onClick={handleSubmit}
               disabled={isLoading}
-              className="px-8 py-2.5 text-sm font-bold text-white rounded-lg flex items-center gap-2 bg-red-500 hover:bg-red-600 shadow-md transition-colors"
+              className="px-8 py-2.5 text-sm font-extrabold text-white rounded-xl flex items-center gap-2 bg-[#DA7756] hover:bg-[#C26547] shadow-md transition-colors outline-none disabled:opacity-70"
             >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
-              ) : isEditMode ? (
-                <Save className="w-4 h-4" />
               ) : (
-                <Save className="w-4 h-4" />
+                <Save className="w-4 h-4" strokeWidth={2.5}/>
               )}
-              {isEditMode ? "Save Changes" : "Create"}
+              {isEditMode ? "Save Changes" : "Create Person"}
             </button>
           )}
         </div>
