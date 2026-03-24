@@ -1202,6 +1202,14 @@ const GoalsHabits = () => {
   // ─── HABIT HANDLERS ───────────────────────────────────────────────────────
   const handleCreateHabit = async () => {
     if (!habitName.trim()) return;
+    if (!habitStartDate.trim()) {
+      toast({
+        title: "Start date required",
+        description: "Choose a start date before creating this habit.",
+        variant: "figmaWarning",
+      });
+      return;
+    }
     setHabitSaving(true);
     try {
       const res = await fetchWithAuth("/habits", {
@@ -1232,7 +1240,11 @@ const GoalsHabits = () => {
       setHabitStartDate("");
       setHabitLinkedGoals([]);
       setIsHabitDialogOpen(false);
-      toast({ title: "Habit created" });
+      toast({
+        title: "Habit created",
+        description: "Your habit has been saved.",
+        variant: "goalsSuccess",
+      });
     } catch {
       toast({
         title: "Error",
@@ -1289,7 +1301,11 @@ const GoalsHabits = () => {
       setHabitStartDate("");
       setHabitLinkedGoals([]);
       setIsHabitDialogOpen(false);
-      toast({ title: "Habit updated" });
+      toast({
+        title: "Habit updated",
+        description: "Your changes have been saved.",
+        variant: "goalsSuccess",
+      });
     } catch (err) {
       toast({
         title: "Error",
@@ -1326,6 +1342,7 @@ const GoalsHabits = () => {
       if (!res.ok) throw new Error(`Failed (${res.status})`);
       toast({
         title: "Habit deleted",
+        description: "Removed successfully.",
         variant: "todoDelete",
       });
     } catch (err) {
@@ -2662,7 +2679,9 @@ const GoalsHabits = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Start Date</Label>
+              <Label>
+                Start Date{editingHabitId === null ? " *" : ""}
+              </Label>
               <Input
                 type="date"
                 value={habitStartDate}
