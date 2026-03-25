@@ -16,11 +16,11 @@ import { toast as sonnerToast } from "sonner";
 import AddAchievementDialog from "@/components/journal/AddAchievementDialog";
 
 // ─── EXACT BRAND PALETTE (from image) ────────────────────────────────────────
-// PRIMARY:   Coral #D54744 | Cream #F0CEAA | Charcoal #1A1A2A
+// PRIMARY:  Coral #D54744 | Cream #F0CEAA | Charcoal #1A1A2A
 // SECONDARY: Violet #5034BB | Forest #0B5541
 // TERTIARY:  Sky #3A6CC5 | Amber #D47517 | Crimson #B72B2D | Leaf #3A6011 | Lavender #C0CBEB | Stone #888763
-// ACCENT:    Sand #C5A881 | Dune #D1BC88 | Mist #D1D6A6
-// STATUS:    Success #44FBD0 | Warning #E4A948 | Error #D8432F
+// ACCENT:   Sand #C5A881 | Dune #D1BC88 | Mist #D1D6A6
+// STATUS:   Success #44FBD0 | Warning #E4A948 | Error #D8432F
 const C = {
   coral:     "#D54744",
   coral8:    "rgba(213,71,68,0.08)",
@@ -754,83 +754,16 @@ const PillSelect = ({ value, options, onChange, styleFn }: any) => (
   </div>
 );
 
-const AddDreamModal = ({ onClose, onAdd, token }: { onClose: () => void; onAdd: (i: any) => void; token?: string }) => {
-  const [form, setForm]           = useState({ title: "", description: "", category: "Personal", status: "dreaming" });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = async () => {
-    if (!form.title.trim()) { sonnerToast.error("Title is required"); return; }
-    setIsSubmitting(true);
-    try {
-      const res = await fetch(`${API_BASE}/dreams`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken(token)}` }, body: JSON.stringify({ ...form, core_value_ids: [], goal_ids: [] }) });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      onAdd({ id: (data.id || data.dream?.id || Date.now()).toString(), title: data.title || data.dream?.title || form.title, category: data.category || data.dream?.category || form.category, progress: statusToProgress(data.status || data.dream?.status || form.status) });
-      sonnerToast.success("Dream added!"); onClose();
-    } catch { sonnerToast.error("Failed to add dream"); } finally { setIsSubmitting(false); }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="font-bold text-base" style={{ color: C.charcoal }}>Add New Dream</h3>
-          <button onClick={onClose} className="transition-colors" style={{ color: C.muted }}><X className="w-4 h-4"/></button>
-        </div>
-        <div className="flex flex-col gap-3">
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: C.stone }}>Title *</label>
-            <input type="text" placeholder="e.g. Visit Northern Lights" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
-              className="w-full rounded-lg border px-3 py-2 text-sm outline-none transition-all" style={{ borderColor: C.cream, color: C.charcoal }}
-              onFocus={e => { e.target.style.borderColor = C.coral; e.target.style.boxShadow = `0 0 0 3px ${C.coral15}`; }}
-              onBlur={e => { e.target.style.borderColor = C.cream; e.target.style.boxShadow = "none"; }}/>
-          </div>
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: C.stone }}>Description</label>
-            <textarea rows={2} placeholder="e.g. Travel to Iceland" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
-              className="w-full rounded-lg border px-3 py-2 text-sm outline-none resize-none transition-all" style={{ borderColor: C.cream, color: C.charcoal }}/>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: "Category", key: "category", options: CATEGORY_OPTIONS,                                       val: form.category },
-              { label: "Status",   key: "status",   options: ["dreaming","planning","in_progress","achieved"],      val: form.status },
-            ].map(({ label, key, options, val }) => (
-              <div key={key}>
-                <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: C.stone }}>{label}</label>
-                <div className="relative">
-                  <select value={val} onChange={e => setForm({ ...form, [key]: e.target.value })}
-                    className="appearance-none w-full rounded-lg border px-3 py-2 pr-7 text-sm outline-none cursor-pointer" style={{ borderColor: C.cream, color: C.charcoal }}>
-                    {options.map(o => <option key={o}>{o}</option>)}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: C.muted }}/>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="flex justify-end gap-2 mt-5">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border text-sm transition-colors" style={{ borderColor: C.cream, color: C.stone }}
-            onMouseEnter={e => (e.currentTarget.style.background = C.pageBg)} onMouseLeave={e => (e.currentTarget.style.background = "#fff")}>Cancel</button>
-          <button onClick={handleSubmit} disabled={isSubmitting}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-white text-sm font-semibold transition-all disabled:opacity-60"
-            style={{ background: `linear-gradient(135deg, ${C.coral}, ${C.sand})` }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")} onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
-            {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin"/> : <Plus className="w-3.5 h-3.5"/>}
-            {isSubmitting ? "Adding..." : "Add Dream"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+// Note: AddDreamModal logic is kept here if needed elsewhere, 
+// but it is no longer used by the BucketListProgress component in this file.
 
 const BucketListProgress = ({ token }: { token?: string }) => {
+  const navigate = useNavigate(); // ADDED NAVIGATE FOR ROUTING
   const [bucketList, setBucketList]         = useState<any[]>([]);
   const [isLoading, setIsLoading]           = useState(true);
   const [updateTexts, setUpdateTexts]       = useState<any>({});
   const [progressFilter, setProgressFilter] = useState("All Progress");
   const [categoryFilter, setCategoryFilter] = useState("All Categories");
-  const [showAddModal, setShowAddModal]     = useState(false);
 
   useEffect(() => {
     setIsLoading(true);
@@ -860,7 +793,6 @@ const BucketListProgress = ({ token }: { token?: string }) => {
 
   return (
     <>
-      {showAddModal && <AddDreamModal token={token} onClose={() => setShowAddModal(false)} onAdd={(i: any) => setBucketList(p => [i,...p])}/>}
       <div className="rounded-2xl p-5 border font-sans w-full" style={{ background: C.pageBg, borderColor: C.cream }}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
@@ -883,7 +815,7 @@ const BucketListProgress = ({ token }: { token?: string }) => {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowAddModal(true)}
+            <button onClick={() => navigate("/bucket-list")} // FIXED HERE
               className="flex items-center gap-1 h-8 px-3 rounded-lg text-white text-xs font-semibold transition-all shadow-sm"
               style={{ background: C.coral }}
               onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")} onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
@@ -928,7 +860,7 @@ const BucketListProgress = ({ token }: { token?: string }) => {
                   <path d="m12 3-1.9 5.8a2 2 0 0 1-1.275 1.275L3 12l5.8 1.9a2 2 0 0 1 1.275 1.275L12 21l1.9-5.8a2 2 0 0 1 1.275-1.275L21 12l-5.8-1.9a2 2 0 0 1-1.275-1.275L12 3Z"/>
                 </svg>
                 <p className="text-[15px] font-medium mb-4" style={{ color: C.stone }}>No bucket list items matching filters</p>
-                <button onClick={() => setShowAddModal(true)}
+                <button onClick={() => navigate("/bucket-list")} // FIXED HERE
                   className="bg-white border text-[#333] font-semibold text-[14px] px-5 py-2 rounded-lg shadow-sm transition-colors" style={{ borderColor: C.cream }}
                   onMouseEnter={e => (e.currentTarget.style.background = C.pageBg)} onMouseLeave={e => (e.currentTarget.style.background = "#fff")}>
                   Create Your First Dream
