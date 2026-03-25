@@ -574,6 +574,22 @@ const GoalsHabits = () => {
     setIsBeliefDialogOpen(true);
   };
 
+  const resetPatternForm = () => {
+    setEditingPatternId(null);
+    setPatternName("");
+    setPatternTrigger("");
+    setPatternUnderlyingReason("");
+    setPatternConsequence("");
+    setPatternAlternative("");
+    setPatternStrategies("");
+    setPatternAffirmationId("");
+  };
+
+  const openNewPatternDialog = () => {
+    resetPatternForm();
+    setIsPatternDialogOpen(true);
+  };
+
   const toggleCoreValue = (id: number) => {
     setGoalLinkedValues((prev) =>
       prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id],
@@ -1028,13 +1044,7 @@ const GoalsHabits = () => {
             created.pattern_data?.desired_behavior ?? patternAlternative,
         },
       ]);
-      setPatternName("");
-      setPatternTrigger("");
-      setPatternUnderlyingReason("");
-      setPatternConsequence("");
-      setPatternAlternative("");
-      setPatternStrategies("");
-      setPatternAffirmationId("");
+      resetPatternForm();
       setIsPatternDialogOpen(false);
       toast({
         title: "Pattern added",
@@ -1090,14 +1100,7 @@ const GoalsHabits = () => {
             : p,
         ),
       );
-      setEditingPatternId(null);
-      setPatternName("");
-      setPatternTrigger("");
-      setPatternUnderlyingReason("");
-      setPatternConsequence("");
-      setPatternAlternative("");
-      setPatternStrategies("");
-      setPatternAffirmationId("");
+      resetPatternForm();
       setIsPatternDialogOpen(false);
       toast({
         title: "Pattern updated",
@@ -1871,7 +1874,7 @@ const GoalsHabits = () => {
                 </div>
                 <Button
                   className="bg-[#DA7756] hover:bg-[#C96B4D] text-white w-full sm:w-auto text-sm"
-                  onClick={() => setIsPatternDialogOpen(true)}
+                  onClick={() => openNewPatternDialog()}
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add Pattern
                 </Button>
@@ -2376,7 +2379,7 @@ const GoalsHabits = () => {
         open={isPatternDialogOpen}
         onOpenChange={(open) => {
           setIsPatternDialogOpen(open);
-          if (!open) setEditingPatternId(null);
+          if (!open) resetPatternForm();
         }}
       >
         <DialogContent className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto">
