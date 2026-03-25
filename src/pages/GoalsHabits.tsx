@@ -541,6 +541,39 @@ const GoalsHabits = () => {
     setGoalLinkedValues([]);
   };
 
+  const resetHabitForm = () => {
+    setEditingHabitId(null);
+    setHabitName("");
+    setHabitDescription("");
+    setHabitFrequency("daily");
+    setHabitCategory("");
+    setHabitTime("");
+    setHabitPlace("");
+    setHabitStartDate("");
+    setHabitLinkedGoals([]);
+  };
+
+  const openNewHabitDialog = () => {
+    resetHabitForm();
+    setIsHabitDialogOpen(true);
+  };
+
+  const resetBeliefForm = () => {
+    setEditingBeliefId(null);
+    setBeliefText("");
+    setBeliefOrigin("");
+    setBeliefSupportingEvidence("");
+    setBeliefEvidence("");
+    setBeliefImpact("");
+    setBeliefAlternative("");
+    setBeliefAffirmationId("none");
+  };
+
+  const openNewBeliefDialog = () => {
+    resetBeliefForm();
+    setIsBeliefDialogOpen(true);
+  };
+
   const toggleCoreValue = (id: number) => {
     setGoalLinkedValues((prev) =>
       prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id],
@@ -1470,7 +1503,7 @@ const GoalsHabits = () => {
       className: "bg-[#DA7756] hover:bg-[#C96B4D] text-white",
     },
     beliefs: {
-      onClick: () => setIsBeliefDialogOpen(true),
+      onClick: () => openNewBeliefDialog(),
       label: "Identify Your First Belief",
       className: "bg-[#DA7756] hover:bg-[#C96B4D] text-white",
     },
@@ -1480,7 +1513,7 @@ const GoalsHabits = () => {
       className: "bg-[#DA7756] hover:bg-[#C96B4D] text-white",
     },
     habits: {
-      onClick: () => setIsHabitDialogOpen(true),
+      onClick: () => openNewHabitDialog(),
       label: "Create Your First Habit",
       className: "bg-[#DA7756] hover:bg-[#C96B4D] text-white",
     },
@@ -1785,7 +1818,7 @@ const GoalsHabits = () => {
                 </div>
                 <Button
                   className="bg-[#DA7756] hover:bg-[#C96B4D] text-white w-full sm:w-auto text-sm"
-                  onClick={() => setIsBeliefDialogOpen(true)}
+                  onClick={() => openNewBeliefDialog()}
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add Belief
                 </Button>
@@ -1966,7 +1999,7 @@ const GoalsHabits = () => {
               </div>
               <Button
                 className="bg-[#DA7756] hover:bg-[#C96B4D] text-white w-full sm:w-auto text-sm"
-                onClick={() => setIsHabitDialogOpen(true)}
+                onClick={() => openNewHabitDialog()}
               >
                 <Plus className="h-4 w-4 mr-2" /> Add Habit
               </Button>
@@ -2237,10 +2270,7 @@ const GoalsHabits = () => {
         open={isBeliefDialogOpen}
         onOpenChange={(open) => {
           setIsBeliefDialogOpen(open);
-          if (!open) {
-            setEditingBeliefId(null);
-            setBeliefAffirmationId("none");
-          }
+          if (!open) resetBeliefForm();
         }}
       >
         <DialogContent className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -2634,7 +2664,7 @@ const GoalsHabits = () => {
         open={isHabitDialogOpen}
         onOpenChange={(open) => {
           setIsHabitDialogOpen(open);
-          if (!open) setEditingHabitId(null);
+          if (!open) resetHabitForm();
         }}
       >
         <DialogContent className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -2755,10 +2785,7 @@ const GoalsHabits = () => {
               <Button
                 variant="outline"
                 className="border-[#DA7756]/40 text-[#DA7756] hover:bg-[#DA7756]/10 hover:text-[#C96B4D]"
-                onClick={() => {
-                  setIsHabitDialogOpen(false);
-                  setHabitLinkedGoals([]);
-                }}
+                onClick={() => setIsHabitDialogOpen(false)}
                 disabled={habitSaving}
               >
                 Cancel
