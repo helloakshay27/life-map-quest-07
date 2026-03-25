@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 const LIFE_AREAS = ["Career", "Health", "Relationships", "Personal Growth", "Finance"];
 const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
@@ -61,6 +62,7 @@ const CreateToDoDialog = ({
   initialData = null,
   availableGoals = [] 
 }: CreateToDoDialogProps) => {
+  const { toast } = useToast();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [lifeArea, setLifeArea] = useState("Career");
@@ -99,6 +101,14 @@ const CreateToDoDialog = ({
 
   const handleSubmit = () => {
     if (!title.trim()) return;
+    if (!isEditMode && !targetDate) {
+      toast({
+        title: "Can't create to do",
+        description: "Add a target date before creating this to do.",
+        variant: "goalsError",
+      });
+      return;
+    }
     onSubmit({
       id: initialData?.id ?? crypto.randomUUID(),
       title: title.trim(),
@@ -190,7 +200,9 @@ const CreateToDoDialog = ({
               </div>
             </div>
             <div>
-              <label className="text-body-5 font-medium text-[#222]">Target Date</label>
+              <label className="text-body-5 font-medium text-[#222]">
+                Target Date{!isEditMode ? " *" : ""}
+              </label>
               <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button

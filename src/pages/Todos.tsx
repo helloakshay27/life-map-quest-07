@@ -177,7 +177,11 @@ const Todos = () => {
         if (response.ok) { const data = await response.json(); newTodo.id = data.id || newTodo.id; }
       } catch { console.log("API unavailable, saving locally"); }
       setTodos((prev) => { const updated = [...prev, newTodo]; localStorage.setItem("user_todos", JSON.stringify(updated)); return updated; });
-      toast({ title: "To do created", description: "Saved successfully." });
+      toast({
+        title: "To do created",
+        description: "Saved successfully.",
+        variant: "goalsSuccess",
+      });
     } catch (error) {
       console.error("Failed to create todo:", error);
       toast({ title: "Error", description: "Failed to create to do", variant: "destructive" });
@@ -239,7 +243,11 @@ const Todos = () => {
       }
 
       if (!res.ok) throw new Error(`Failed (${res.status})`);
-      toast({ title: "To do updated", description: "Your changes have been saved." });
+      toast({
+        title: "To do updated",
+        description: "Your changes have been saved.",
+        variant: "goalsSuccess",
+      });
     } catch (e) {
       console.error("Failed to update todo:", e);
       setTodos(previous);
@@ -252,7 +260,11 @@ const Todos = () => {
     try {
       try { await fetchWithAuth(`/todos/${id}`, { method: "DELETE" }); } catch { console.log("API unavailable, deleting locally"); }
       setTodos((prev) => { const updated = prev.filter((t) => t.id !== id); localStorage.setItem("user_todos", JSON.stringify(updated)); return updated; });
-      toast({ title: "To do deleted", description: "Removed successfully." });
+      toast({
+        title: "To do deleted",
+        description: "Removed successfully.",
+        variant: "todoDelete",
+      });
     } catch (error) {
       console.error("Failed to delete todo:", error);
       toast({ title: "Error", description: "Failed to delete to do", variant: "destructive" });
@@ -305,13 +317,21 @@ const Todos = () => {
           }
         }
         if (res.ok) {
-          toast({ title: "To do moved", description: `Updated status to ${newStatus}.` });
+          toast({
+            title: "To do moved",
+            description: `Updated status to ${newStatus}.`,
+            variant: "goalsSuccess",
+          });
         } else {
           toast({ title: "Error", description: "Failed to move to do", variant: "destructive" });
         }
       } catch {
         console.log("API unavailable, updating locally");
-        toast({ title: "To do moved", description: `Updated status to ${newStatus}.` });
+        toast({
+          title: "To do moved",
+          description: `Updated status to ${newStatus}.`,
+          variant: "goalsSuccess",
+        });
       }
     } catch (error) {
       console.error("Failed to update todo:", error);

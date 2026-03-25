@@ -550,6 +550,22 @@ const GoalsHabits = () => {
   // ─── GOALS CRUD ───────────────────────────────────────────────────────────
   const handleCreateGoal = async () => {
     if (!goalName.trim()) return;
+    if (!goalStartDate.trim() || !goalTargetDate.trim()) {
+      toast({
+        title: "Date required",
+        description: "Add both a start date and a target date before creating a goal.",
+        variant: "goalsError",
+      });
+      return;
+    }
+    if (goalTargetDate < goalStartDate) {
+      toast({
+        title: "Invalid dates",
+        description: "Target date must be on or after the start date.",
+        variant: "goalsWarning",
+      });
+      return;
+    }
     setGoalSaving(true);
     try {
       const res = await fetchWithAuth("/goals", {
@@ -596,6 +612,7 @@ const GoalsHabits = () => {
       toast({
         title: "Goal created",
         description: "Your goal has been saved.",
+        variant: "goalsSuccess",
       });
     } catch (err) {
       toast({
@@ -701,6 +718,7 @@ const GoalsHabits = () => {
       toast({
         title: "Goal deleted",
         description: "Goal removed successfully.",
+        variant: "todoDelete",
       });
     } catch (err) {
       toast({
@@ -763,6 +781,7 @@ const GoalsHabits = () => {
         toast({
           title: "Goal moved",
           description: `Status updated to ${newStatus}.`,
+          variant: "goalsSuccess",
         });
       } catch (err) {
         toast({
@@ -826,6 +845,11 @@ const GoalsHabits = () => {
       setBeliefAlternative("");
       setBeliefAffirmationId("none");
       setIsBeliefDialogOpen(false);
+      toast({
+        title: "Belief added",
+        description: "Your belief has been saved successfully.",
+        variant: "goalsSuccess",
+      });
     } catch {
       toast({
         title: "Error",
@@ -882,6 +906,10 @@ const GoalsHabits = () => {
       setBeliefAlternative("");
       setBeliefAffirmationId("none");
       setIsBeliefDialogOpen(false);
+      toast({
+        title: "Belief updated",
+        description: "Your changes have been saved.",
+      });
     } catch {
       toast({
         title: "Error",
@@ -900,6 +928,11 @@ const GoalsHabits = () => {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed");
+      toast({
+        title: "Belief deleted",
+        description: "Your belief has been removed successfully.",
+        variant: "todoDelete",
+      });
     } catch {
       toast({
         title: "Error",
@@ -970,6 +1003,11 @@ const GoalsHabits = () => {
       setPatternStrategies("");
       setPatternAffirmationId("");
       setIsPatternDialogOpen(false);
+      toast({
+        title: "Pattern added",
+        description: "Your pattern has been saved successfully.",
+        variant: "goalsSuccess",
+      });
     } catch {
       toast({
         title: "Error",
@@ -1028,6 +1066,10 @@ const GoalsHabits = () => {
       setPatternStrategies("");
       setPatternAffirmationId("");
       setIsPatternDialogOpen(false);
+      toast({
+        title: "Pattern updated",
+        description: "Your changes have been saved.",
+      });
     } catch {
       toast({
         title: "Error",
@@ -1046,6 +1088,11 @@ const GoalsHabits = () => {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed");
+      toast({
+        title: "Pattern deleted",
+        description: "Your pattern has been removed successfully.",
+        variant: "todoDelete",
+      });
     } catch {
       toast({
         title: "Error",
@@ -1105,6 +1152,11 @@ const GoalsHabits = () => {
       setAffirmationStatement("");
       setAffirmationPriority(5);
       setIsAffirmationDialogOpen(false);
+      toast({
+        title: "Affirmation added",
+        description: "Your affirmation has been saved successfully.",
+        variant: "goalsSuccess",
+      });
     } catch {
       toast({
         title: "Error",
@@ -1146,6 +1198,10 @@ const GoalsHabits = () => {
       setAffirmationStatement("");
       setAffirmationPriority(5);
       setIsAffirmationDialogOpen(false);
+      toast({
+        title: "Affirmation updated",
+        description: "Your changes have been saved.",
+      });
     } catch {
       toast({
         title: "Error",
@@ -1171,6 +1227,11 @@ const GoalsHabits = () => {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed");
+      toast({
+        title: "Affirmation deleted",
+        description: "Your affirmation has been removed successfully.",
+        variant: "todoDelete",
+      });
     } catch {
       toast({
         title: "Error",
@@ -1183,6 +1244,14 @@ const GoalsHabits = () => {
   // ─── HABIT HANDLERS ───────────────────────────────────────────────────────
   const handleCreateHabit = async () => {
     if (!habitName.trim()) return;
+    if (!habitStartDate.trim()) {
+      toast({
+        title: "Start date required",
+        description: "Choose a start date before creating this habit.",
+        variant: "figmaWarning",
+      });
+      return;
+    }
     setHabitSaving(true);
     try {
       const res = await fetchWithAuth("/habits", {
@@ -1213,7 +1282,11 @@ const GoalsHabits = () => {
       setHabitStartDate("");
       setHabitLinkedGoals([]);
       setIsHabitDialogOpen(false);
-      toast({ title: "Habit created" });
+      toast({
+        title: "Habit created",
+        description: "Your habit has been saved.",
+        variant: "goalsSuccess",
+      });
     } catch {
       toast({
         title: "Error",
@@ -1270,7 +1343,10 @@ const GoalsHabits = () => {
       setHabitStartDate("");
       setHabitLinkedGoals([]);
       setIsHabitDialogOpen(false);
-      toast({ title: "Habit updated" });
+      toast({
+        title: "Habit updated",
+        description: "Your changes have been saved.",
+      });
     } catch (err) {
       toast({
         title: "Error",
@@ -1305,7 +1381,11 @@ const GoalsHabits = () => {
           method: "POST",
         });
       if (!res.ok) throw new Error(`Failed (${res.status})`);
-      toast({ title: "Habit deleted" });
+      toast({
+        title: "Habit deleted",
+        description: "Removed successfully.",
+        variant: "todoDelete",
+      });
     } catch (err) {
       toast({
         title: "Error",
@@ -2364,7 +2444,7 @@ const GoalsHabits = () => {
                 Cancel
               </Button>
               <Button
-                className="bg-red-500 hover:bg-red-600 text-white"
+                className="bg-[#DA7756] hover:bg-[#C96B4D] text-white"
                 onClick={
                   editingPatternId !== null
                     ? handleUpdatePattern
@@ -2640,7 +2720,9 @@ const GoalsHabits = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Start Date</Label>
+              <Label>
+                Start Date{editingHabitId === null ? " *" : ""}
+              </Label>
               <Input
                 type="date"
                 value={habitStartDate}
