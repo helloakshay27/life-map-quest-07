@@ -1,28 +1,24 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   ArrowLeft, HelpCircle, Calendar, Trash2, Pencil, ChevronDown, ChevronUp,
   Plus, X, Info, Calendar as CalendarIcon, AlertCircle, Loader2, Target,
-  Heart, Sparkles, ListTodo, BookOpen, Lightbulb, Zap
+  Heart, Sparkles, ListTodo, BookOpen, Lightbulb, Zap, Edit2, CheckCircle,
+  ListOrdered,
+  ArrowRight
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, startOfWeek, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "@/hooks/use-toast";
-import { toast as sonnerToast } from "sonner";
 import AddAchievementDialog from "@/components/journal/AddAchievementDialog";
+import CreateToDoDialog from "@/components/journal/CreateToDoDialog"; // <-- IMPORTED DIALOG
 
-// ─── EXACT BRAND PALETTE (from image) ────────────────────────────────────────
-// PRIMARY:  Coral #D54744 | Cream #F0CEAA | Charcoal #1A1A2A
-// SECONDARY: Violet #5034BB | Forest #0B5541
-// TERTIARY:  Sky #3A6CC5 | Amber #D47517 | Crimson #B72B2D | Leaf #3A6011 | Lavender #C0CBEB | Stone #888763
-// ACCENT:   Sand #C5A881 | Dune #D1BC88 | Mist #D1D6A6
-// STATUS:   Success #44FBD0 | Warning #E4A948 | Error #D8432F
+// ─── EXACT BRAND PALETTE ──────────────────────────────────────────────────────
 const C = {
-  coral:     "#D54744",
+  coral:     "#DA7756",
   coral8:    "rgba(213,71,68,0.08)",
   coral15:   "rgba(213,71,68,0.15)",
   charcoal:  "#1A1A2A",
@@ -81,6 +77,24 @@ interface HabitItem {
   frequency?: string; category?: string; week_history?: boolean[];
 }
 
+// ─── Mapping Helpers for To-Do API ────────────────────────────────────────────
+const toApiStatus = (ui: string) => {
+  const map: Record<string, string> = { "Not Started": "not_started", "In Progress": "in_progress", "Completed": "completed", "Someday": "someday" };
+  return map[ui] ?? ui.toLowerCase().replace(/ /g, "_");
+};
+
+const toApiPriority = (ui: string) => ui.toLowerCase();
+
+const fromApiStatus = (api: string) => {
+  const map: Record<string, string> = { "not_started": "Not Started", "in_progress": "In Progress", "completed": "Completed", "someday": "Someday" };
+  return map[api] || "Not Started";
+}
+
+const fromApiPriority = (api: string) => {
+  const map: Record<string, string> = { "low": "Low", "medium": "Medium", "high": "High", "urgent": "Urgent" };
+  return map[api] || "Medium";
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const getProgressStyle = (progress: string) => {
   switch (progress) {
@@ -99,7 +113,6 @@ const getProgressClass = (progress: string) => {
     default:            return "bg-[#C5A881]/20 text-[#888763]";
   }
 };
-const getCategoryStyle  = () => `bg-white text-[#888763] border border-[#D1D6A6]`;
 const statusToProgress  = (s: string) => ({ dreaming: "Dreaming", planning: "Planning", in_progress: "In Progress", achieved: "Achieved" }[s] || "Dreaming");
 const progressToStatus  = (p: string) => ({ Dreaming: "dreaming", Planning: "planning", "In Progress": "in_progress", Achieved: "achieved" }[p] || "dreaming");
 
@@ -115,8 +128,9 @@ const DailyFortuneModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =
           <X className="w-5 h-5" />
         </button>
         <div className="flex flex-col items-center text-center mt-2">
+          {/* Solid Coral Background */}
           <div className="w-[64px] h-[64px] rounded-full flex items-center justify-center shadow-lg mb-5 border-4 border-white"
-            style={{ background: `linear-gradient(135deg, ${C.coral}, ${C.sand})` }}>
+            style={{ background: C.coral }}>
             <Sparkles className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-[22px] font-extrabold mb-1 flex items-center justify-center gap-2" style={{ color: C.charcoal }}>
@@ -128,7 +142,7 @@ const DailyFortuneModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =
           </div>
           <button onClick={onClose}
             className="px-8 py-3.5 text-white text-[15px] font-bold rounded-full shadow-md transition-all active:scale-95 w-3/4"
-            style={{ background: `linear-gradient(135deg, ${C.coral}, ${C.sand})` }}
+            style={{ background: C.coral }}
             onMouseEnter={e => (e.currentTarget.style.opacity = "0.88")}
             onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
             Continue Your Journey
@@ -160,10 +174,10 @@ function Dailystrip({ onSelectDate, filledDates = [], selectedDateExternal }: { 
   const weekLabel = isCurrentWeek ? "This Week" : formatWeekRange(weekStart);
 
   return (
-    <div className="rounded-2xl border p-4 sm:p-5 w-full font-sans" style={{ background: C.pageBg, borderColor: C.cream }}>
+    <div className="rounded-2xl border p-4 sm:p-5 w-full font-sans" style={{ background: "white", borderColor: C.cream }}>
       <div className="flex items-center gap-2.5 mb-5">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
-          style={{ background: `linear-gradient(135deg, ${C.coral}, ${C.sand})` }}>
+          style={{ background: C.coral }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <rect x="3" y="4" width="18" height="17" rx="2" stroke="white" strokeWidth="2"/>
             <path d="M3 9h18" stroke="white" strokeWidth="2"/>
@@ -245,7 +259,7 @@ function Dailystrip({ onSelectDate, filledDates = [], selectedDateExternal }: { 
   );
 }
 
-// ─── GuidingPrinciples ────────────────────────────────────────────────────────
+/// ─── GuidingPrinciples ────────────────────────────────────────────────────────
 interface GuidingPrinciplesProps {
   coreValues: { id: number; name: string }[];
   selectedValues: string[]; setSelectedValues: React.Dispatch<React.SetStateAction<string[]>>;
@@ -276,11 +290,10 @@ const GuidingPrinciples = ({ coreValues, selectedValues, setSelectedValues, sele
   const toggle = (list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>, item: string) =>
     setList(prev => prev.includes(item) ? prev.filter(v => v !== item) : [...prev, item]);
 
-  // Sand = active pill (brand accent), white+mist = inactive
   const pillBtn = (active: boolean) => ({
     padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: 600,
-    border: `1.5px solid ${active ? C.sand : C.cream}`,
-    background: active ? C.sand : "#fff",
+    border: `1.5px solid ${active ? C.coral : C.cream}`,
+    background: active ? C.coral : "#fff",
     color: active ? "#fff" : C.stone,
     cursor: "pointer", flexShrink: 0, transition: "all 0.15s",
   } as React.CSSProperties);
@@ -289,7 +302,7 @@ const GuidingPrinciples = ({ coreValues, selectedValues, setSelectedValues, sele
     <div className="rounded-2xl border p-5 w-full font-sans" style={{ background: C.pageBg, borderColor: C.cream }}>
       <div className="flex items-center gap-2.5 mb-5">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
-          style={{ background: `linear-gradient(135deg, ${C.coral}, ${C.sand})` }}>
+          style={{ background: C.coral }}>
           <Heart className="w-5 h-5 text-white" strokeWidth={2.5}/>
         </div>
         <span className="font-bold text-[18px] flex items-center gap-2" style={{ color: C.charcoal }}>
@@ -368,7 +381,7 @@ const TodaysReflection = ({
   const selectedDayIdx = selectedDate.getDay();
   const today = new Date(); today.setHours(0,0,0,0);
 
-  const addAccomplishment    = () => setAccomplishments((p: any) => [...p, { id: Date.now(), title: "", checked: false }]);
+  const addAccomplishment = () => setAccomplishments((p: any) => [...p, { id: Date.now(), title: "", checked: true }]);
   const removeAccomplishment = (id: number) => setAccomplishments((p: any) => p.filter((a: any) => a.id !== id));
   const updateAccomplishment = (id: number, field: string, value: any) => setAccomplishments((p: any) => p.map((a: any) => a.id === id ? { ...a, [field]: value } : a));
   const toggleMood  = (mood: string) => setSelectedMoods((p: any) => p.includes(mood) ? p.filter((m: any) => m !== mood) : [...p, mood]);
@@ -376,8 +389,8 @@ const TodaysReflection = ({
 
   const pillBtn = (active: boolean): React.CSSProperties => ({
     flexShrink: 0, padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 500,
-    border: `1.5px solid ${active ? C.sand : C.cream}`,
-    background: active ? C.sand : "#fff",
+    border: `1.5px solid ${active ? C.coral : C.cream}`,
+    background: active ? C.coral : "#fff",
     color: active ? "#fff" : C.stone,
     cursor: "pointer", transition: "all 0.15s",
   });
@@ -386,7 +399,7 @@ const TodaysReflection = ({
     <div className="rounded-2xl border p-5 w-full font-sans" style={{ background: C.pageBg, borderColor: C.cream }}>
       <div className="flex items-center gap-2.5 mb-5">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
-          style={{ background: `linear-gradient(135deg, ${C.coral}, ${C.sand})` }}>
+          style={{ background: C.coral }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
             <path d="M9 21h6M12 3a6 6 0 0 1 4 10.47V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-3.53A6 6 0 0 1 12 3z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
@@ -560,7 +573,7 @@ const TodaysReflection = ({
       <div className="grid grid-cols-2 gap-6">
         {[
           { label: "Energy",    val: energy,    set: setEnergy,    fillColor: C.coral },
-          { label: "Alignment", val: alignment, set: setAlignment, fillColor: C.violet },
+          { label: "Alignment", val: alignment, set: setAlignment, fillColor: C.coral },
         ].map(({ label, val, set, fillColor }) => (
           <div key={label}>
             <div className="flex items-center justify-between mb-2">
@@ -579,15 +592,89 @@ const TodaysReflection = ({
 };
 
 // ─── ShapingTomorrow ──────────────────────────────────────────────────────────
-const ShapingTomorrow = ({ priorities, setPriorities, token }: { priorities: string[]; setPriorities: any; token?: string }) => {
+const ShapingTomorrow = ({ priorities, setPriorities, token, showToast }: { priorities: string[]; setPriorities: any; token?: string; showToast: (msg: string, type?: "success" | "error") => void }) => {
   const [calendars, setCalendars] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // ── To-Dos State ──
+  const [todos, setTodos] = useState<any[]>([]);
+  const [isLoadingTodos, setIsLoadingTodos] = useState(true);
+  const [isTodoDialogOpen, setIsTodoDialogOpen] = useState(false);
+  const [editingTodo, setEditingTodo] = useState<any>(null);
 
+  // Fetch Calendars
   useEffect(() => {
     fetch(`${API_BASE_URL}/user_calendars`, { headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken(token)}` } })
       .then(r => r.json()).then(data => setCalendars(Array.isArray(data) ? data.map(item => ({ id: String(item.id), name: item.name, embedUrl: item.embed_url })) : []))
       .catch(() => setCalendars([])).finally(() => setIsLoading(false));
   }, [token]);
+
+  // Fetch Todos
+  const fetchTodos = async () => {
+    setIsLoadingTodos(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/todos`, {
+        headers: { Authorization: `Bearer ${getToken(token)}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : (data.data || data.todos || []);
+        setTodos(list.filter((t: any) => t.status !== 'completed'));
+      }
+    } catch (err) {
+      console.error("Failed to fetch todos:", err);
+    } finally {
+      setIsLoadingTodos(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTodos();
+  }, [token]);
+
+  // Handle Edit Submission
+  const handleUpdateTodo = async (updated: any) => {
+    try {
+      const payloadWrapped = {
+        todo: {
+          title: updated.title,
+          description: updated.description,
+          life_area: updated.lifeArea,
+          priority: toApiPriority(updated.priority),
+          status: toApiStatus(updated.status),
+          recurring: updated.recurring,
+          target_date: updated.targetDate ? new Date(updated.targetDate).toISOString().split("T")[0] : null,
+          goal_id: updated.goalId ? Number(updated.goalId) : null,
+        },
+      };
+
+      const tokenToUse = token || localStorage.getItem("auth_token") || "";
+      let res = await fetch(`https://life-api.lockated.com/todos/${updated.id}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${tokenToUse}`, "Content-Type": "application/json" },
+        body: JSON.stringify(payloadWrapped),
+      });
+
+      if (!res.ok) {
+        res = await fetch(`https://life-api.lockated.com/todos/${updated.id}`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${tokenToUse}`, "Content-Type": "application/json" },
+          body: JSON.stringify(payloadWrapped),
+        });
+      }
+
+      if (res.ok) {
+        showToast("To do updated successfully.", "success");
+        setIsTodoDialogOpen(false);
+        fetchTodos(); // Refresh the to-dos list
+      } else {
+        throw new Error("Update failed");
+      }
+    } catch (e) {
+      console.error(e);
+      showToast("Failed to update to do.", "error");
+    }
+  };
 
   const addPriority    = () => setPriorities([...priorities, ""]);
   const updatePriority = (index: number, value: string) => { const u = [...priorities]; u[index] = value; setPriorities(u); };
@@ -596,7 +683,7 @@ const ShapingTomorrow = ({ priorities, setPriorities, token }: { priorities: str
     <div className="w-full border rounded-xl p-6 font-sans shadow-sm" style={{ background: C.pageBg, borderColor: C.cream }}>
       <div className="flex items-center gap-3 mb-6">
         <div className="w-10 h-10 rounded-xl shadow-sm flex items-center justify-center"
-          style={{ background: `linear-gradient(135deg, ${C.coral}, ${C.sand})` }}>
+          style={{ background: C.coral }}>
           <div className="relative flex items-center justify-center w-5 h-5">
             <div className="absolute w-full h-full rounded-full border-[1.5px] border-white/90"/>
             <div className="absolute w-[60%] h-[60%] rounded-full border-[1.5px] border-white/90"/>
@@ -642,6 +729,88 @@ const ShapingTomorrow = ({ priorities, setPriorities, token }: { priorities: str
         )}
       </div>
 
+      {/* ── Tomorrow's Headstart Alert ── */}
+      <div className="bg-[#FFFDE7] border border-[#FDE047] rounded-md px-4 py-3 mb-6 flex items-start gap-2 shadow-sm">
+        <span className="text-[15px] leading-none mt-0.5">💡</span>
+        <p className="text-[13.5px] text-[#854D0E]">
+          <span className="font-bold">Tomorrow's Headstart:</span> Write down your top 3 priorities for tomorrow tonight.
+        </p>
+      </div>
+
+      {/* ── To Do's Card ── */}
+      <div className="border border-[#D5DDFA] rounded-xl overflow-hidden bg-white mb-6 shadow-sm">
+        <div className="px-4 py-3 bg-[#F8FAFC] border-b border-[#D5DDFA] flex justify-between items-center">
+          <h3 className="font-bold text-[#5034BB] text-[15px] flex items-center gap-1.5">
+            <ListOrdered className="w-4 h-4" /> Top To-Do's ({todos.length})
+          </h3>
+          <Link to="/todos" className="text-[13px] font-bold flex items-center gap-1 hover:underline" style={{ color: "#5034BB" }}>
+            See All <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+        <div className="p-4 flex flex-col gap-3">
+          {isLoadingTodos ? (
+             <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-[#5034BB]" /></div>
+          ) : todos.length > 0 ? (
+            todos.slice(0, 3).map((todo, idx) => {
+              const p = (todo.priority || "Medium").toLowerCase();
+              return (
+                <div key={todo.id || idx} className="flex items-center justify-between border border-[#E2E8F0] rounded-lg p-3">
+                  <div className="flex items-start gap-3">
+                    <input 
+                      type="checkbox" 
+                      title="Mark as Completed"
+                      className="mt-1 w-4 h-4 rounded border-gray-300 text-[#5034BB] focus:ring-[#5034BB] cursor-pointer"
+                      onChange={() => {
+                        const updatedTodo = {
+                          ...todo,
+                          status: "Completed"
+                        };
+                        handleUpdateTodo(updatedTodo);
+                      }}
+                    />
+                    <div>
+                      <p className="text-[14px] font-medium text-[#2C2C2A]">{todo.title || todo.name || "Untitled Task"}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[11px] font-medium text-gray-500">{todo.life_area || todo.lifeArea || "General"}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold capitalize ${
+                          p === 'high' ? 'bg-[#FEE2E2] text-[#991B1B]' :
+                          p === 'low' ? 'bg-[#DCFCE7] text-[#166534]' :
+                          'bg-[#FEF08A] text-[#854D0E]'
+                        }`}>
+                          {todo.priority || "Medium"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-400">
+                     <Edit2 
+                       className="w-4 h-4 cursor-pointer hover:text-[#5034BB] transition-colors" 
+                       onClick={() => {
+                         setEditingTodo({
+                           ...todo,
+                           id: String(todo.id),
+                           title: todo.title || todo.name,
+                           description: todo.description || "",
+                           lifeArea: todo.life_area || todo.lifeArea || "General",
+                           priority: fromApiPriority(todo.priority),
+                           status: fromApiStatus(todo.status),
+                           recurring: todo.recurring || "None",
+                           targetDate: todo.target_date || null,
+                           goalId: todo.goal_id || null
+                         });
+                         setIsTodoDialogOpen(true);
+                       }} 
+                     />
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <p className="text-sm text-gray-500 text-center py-4">No active to-do's found.</p>
+          )}
+        </div>
+      </div>
+
       <div className="bg-white border rounded-md px-4 py-3 mb-6 flex items-center gap-2 shadow-sm" style={{ borderColor: C.cream }}>
         <span className="text-[15px] leading-none">💡</span>
         <p className="text-[13.5px]" style={{ color: C.stone }}>
@@ -669,6 +838,19 @@ const ShapingTomorrow = ({ priorities, setPriorities, token }: { priorities: str
           ))}
         </div>
       </div>
+
+      {/* Edit Todo Modal */}
+      <CreateToDoDialog
+        open={isTodoDialogOpen}
+        onOpenChange={(open) => {
+          setIsTodoDialogOpen(open);
+          if (!open) setEditingTodo(null);
+        }}
+        initialData={editingTodo}
+        onSubmit={async (todo) => {
+          await handleUpdateTodo(todo);
+        }}
+      />
     </div>
   );
 };
@@ -695,7 +877,7 @@ const DailyAffirmation = ({ affirmation, setAffirmation, token }: { affirmation:
     <div className="border rounded-2xl p-6 w-full font-sans" style={{ background: C.pageBg, borderColor: C.cream }}>
       <div className="flex items-center gap-3 mb-4">
         <div className="rounded-xl w-10 h-10 flex items-center justify-center flex-shrink-0"
-          style={{ background: `linear-gradient(135deg, ${C.violet}, ${C.coral})` }}>
+          style={{ background: C.coral }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
             <path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z" fill="white" stroke="white" strokeWidth="0.5" strokeLinejoin="round"/>
             <path d="M19 2L19.8 5.2L23 6L19.8 6.8L19 10L18.2 6.8L15 6L18.2 5.2L19 2Z" fill="white" strokeLinejoin="round"/>
@@ -754,11 +936,8 @@ const PillSelect = ({ value, options, onChange, styleFn }: any) => (
   </div>
 );
 
-// Note: AddDreamModal logic is kept here if needed elsewhere, 
-// but it is no longer used by the BucketListProgress component in this file.
-
-const BucketListProgress = ({ token }: { token?: string }) => {
-  const navigate = useNavigate(); // ADDED NAVIGATE FOR ROUTING
+const BucketListProgress = ({ token, showToast }: { token?: string, showToast: (msg: string, type?: "success" | "error") => void }) => {
+  const navigate = useNavigate(); 
   const [bucketList, setBucketList]         = useState<any[]>([]);
   const [isLoading, setIsLoading]           = useState(true);
   const [updateTexts, setUpdateTexts]       = useState<any>({});
@@ -777,16 +956,16 @@ const BucketListProgress = ({ token }: { token?: string }) => {
           mapCat(data.dreaming,"Dreaming"); mapCat(data.planning,"Planning"); mapCat(data.in_progress,"In Progress"); mapCat(data.achieved,"Achieved");
         }
         setBucketList(mapped);
-      }).catch(() => sonnerToast.error("Failed to load bucket list")).finally(() => setIsLoading(false));
+      }).catch(() => showToast("Failed to load bucket list", "error")).finally(() => setIsLoading(false));
   }, [token]);
 
   const handleProgressChange = async (id: string, val: string) => {
     setBucketList(p => p.map(i => i.id===id ? {...i, progress: val} : i));
-    fetch(`${API_BASE}/dreams/${id}/change_status`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken(token)}` }, body: JSON.stringify({ status: progressToStatus(val) }) }).catch(() => sonnerToast.error("Failed update"));
+    fetch(`${API_BASE}/dreams/${id}/change_status`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken(token)}` }, body: JSON.stringify({ status: progressToStatus(val) }) }).catch(() => showToast("Failed update", "error"));
   };
   const handleCategoryChange = async (id: string, val: string) => {
     setBucketList(p => p.map(i => i.id===id ? {...i, category: val} : i));
-    fetch(`${API_BASE}/dreams/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken(token)}` }, body: JSON.stringify({ title: bucketList.find(i => i.id===id)?.title, category: val }) }).catch(() => sonnerToast.error("Failed update"));
+    fetch(`${API_BASE}/dreams/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken(token)}` }, body: JSON.stringify({ title: bucketList.find(i => i.id===id)?.title, category: val }) }).catch(() => showToast("Failed update", "error"));
   };
 
   const filtered = bucketList.filter(item => (progressFilter==="All Progress" || item.progress===progressFilter) && (categoryFilter==="All Categories" || item.category===categoryFilter));
@@ -797,7 +976,7 @@ const BucketListProgress = ({ token }: { token?: string }) => {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
-              style={{ background: `linear-gradient(135deg, ${C.violet}, ${C.sky})` }}>
+              style={{ background: C.coral }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z" fill="white" stroke="white" strokeWidth="0.5" strokeLinejoin="round"/>
               </svg>
@@ -815,7 +994,7 @@ const BucketListProgress = ({ token }: { token?: string }) => {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => navigate("/bucket-list")} // FIXED HERE
+            <button onClick={() => navigate("/bucket-list")}
               className="flex items-center gap-1 h-8 px-3 rounded-lg text-white text-xs font-semibold transition-all shadow-sm"
               style={{ background: C.coral }}
               onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")} onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
@@ -846,7 +1025,7 @@ const BucketListProgress = ({ token }: { token?: string }) => {
                 <textarea rows={2} placeholder="Add update..." value={updateTexts[item.id]||""} onChange={e => setUpdateTexts((p: any) => ({...p,[item.id]:e.target.value}))}
                   className="w-full rounded-lg border px-3 py-2 text-xs resize-none outline-none" style={{ borderColor: C.cream, background: C.pageBg, color: C.charcoal }}/>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <button onClick={() => { if (updateTexts[item.id]?.trim()) { sonnerToast.success("Update added!"); setUpdateTexts((p: any) => ({...p,[item.id]:""})); }}}
+                  <button onClick={() => { if (updateTexts[item.id]?.trim()) { showToast("Update added!", "success"); setUpdateTexts((p: any) => ({...p,[item.id]:""})); }}}
                     className="flex items-center gap-1 h-7 px-3 rounded-full bg-white border text-[11px] font-semibold" style={{ borderColor: C.cream, color: C.stone }}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" className="inline-block"><rect x="3" y="3" width="18" height="18" rx="3" fill="currentColor" opacity="0.2"/><path d="M12 8v8M8 12h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg> Add
                   </button>
@@ -860,7 +1039,7 @@ const BucketListProgress = ({ token }: { token?: string }) => {
                   <path d="m12 3-1.9 5.8a2 2 0 0 1-1.275 1.275L3 12l5.8 1.9a2 2 0 0 1 1.275 1.275L12 21l1.9-5.8a2 2 0 0 1 1.275-1.275L21 12l-5.8-1.9a2 2 0 0 1-1.275-1.275L12 3Z"/>
                 </svg>
                 <p className="text-[15px] font-medium mb-4" style={{ color: C.stone }}>No bucket list items matching filters</p>
-                <button onClick={() => navigate("/bucket-list")} // FIXED HERE
+                <button onClick={() => navigate("/bucket-list")} 
                   className="bg-white border text-[#333] font-semibold text-[14px] px-5 py-2 rounded-lg shadow-sm transition-colors" style={{ borderColor: C.cream }}
                   onMouseEnter={e => (e.currentTarget.style.background = C.pageBg)} onMouseLeave={e => (e.currentTarget.style.background = "#fff")}>
                   Create Your First Dream
@@ -875,7 +1054,7 @@ const BucketListProgress = ({ token }: { token?: string }) => {
 };
 
 // ─── PastJournalRow ───────────────────────────────────────────────────────────
-const PastJournalRow = ({ journal, token, onDelete, onEdit }: { journal: PastJournal; token?: string; onDelete: (id: number) => void; onEdit: (id: number) => void }) => {
+const PastJournalRow = ({ journal, token, onDelete, onEdit, showToast }: { journal: PastJournal; token?: string; onDelete: (id: number) => void; onEdit: (id: number) => void; showToast: (msg: string, type?: "success"| "error") => void }) => {
   const [expanded, setExpanded] = useState(false);
   const [detail, setDetail]     = useState<DetailedJournal | null>(null);
   const [loading, setLoading]   = useState(false);
@@ -887,7 +1066,7 @@ const PastJournalRow = ({ journal, token, onDelete, onEdit }: { journal: PastJou
         const res  = await fetch(`${LIFE_API}/user_journals/${journal.id}`, { headers: { Authorization: `Bearer ${getToken(token)}` } });
         const data = await res.json();
         setDetail(data?.user_journal ?? data);
-      } catch { toast({ title: "Error", variant: "destructive" }); } finally { setLoading(false); }
+      } catch { showToast("Error loading details", "error"); } finally { setLoading(false); }
     }
     setExpanded(p => !p);
   };
@@ -897,10 +1076,10 @@ const PastJournalRow = ({ journal, token, onDelete, onEdit }: { journal: PastJou
     if (!window.confirm("Delete this journal entry?")) return;
     try {
       await fetch(`${LIFE_API}/user_journals/${journal.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${getToken(token)}` } });
-      toast({ title: "Deleted" });
+      showToast("Entry Deleted", "success");
       localStorage.removeItem(`daily_journal_${journal.start_date}`);
       onDelete(journal.id);
-    } catch { toast({ title: "Error", variant: "destructive" }); }
+    } catch { showToast("Error deleting entry", "error"); }
   };
 
   const dateLabel   = journal.formatted_date || format(new Date(journal.start_date), "EEEE, MMMM d, yyyy");
@@ -1001,7 +1180,7 @@ const PastJournalRow = ({ journal, token, onDelete, onEdit }: { journal: PastJou
 };
 
 // ─── PastLetterRow ────────────────────────────────────────────────────────────
-const PastLetterRow = ({ letter, token, onDelete, onEdit }: { letter: PastLetter; token?: string; onDelete: (id: number) => void; onEdit: (l: PastLetter & { content?: string }) => void }) => {
+const PastLetterRow = ({ letter, token, onDelete, onEdit, showToast }: { letter: PastLetter; token?: string; onDelete: (id: number) => void; onEdit: (l: PastLetter & { content?: string }) => void; showToast: (msg: string, type?: "success"|"error") => void }) => {
   const [expanded, setExpanded] = useState(false);
   const [content, setContent]   = useState<string | null>(letter.content ?? null);
   const [loading, setLoading]   = useState(false);
@@ -1012,7 +1191,7 @@ const PastLetterRow = ({ letter, token, onDelete, onEdit }: { letter: PastLetter
       try {
         const res = await fetch(`${LIFE_API}/user_letters/${letter.id}`, { headers: { Authorization: `Bearer ${getToken(token)}` } });
         if (res.ok) { const data = await res.json(); setContent((data?.letter ?? data?.user_letter ?? data)?.content ?? ""); }
-      } catch { toast({ title: "Error loading letter", variant: "destructive" }); } finally { setLoading(false); }
+      } catch { showToast("Error loading letter", "error"); } finally { setLoading(false); }
     }
     setExpanded(p => !p);
   };
@@ -1023,8 +1202,8 @@ const PastLetterRow = ({ letter, token, onDelete, onEdit }: { letter: PastLetter
     try {
       const res = await fetch(`${LIFE_API}/user_letters/${letter.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${getToken(token)}` } });
       if (!res.ok) throw new Error();
-      toast({ title: "Letter deleted" }); onDelete(letter.id);
-    } catch { toast({ title: "Failed to delete letter", variant: "destructive" }); }
+      showToast("Letter deleted", "success"); onDelete(letter.id);
+    } catch { showToast("Failed to delete letter", "error"); }
   };
 
   const dateLabel = letter.formatted_date || (letter.written_on ? format(new Date(letter.written_on), "EEEE, MMMM d, yyyy") : "");
@@ -1101,11 +1280,11 @@ const PeopleUpcomingDates = ({ token }: { token?: string }) => {
   if (people.length === 0) return emptyCard(false);
 
   return (
-    <div className="rounded-[16px] border px-5 pt-4 pb-8 font-sans w-full" style={{ background: C.pageBg, borderColor: C.cream }}>
+    <div className="rounded-[16px] border px-5 pt-4 pb-8 font-sans w-full" style={{ background: "white", borderColor: C.cream }}>
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-2.5">
           <div className="w-[30px] h-[30px] rounded-[8px] flex items-center justify-center shadow-sm"
-            style={{ background: `linear-gradient(135deg, ${C.coral}, ${C.sand})` }}>
+            style={{ background: C.coral }}>
             <CalendarIcon className="w-[18px] h-[18px] text-white" strokeWidth={2}/>
           </div>
           <span className="font-bold text-[15px]" style={{ color: C.charcoal }}>Upcoming Dates</span>
@@ -1125,7 +1304,7 @@ const ReviewToDos = ({ goals }: { goals: Goal[] }) => (
   <div className="w-full border rounded-2xl p-6 font-sans" style={{ background: C.pageBg, borderColor: C.cream }}>
     <div className="flex items-center gap-3 mb-6">
       <div className="flex items-center justify-center w-10 h-10 rounded-xl shadow-sm"
-        style={{ background: `linear-gradient(135deg, ${C.forest}, ${C.sky})` }}>
+        style={{ background: C.coral }}>
         <Target className="w-5 h-5 text-white" strokeWidth={2.5}/>
       </div>
       <div className="flex items-center gap-1.5">
@@ -1174,11 +1353,20 @@ const DailyJournal = () => {
   const navigate = useNavigate();
   const { token } = useAuth();
 
+  // ─── CUSTOM TOAST STATE ─────────────────────────────────────────────────────
+  const [customToast, setCustomToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setCustomToast({ message, type });
+    setTimeout(() => setCustomToast(null), 3000);
+  };
+
   const [activeTab, setActiveTab]         = useState("new");
   const [isSaving, setIsSaving]           = useState(false);
   const [selectedDate, setSelectedDate]   = useState(new Date());
   const [journalId, setJournalId]         = useState<number | null>(null);
   const [isEditMode, setIsEditMode]       = useState(false);
+  const [isEditingFromPast, setIsEditingFromPast] = useState(false);
   const [isLoadingDaily, setIsLoadingDaily] = useState(false);
   const [showFortuneModal, setShowFortuneModal] = useState(false);
 
@@ -1256,7 +1444,9 @@ const DailyJournal = () => {
         } catch {}
         if (!isMounted) return;
         if (existingJournal) {
-          setJournalId(existingJournal.id); setIsEditMode(false);
+          setJournalId(existingJournal.id); 
+          setIsEditMode(true);
+          setIsEditingFromPast(false);
           setAffirmation(existingJournal.affirmation || ""); setGratitude(existingJournal.gratitude_note || "");
           setChallenges(existingJournal.challenges_note || ""); setDescription(existingJournal.data?.description || "");
           setEnergy(existingJournal.energy_score ?? 5); setAlignment(existingJournal.alignment_score ?? 5);
@@ -1271,7 +1461,10 @@ const DailyJournal = () => {
             return { ...sh, frequency: match?.frequency || match?.repeat_type || "Daily", category: match?.category || match?.habit_category || "Other", week_history: match?.week_history || match?.weekly_completion || [] };
           }));
         } else {
-          setJournalId(null); setIsEditMode(false); setGratitude(""); setChallenges(""); setDescription("");
+          setJournalId(null); 
+          setIsEditMode(false); 
+          setIsEditingFromPast(false);
+          setGratitude(""); setChallenges(""); setDescription("");
           setEnergy(5); setAlignment(5); setPriorities([""]); setSelectedMoods([]); setAchievements([]);
           setSelectedAreas([]); setSelectedValues([]); setAffirmation("");
           setHabitsSnapshot(fetchedHabits.map((h: any) => ({ habit_id: h.id || h.habit_id, name: h.name || h.title || "Habit", completed: false, frequency: h.frequency || h.repeat_type || "Daily", category: h.category || h.habit_category || "Other", week_history: h.week_history || h.weekly_completion || [] })));
@@ -1288,10 +1481,16 @@ const DailyJournal = () => {
       if (!res.ok) throw new Error();
       const data = await res.json();
       const j    = data?.user_journal ?? data;
-      if (j.start_date) { setSelectedDate(new Date(j.start_date + "T00:00:00")); setTimeout(() => setIsEditMode(true), 500); }
+      if (j.start_date) { 
+        setSelectedDate(new Date(j.start_date + "T00:00:00")); 
+        setTimeout(() => {
+          setIsEditMode(true);
+          setIsEditingFromPast(true);
+        }, 500); 
+      }
       setActiveTab("new");
-      toast({ title: "Ready to edit ✏️", description: "Make your changes and click Update Entry." });
-    } catch { toast({ title: "Error", variant: "destructive" }); }
+      showToast("Ready to edit ✏️", "success");
+    } catch { showToast("Error loading entry", "error"); }
   };
 
   useEffect(() => {
@@ -1314,8 +1513,7 @@ const DailyJournal = () => {
   const handleSaveEntry = async () => {
     const today     = new Date(); today.setHours(0,0,0,0);
     const entryDate = new Date(selectedDate); entryDate.setHours(0,0,0,0);
-    if (entryDate > today) return toast({ title: "Cannot Create Future Entry", description: "You can only create journal entries for today or past dates.", variant: "destructive" });
-    if (journalId && !isEditMode) return toast({ title: "Entry Already Exists ⚠️", description: "Use the Past tab to update it.", variant: "destructive" });
+    if (entryDate > today) return showToast("Cannot Create Future Entry", "error");
     setIsSaving(true);
     try {
       const isUpdate             = isEditMode && !!journalId;
@@ -1335,12 +1533,13 @@ const DailyJournal = () => {
       const savedJournal = resData?.user_journal ?? resData?.journal ?? resData;
       if (savedJournal?.id) setJournalId(savedJournal.id);
       setIsEditMode(false);
-      toast({ title: isUpdate ? "Journal Updated ✅" : "Journal Entry Saved ✅" });
+      setIsEditingFromPast(false);
+      showToast(isUpdate ? "Journal Updated ✅" : "Journal Entry Saved ✅", "success");
       const dateKey = format(selectedDate, "yyyy-MM-dd");
       localStorage.setItem(`daily_journal_${dateKey}`, JSON.stringify({ accomplishments: achievements.filter(a => a.title?.trim()).map(a => ({ title: a.title, checked: a.checked })) }));
       if (!isUpdate) setShowFortuneModal(true);
       await fetchPastJournals();
-    } catch { toast({ title: "Error saving entry", variant: "destructive" }); } finally { setIsSaving(false); }
+    } catch { showToast("Error saving entry", "error"); } finally { setIsSaving(false); }
   };
 
   const handleSaveLetter = async () => {
@@ -1352,8 +1551,8 @@ const DailyJournal = () => {
       const resData = await res.json();
       const saved   = resData?.letter ?? resData?.user_letter ?? resData;
       if (saved?.id) setPastLetters(prev => [saved, ...prev]);
-      toast({ title: "Letter Saved 💌" }); setLetterSubject(""); setLetterBody("");
-    } catch { toast({ title: "Error saving letter", variant: "destructive" }); } finally { setIsSavingLetter(false); }
+      showToast("Letter Saved 💌", "success"); setLetterSubject(""); setLetterBody("");
+    } catch { showToast("Error saving letter", "error"); } finally { setIsSavingLetter(false); }
   };
 
   const handleEditLetter   = (letter: PastLetter & { content?: string }) => { setEditingLetter(letter); setLetterSubject(letter.subject || ""); setLetterBody(letter.content || ""); };
@@ -1365,8 +1564,8 @@ const DailyJournal = () => {
       if (!res.ok) throw new Error();
       const updated = (await res.json())?.letter ?? (await res.json())?.user_letter ?? (await res.json());
       setPastLetters(prev => prev.map(l => l.id === editingLetter.id ? { ...l, ...updated } : l));
-      toast({ title: "Letter updated ✅" }); setEditingLetter(null); setLetterSubject(""); setLetterBody("");
-    } catch { toast({ title: "Failed to update letter", variant: "destructive" }); } finally { setIsSavingLetter(false); }
+      showToast("Letter updated ✅", "success"); setEditingLetter(null); setLetterSubject(""); setLetterBody("");
+    } catch { showToast("Failed to update letter", "error"); } finally { setIsSavingLetter(false); }
   };
 
   return (
@@ -1391,14 +1590,19 @@ const DailyJournal = () => {
         </div>
 
         {/* Edit mode banner */}
-        {isEditMode && (
-          <div className="mb-4 px-4 py-3 border rounded-xl flex items-center justify-between"
+        {isEditingFromPast && (
+          <div className="mb-4 px-4 py-3 border rounded-xl flex items-center justify-between animate-in fade-in slide-in-from-bottom-4 duration-500"
             style={{ background: C.coral8, borderColor: C.coral15 }}>
             <div className="flex items-center gap-2">
               <Pencil className="w-4 h-4" style={{ color: C.coral }}/>
               <span className="text-sm font-bold" style={{ color: C.charcoal }}>Editing entry for {format(selectedDate, "MMMM d, yyyy")}</span>
             </div>
-            <button onClick={() => { setIsEditMode(false); setSelectedDate(new Date(selectedDate)); }}
+            <button onClick={() => { 
+                setIsEditingFromPast(false); 
+                setIsEditMode(false);
+                setJournalId(null);
+                setSelectedDate(new Date()); 
+              }}
               className="text-xs font-bold uppercase tracking-wider underline" style={{ color: C.coral }}>Cancel Edit</button>
           </div>
         )}
@@ -1420,70 +1624,74 @@ const DailyJournal = () => {
           </TabsList>
 
           {/* NEW ENTRY */}
-          <TabsContent value="new" className="focus:outline-none">
-            {isLoadingDaily ? (
-              <div className="flex items-center justify-center py-32">
-                <div className="flex flex-col items-center gap-3">
-                  <Loader2 className="w-8 h-8 animate-spin" style={{ color: C.coral }}/>
-                  <p className="text-sm font-bold uppercase tracking-wider" style={{ color: C.stone }}>Loading {format(selectedDate, "MMMM d, yyyy")}...</p>
+          <TabsContent value="new" className="focus:outline-none outline-none">
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {isLoadingDaily ? (
+                <div className="flex items-center justify-center py-32">
+                  <div className="flex flex-col items-center gap-3">
+                    <Loader2 className="w-8 h-8 animate-spin" style={{ color: C.coral }}/>
+                    <p className="text-sm font-bold uppercase tracking-wider" style={{ color: C.stone }}>Loading {format(selectedDate, "MMMM d, yyyy")}...</p>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="flex flex-col space-y-8 pb-32 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <Dailystrip selectedDateExternal={selectedDate} onSelectDate={(date: any) => setSelectedDate(date)} filledDates={filledDates}/>
-                <GuidingPrinciples coreValues={allCoreValues} selectedValues={selectedValues} setSelectedValues={setSelectedValues} selectedAreas={selectedAreas} setSelectedAreas={setSelectedAreas} token={token}/>
-                <TodaysReflection accomplishments={achievements} setAccomplishments={setAchievements} gratitude={gratitude} setGratitude={setGratitude} challenges={challenges} setChallenges={setChallenges} selectedMoods={selectedMoods} setSelectedMoods={setSelectedMoods} energy={energy} setEnergy={setEnergy} alignment={alignment} setAlignment={setAlignment} habits={habitsSnapshot} setHabits={setHabitsSnapshot} selectedDate={selectedDate}/>
-                <ShapingTomorrow priorities={priorities} setPriorities={setPriorities} token={token}/>
-                <DailyAffirmation affirmation={affirmation} setAffirmation={setAffirmation} token={token}/>
-                <ReviewToDos goals={goalsList}/>
-                <BucketListProgress token={token}/>
-                <PeopleUpcomingDates token={token}/>
-              </div>
-            )}
+              ) : (
+                <div className="flex flex-col space-y-8 pb-32">
+                  <Dailystrip selectedDateExternal={selectedDate} onSelectDate={(date: any) => setSelectedDate(date)} filledDates={filledDates}/>
+                  <GuidingPrinciples coreValues={allCoreValues} selectedValues={selectedValues} setSelectedValues={setSelectedValues} selectedAreas={selectedAreas} setSelectedAreas={setSelectedAreas} token={token}/>
+                  <TodaysReflection accomplishments={achievements} setAccomplishments={setAchievements} gratitude={gratitude} setGratitude={setGratitude} challenges={challenges} setChallenges={setChallenges} selectedMoods={selectedMoods} setSelectedMoods={setSelectedMoods} energy={energy} setEnergy={setEnergy} alignment={alignment} setAlignment={setAlignment} habits={habitsSnapshot} setHabits={setHabitsSnapshot} selectedDate={selectedDate}/>
+                  <ShapingTomorrow priorities={priorities} setPriorities={setPriorities} token={token} showToast={showToast} />
+                  <DailyAffirmation affirmation={affirmation} setAffirmation={setAffirmation} token={token}/>
+                  <ReviewToDos goals={goalsList}/>
+                  <BucketListProgress token={token} showToast={showToast} />
+                  <PeopleUpcomingDates token={token}/>
+                </div>
+              )}
 
-            {/* Save bar */}
-            <div className="bg-white/95 backdrop-blur-md border-t p-4 flex justify-center z-50" style={{ borderColor: C.cream }}>
-              <div className="w-full flex justify-end gap-3 px-4">
-                <Button variant="outline" onClick={() => navigate(-1)}
-                  className="font-bold uppercase tracking-wider"
-                  style={{ background: "#fff", borderColor: C.cream, color: C.charcoal }}>Cancel</Button>
-                <Button onClick={handleSaveEntry}
-                  disabled={isSaving || isLoadingDaily || (!!journalId && !isEditMode)}
-                  className="text-white shadow-md font-bold uppercase tracking-wider"
-                  style={{
-                    background: isEditMode ? C.sand
-                      : journalId ? C.muted
-                      : `linear-gradient(135deg, ${C.coral}, ${C.sand})`,
-                  }}>
-                  {isSaving ? "Saving..."
-                    : isEditMode ? `Update Entry — ${format(selectedDate, "MMM d, yyyy")}`
-                    : journalId ? `Already Saved — ${format(selectedDate, "MMM d, yyyy")}`
-                    : `Save Entry — ${format(selectedDate, "MMM d, yyyy")}`}
-                </Button>
+              {/* Save bar */}
+              <div className=" backdrop-blur-md border-t p-4 flex justify-center z-40" style={{ borderColor: C.cream }}>
+                <div className="w-full flex justify-end gap-3 px-4">
+                  <Button variant="outline" onClick={() => navigate(-1)}
+                    className="font-bold uppercase tracking-wider"
+                    style={{ background: "#fff", borderColor: C.cream, color: C.charcoal }}>Cancel</Button>
+                  <Button onClick={handleSaveEntry}
+                    disabled={isSaving || isLoadingDaily}
+                    className="text-white shadow-md font-bold uppercase tracking-wider"
+                    style={{
+                      background: isEditMode ? C.coral 
+                        : journalId ? C.muted
+                        : C.coral,
+                    }}>
+                    {isSaving ? "Saving..."
+                      : isEditMode ? `Update Entry — ${format(selectedDate, "MMM d, yyyy")}`
+                      : journalId ? `Already Saved — ${format(selectedDate, "MMM d, yyyy")}`
+                      : `Save Entry — ${format(selectedDate, "MMM d, yyyy")}`}
+                  </Button>
+                </div>
               </div>
             </div>
           </TabsContent>
 
           {/* PAST */}
-          <TabsContent value="past" className="focus:outline-none">
-            {isLoadingPast ? (
-              <div className="py-20 text-center bg-white rounded-xl border" style={{ borderColor: C.cream }}>
-                <p className="font-bold uppercase tracking-wider" style={{ color: C.stone }}>Loading past entries...</p>
-              </div>
-            ) : pastJournals.length === 0 ? (
-              <div className="py-20 text-center bg-white rounded-xl border" style={{ borderColor: C.cream }}>
-                <p className="font-bold uppercase tracking-wider" style={{ color: C.stone }}>Past entries will appear here.</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {pastJournals.map(journal => <PastJournalRow key={journal.id} journal={journal} token={token} onDelete={id => setPastJournals(p => p.filter(j => j.id !== id))} onEdit={loadJournalIntoForm}/>)}
-              </div>
-            )}
+          <TabsContent value="past" className="focus:outline-none outline-none">
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {isLoadingPast ? (
+                <div className="py-20 text-center bg-white rounded-xl border" style={{ borderColor: C.cream }}>
+                  <p className="font-bold uppercase tracking-wider" style={{ color: C.stone }}>Loading past entries...</p>
+                </div>
+              ) : pastJournals.length === 0 ? (
+                <div className="py-20 text-center bg-white rounded-xl border" style={{ borderColor: C.cream }}>
+                  <p className="font-bold uppercase tracking-wider" style={{ color: C.stone }}>Past entries will appear here.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {pastJournals.map(journal => <PastJournalRow key={journal.id} journal={journal} token={token} onDelete={id => setPastJournals(p => p.filter(j => j.id !== id))} onEdit={loadJournalIntoForm} showToast={showToast} />)}
+                </div>
+              )}
+            </div>
           </TabsContent>
 
           {/* INSIGHTS */}
-          <TabsContent value="insights" className="focus:outline-none">
-            <div className="rounded-xl border bg-white p-12 text-center" style={{ borderColor: C.cream }}>
+          <TabsContent value="insights" className="focus:outline-none outline-none">
+            <div className="rounded-xl border bg-white p-12 text-center animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ borderColor: C.cream }}>
               {isLoadingInsights ? <p className="font-bold uppercase tracking-wider" style={{ color: C.stone }}>Loading insights...</p>
                 : insightsData?.message ? (
                   <>
@@ -1502,8 +1710,8 @@ const DailyJournal = () => {
           </TabsContent>
 
           {/* LETTERS */}
-          <TabsContent value="letters" className="focus:outline-none">
-            <div className="space-y-6">
+          <TabsContent value="letters" className="focus:outline-none outline-none">
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="rounded-xl border bg-white p-8" style={{ borderColor: C.cream }}>
                 <div className="mb-6 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -1555,7 +1763,7 @@ const DailyJournal = () => {
                   <p className="font-bold uppercase tracking-wider text-center py-4" style={{ color: C.muted }}>No past letters found. Write your first one above!</p>
                 ) : (
                   <div className="divide-y" style={{ borderColor: C.cream }}>
-                    {pastLetters.map(l => <PastLetterRow key={l.id} letter={l} token={token} onDelete={id => setPastLetters(p => p.filter(x => x.id !== id))} onEdit={handleEditLetter}/>)}
+                    {pastLetters.map(l => <PastLetterRow key={l.id} letter={l} token={token} onDelete={id => setPastLetters(p => p.filter(x => x.id !== id))} onEdit={handleEditLetter} showToast={showToast} />)}
                   </div>
                 )}
               </div>
@@ -1565,6 +1773,18 @@ const DailyJournal = () => {
       </div>
 
       <AddAchievementDialog open={showAchievementDialog} onOpenChange={setShowAchievementDialog} onSubmit={(a: any) => setAchievements([...achievements, a])}/>
+
+      {/* ─── CUSTOM TOAST COMPONENT INJECTED HERE ───────────────────────────────── */}
+      {customToast && (
+        <div
+          className={`fixed bottom-6 right-6 ${
+            customToast.type === "error" ? "bg-[#A32D2D]" : "bg-[#0B5D41]"
+          } text-white px-4 py-3 rounded-xl shadow-lg flex flex-col min-w-[250px] animate-fade-in z-50`}
+        >
+          <span className="font-bold text-sm">{customToast.type === "error" ? "Error" : "Success"}</span>
+          <span className="text-sm">{customToast.message}</span>
+        </div>
+      )}
     </div>
   );
 };

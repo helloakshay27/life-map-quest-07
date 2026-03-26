@@ -141,15 +141,15 @@ const Analytics = () => {
 
       {/* Metric Cards */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
-        <MetricBox icon={FileText}   title="Unique Days" value={metrics.uniqueDays}                                         variant="coral"  />
-        <MetricBox icon={Calendar}   title="Weekly Avg"  value={metrics.weekly}                                             variant="violet" />
+        <MetricBox icon={FileText}   title="Unique Days" value={metrics.uniqueDays}                                        variant="coral"  />
+        <MetricBox icon={Calendar}   title="Weekly Avg"  value={metrics.weekly}                                            variant="violet" />
         <MetricBox icon={TrendingUp} title="Alignment"   value={typeof metrics.alignment === "number" ? metrics.alignment.toFixed(1) : "0.0"} isScore variant="forest" />
         <MetricBox icon={Heart}      title="Energy"      value={typeof metrics.energy    === "number" ? metrics.energy.toFixed(1)    : "0.0"} isScore variant="amber"  />
       </div>
 
       {/* Trends Chart */}
       <div
-        className="rounded-xl p-4 sm:p-6 shadow-sm overflow-hidden"
+        className="rounded-xl p-4 sm:p-6 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
         style={{ background: "#FFFFFF", border: `1.5px solid ${C.dune}` }}
       >
         <h3 className="text-base sm:text-lg font-semibold mb-4" style={{ color: C.charcoal }}>
@@ -174,7 +174,7 @@ const Analytics = () => {
 
       {/* Key Insights */}
       <section
-        className="p-4 sm:p-6 rounded-2xl"
+        className="p-4 sm:p-6 rounded-2xl transition-all duration-300 hover:shadow-md"
         style={{ background: C.violet8, border: `1.5px solid ${C.violet15}` }}
       >
         <h3
@@ -189,7 +189,7 @@ const Analytics = () => {
             insights.map((ins, i) => (
               <div
                 key={i}
-                className="p-3 sm:p-4 rounded-lg shadow-sm text-sm sm:text-base leading-relaxed"
+                className="p-3 sm:p-4 rounded-lg shadow-sm text-sm sm:text-base leading-relaxed transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
                 style={{ background: "#FFFFFF", border: `1px solid ${C.violet15}`, color: C.charcoal }}
               >
                 {ins}
@@ -218,7 +218,7 @@ const MetricBox = ({ icon: Icon, title, value, variant, isScore }: any) => {
 
   return (
     <div
-      className="p-4 sm:p-5 rounded-xl transition-all"
+      className="p-4 sm:p-5 rounded-xl transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-default"
       style={{ background: v.bg, border: `1.5px solid ${v.border}` }}
     >
       <Icon className="mb-2 h-4 w-4 flex-shrink-0" style={{ color: v.color }} />
@@ -259,7 +259,7 @@ const ValuesInAction = ({ mockValuesData = [] }: any) => {
 
   return (
     <div
-      className="rounded-xl p-4 sm:p-6 shadow-sm flex flex-col h-full"
+      className="rounded-xl p-4 sm:p-6 shadow-sm flex flex-col h-full transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
       style={{ background: "#FFFFFF", border: `1.5px solid ${C.dune}` }}
     >
       <div className="mb-5">
@@ -287,7 +287,7 @@ const ValuesInAction = ({ mockValuesData = [] }: any) => {
             return (
               <div
                 key={item.id}
-                className="flex items-center justify-between p-3 rounded-lg transition-colors"
+                className="flex items-center justify-between p-3 rounded-lg transition-all duration-300 hover:shadow-sm hover:-translate-y-0.5"
                 style={{ background: hex + "14", border: `1px solid ${hex}30` }}
               >
                 <div className="flex items-center gap-3">
@@ -336,7 +336,7 @@ const LifeBalanceOverview = ({ mockLifeBalanceData = {} }: any) => {
 
   return (
     <div
-      className="rounded-xl p-4 sm:p-6 shadow-sm flex flex-col h-full"
+      className="rounded-xl p-4 sm:p-6 shadow-sm flex flex-col h-full transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
       style={{ background: "#FFFFFF", border: `1.5px solid ${C.dune}` }}
     >
       <div className="mb-5">
@@ -362,8 +362,8 @@ const LifeBalanceOverview = ({ mockLifeBalanceData = {} }: any) => {
           dataArray.map((item, index) => {
             const barColor = barColors[index % barColors.length];
             return (
-              <div key={index} className="space-y-1.5">
-                <div className="flex justify-between items-center text-sm">
+              <div key={index} className="space-y-1.5 p-1 transition-all duration-300 hover:bg-slate-50/50 rounded-lg">
+                <div className="flex justify-between items-center text-sm px-1">
                   <span className="font-semibold" style={{ color: C.charcoal }}>{item.name}</span>
                   <span className="font-medium"   style={{ color: C.stone    }}>{item.days} days</span>
                 </div>
@@ -372,7 +372,7 @@ const LifeBalanceOverview = ({ mockLifeBalanceData = {} }: any) => {
                   style={{ background: C.sand40 }}
                 >
                   <div
-                    className="h-2.5 rounded-full transition-all duration-1000 ease-out"
+                    className="h-2.5 rounded-full transition-all duration-1000 ease-out hover:brightness-110"
                     style={{ width: `${(item.days / maxDays) * 100}%`, background: barColor }}
                   />
                 </div>

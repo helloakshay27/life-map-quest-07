@@ -19,7 +19,7 @@ import { apiRequest } from "@/config/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { startOfWeek, endOfWeek, format, addWeeks, isSameWeek } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+// Removed useToast import
 import WeeklyReflection, { Win } from "@/components/WeeklyReflection";
 import MissionHabitsConnection from "@/components/MissionHabitsConnection";
 import WeeklyPlanComponent, {
@@ -32,23 +32,23 @@ import FocusAndBoundaries, {
 import ReviewToDos from "@/components/ReviewToDos";
 import BucketListProgress from "@/components/BucketListProgress";
 
-// ── Exact same color tokens as DailyJournal ───────────────────────────────────
+// ── Updated color tokens to exactly match the Values component theme ───────────
 const C = {
-  coral:    "#D54744",
-  coral8:   "rgba(213,71,68,0.08)",
-  coral15:  "rgba(213,71,68,0.15)",
-  charcoal: "#1A1A2A",
-  cream:    "#F0CEAA",
-  forest:   "#0B5541",
-  forest8:  "rgba(11,85,65,0.08)",
-  crimson:  "#B72B2D",
-  crimson8: "rgba(183,43,45,0.08)",
+  coral:    "#DA7756",
+  coral8:   "rgba(218,119,86,0.08)",
+  coral15:  "rgba(218,119,86,0.15)",
+  charcoal: "#2C2C2A", // Matched Values text dark
+  cream:    "#D6B99D", // Matched Values border
+  forest:   "#0B5D41", // Matched Values green
+  forest8:  "rgba(11,93,65,0.08)",
+  crimson:  "#A32D2D", // Matched Values error/red
+  crimson8: "rgba(163,45,45,0.08)",
   sand:     "#C5A881",
   dune:     "#D1BC88",
   mist:     "#D1D6A6",
-  stone:    "#888763",
+  stone:    "#888780", // Matched Values muted text
   muted:    "#AAAAAA",
-  pageBg:   "#F7F4EE",
+  pageBg:   "#F7F4EE", // Matched Values background
 };
 
 // ── WeeklyStrip ───────────────────────────────────────────────────────────────
@@ -99,7 +99,6 @@ const WeeklyStrip = ({
 
   const [viewStart, setViewStart] = useState(() => addWeeksW(todayWeekStart, -5));
 
-  // Keep selected week in view when changed externally
   useEffect(() => {
     const selWS = getWeekStartW(selectedDate);
     const viewEnd = addWeeksW(viewStart, 5);
@@ -129,12 +128,12 @@ const WeeklyStrip = ({
 
   return (
     <div className="rounded-2xl border p-4 sm:p-5 w-full font-sans"
-      style={{ background: C.pageBg, borderColor: C.cream }}>
+      style={{ background: "white", borderColor: C.cream }}>
 
       {/* Header */}
       <div className="flex items-center gap-2.5 mb-5">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
-          style={{ background: `linear-gradient(135deg, ${C.coral}, ${C.sand})` }}>
+          style={{ background: C.coral }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <rect x="3" y="4" width="18" height="17" rx="2" stroke="white" strokeWidth="2" />
             <path d="M3 9h18" stroke="white" strokeWidth="2" />
@@ -160,7 +159,6 @@ const WeeklyStrip = ({
         >‹</button>
 
         <div className="flex-1 flex flex-col items-center gap-3 w-full">
-          {/* Week label — same as Dailystrip */}
           <span className="text-[13px] font-bold tracking-wide" style={{ color: C.stone }}>
             {weekLabel}
           </span>
@@ -179,7 +177,6 @@ const WeeklyStrip = ({
               const rangeStr = `${monthStr} ${ws.getDate()}-${we.getDate()}`;
               const wkLabel  = `WK#${format(ws, "ww")}`;
 
-              // Exact same color logic as Dailystrip
               let bg = "", color = "";
               if (isFilled   && !isSelected) { bg = C.forest8;        color = C.forest;  }
               if (isFilled   &&  isSelected) { bg = C.forest;         color = "#fff";    }
@@ -238,7 +235,6 @@ const WeeklyStrip = ({
         >›</button>
       </div>
 
-      {/* Legend — exact same as Dailystrip */}
       <div className="flex items-center justify-center gap-3 sm:gap-4 mt-5">
         {[
           { color: C.forest,  label: "Filled" },
@@ -282,7 +278,7 @@ const PeopleUpcomingDates = () => {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed py-8 shadow-sm animate-pulse"
-        style={{ borderColor: C.cream, background: C.pageBg }}>
+        style={{ borderColor: C.cream, background: "white" }}>
         <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mb-3"
           style={{ border: `1px solid ${C.cream}` }}>
           <CalendarIcon className="h-5 w-5" style={{ color: C.cream }} strokeWidth={2} />
@@ -307,11 +303,11 @@ const PeopleUpcomingDates = () => {
 
   return (
     <div className="rounded-[16px] px-5 pt-4 pb-8 font-sans w-full"
-      style={{ border: `1px solid ${C.cream}`, background: C.pageBg }}>
+      style={{ border: `1px solid ${C.cream}`, background: "white" }}>
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-2.5">
           <div className="w-[30px] h-[30px] rounded-[8px] flex items-center justify-center shadow-sm"
-            style={{ background: `linear-gradient(135deg, ${C.coral}, ${C.sand})` }}>
+            style={{ background: C.coral }}>
             <CalendarIcon className="w-[18px] h-[18px] text-white" strokeWidth={2} />
           </div>
           <span className="font-bold text-[15px]" style={{ color: C.charcoal }}>Upcoming Dates</span>
@@ -453,7 +449,7 @@ const PastJournalCard = ({ journal, onDelete, onEdit }: PastJournalCardProps) =>
           )}
 
           {journal.data?.biggest_challenge && (
-            <div className="rounded-xl px-4 py-3" style={{ background: C.crimson8, border: `1px solid rgba(183,43,45,0.18)` }}>
+            <div className="rounded-xl px-4 py-3" style={{ background: C.crimson8, border: `1px solid rgba(163,45,45,0.18)` }}>
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ background: C.crimson }}>
@@ -463,7 +459,7 @@ const PastJournalCard = ({ journal, onDelete, onEdit }: PastJournalCardProps) =>
               </div>
               <p className="text-sm pl-1 leading-relaxed" style={{ color: C.charcoal }}>{journal.data.biggest_challenge}</p>
               {journal.data.challenge_cause && (
-                <p className="text-xs mt-2 pl-1 pt-2" style={{ color: C.stone, borderTop: `1px solid rgba(183,43,45,0.12)` }}>
+                <p className="text-xs mt-2 pl-1 pt-2" style={{ color: C.stone, borderTop: `1px solid rgba(163,45,45,0.12)` }}>
                   <span className="font-semibold">Cause:</span> {journal.data.challenge_cause}
                 </p>
               )}
@@ -530,9 +526,20 @@ const WeeklyJournal = () => {
   const [activeTab, setActiveTab] = useState("new");
   const [currentDate, setCurrentDate] = useState(new Date());
   const { token, user } = useAuth();
-  const { toast } = useToast();
+  
+  // Custom Toast State
+  const [customToast, setCustomToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  const showToast = (message: string, type: "success" | "error" = "error") => {
+    setCustomToast({ message, type });
+    setTimeout(() => setCustomToast(null), 3000);
+  };
+
   const [isSaving, setIsSaving] = useState(false);
   const [journalId, setJournalId] = useState<number | null>(null);
+
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isEditingFromPast, setIsEditingFromPast] = useState(false);
 
   const [challenge, setChallenge] = useState("");
   const [challengeCause, setChallengeCause] = useState("");
@@ -561,11 +568,7 @@ const WeeklyJournal = () => {
 
   const handleSavePlan = async () => {
     if (isFutureWeek) {
-      toast({
-        title: "Cannot Create Future Entry",
-        description: "You can only create journal entries for today or past dates.",
-        variant: "destructive",
-      });
+      showToast("You can only create journal entries for today or past dates.", "error");
       return;
     }
 
@@ -573,6 +576,8 @@ const WeeklyJournal = () => {
     try {
       const startDate = format(startOfWeek(currentDate, { weekStartsOn: 0 }), "yyyy-MM-dd");
       const endDate = format(endOfWeek(currentDate, { weekStartsOn: 0 }), "yyyy-MM-dd");
+
+      const isUpdate = isEditMode && !!journalId;
 
       const payload = {
         user_journal: {
@@ -597,8 +602,8 @@ const WeeklyJournal = () => {
         },
       };
 
-      const url = journalId ? `/user_journals/${journalId}` : `/user_journals`;
-      const method = journalId ? "PUT" : "POST";
+      const url = isUpdate ? `/user_journals/${journalId}` : `/user_journals`;
+      const method = isUpdate ? "PUT" : "POST";
       const res = await apiRequest(url, { method, body: JSON.stringify(payload) });
 
       if (!res.ok) {
@@ -610,10 +615,13 @@ const WeeklyJournal = () => {
       const responseData = await res.json();
       const newId = responseData.journal?.id ?? responseData.user_journal?.id ?? responseData.id;
       if (newId) setJournalId(newId);
+      
+      setIsEditMode(false);
+      setIsEditingFromPast(false);
 
       localStorage.setItem(`weekly_wins_${startDate}`, JSON.stringify(wins));
 
-      if (journalId) {
+      if (isUpdate) {
         setPastJournals((prev) =>
           prev.map((j) =>
             j.id === journalId
@@ -638,19 +646,12 @@ const WeeklyJournal = () => {
         );
       }
 
-      toast({
-        title: journalId ? "Weekly plan updated ✅" : "Weekly plan saved ✅",
-        description: `Plan for week ${format(currentDate, "MMMM d")} ${journalId ? "updated" : "saved"} successfully.`,
-      });
+      showToast(`Plan for week ${format(currentDate, "MMMM d")} ${isUpdate ? "updated" : "saved"} successfully.`, "success");
 
       fetchPastJournals();
     } catch (error) {
       console.error("Save weekly journal error:", error);
-      toast({
-        title: "Error saving journal",
-        description: "Please check your connection and try again.",
-        variant: "destructive",
-      });
+      showToast("Error saving journal. Please check your connection and try again.", "error");
     } finally {
       setIsSaving(false);
     }
@@ -668,6 +669,8 @@ const WeeklyJournal = () => {
             const data = await res.json();
             if (data.id) {
               setJournalId(data.id);
+              setIsEditMode(true);
+              
               setGratitude(data.gratitude_note || "");
               setBalanceRating(data.data?.life_balance_rating ?? data.alignment_score ?? 3);
               setChallenge(data.data?.biggest_challenge || "");
@@ -682,6 +685,9 @@ const WeeklyJournal = () => {
             }
           }
           setJournalId(null);
+          setIsEditMode(false);
+          setIsEditingFromPast(false);
+          
           setGratitude(""); setBalanceRating(3); setChallenge(""); setChallengeCause("");
           setInsight(""); setWins([]); setMissionText(""); setHabitsText("");
           setWeeklyPlanData(generateEmptyWeekData(currentDate));
@@ -693,7 +699,7 @@ const WeeklyJournal = () => {
       fetchJournalForDate();
     }
   }, [currentDate, activeTab, token]);
-
+  
   const fetchPastJournals = async () => {
     setIsLoadingPast(true);
     try {
@@ -739,6 +745,9 @@ const WeeklyJournal = () => {
     setActiveTab("new");
     setJournalId(journal.id);
     setCurrentDate(new Date(journal.start_date));
+    setIsEditMode(true);
+    setIsEditingFromPast(true);
+    
     setGratitude(journal.gratitude_note || "");
     setBalanceRating(journal.data?.life_balance_rating ?? journal.alignment_score ?? 3);
     setChallenge(journal.data?.biggest_challenge || "");
@@ -749,10 +758,8 @@ const WeeklyJournal = () => {
     setHabitsText(journal.data?.weekly_story || "");
     if (journal.data?.weekly_plan) setWeeklyPlanData(journal.data.weekly_plan);
     if (journal.data?.focus_and_boundaries) setFocusData(journal.data.focus_and_boundaries);
-    toast({
-      title: "Editing journal",
-      description: `Loaded journal for week of ${format(new Date(journal.start_date), "MMMM d, yyyy")}. Save to update.`,
-    });
+    
+    showToast(`Loaded journal for week of ${format(new Date(journal.start_date), "MMMM d, yyyy")}. Save to update.`, "success");
   };
 
   const handleDeletePastJournal = async (id: number, e: React.MouseEvent) => {
@@ -761,11 +768,12 @@ const WeeklyJournal = () => {
     try {
       const res = await apiRequest(`/user_journals/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
-      toast({ title: "Deleted", description: "Weekly journal entry removed successfully." });
+      
+      showToast("Weekly journal entry removed successfully.", "success");
       setPastJournals((prev) => prev.filter((j) => j.id !== id));
       if (journalId === id) setJournalId(null);
     } catch (error) {
-      toast({ title: "Error", description: "Could not delete journal entry.", variant: "destructive" });
+      showToast("Could not delete journal entry.", "error");
     }
   };
 
@@ -810,11 +818,35 @@ const WeeklyJournal = () => {
           </TabsList>
 
           {/* ── NEW TAB ── */}
-          <TabsContent value="new" className="focus:outline-none">
+          <TabsContent value="new" className="focus:outline-none outline-none">
             <div className="flex flex-col w-full gap-6 pb-32 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <WeeklyStrip
+              
+              {/* Edit mode banner */}
+              {isEditingFromPast && (
+                <div className="mb-6 px-5 py-3.5 border rounded-xl flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500"
+                  style={{ background: "#FEF4EE", borderColor: "#D6B99D" }}>
+                  <div className="flex items-center gap-2.5">
+                    <Pencil className="w-4 h-4" style={{ color: "#DA7756" }}/>
+                    <span className="text-sm font-bold" style={{ color: "#2C2C2A" }}>Editing entry for {format(currentDate, "MMMM d, yyyy")}</span>
+                  </div>
+                  <button onClick={() => { 
+                      setIsEditingFromPast(false); 
+                      setIsEditMode(false);
+                      setJournalId(null);
+                      setCurrentDate(new Date()); 
+                    }}
+                    className="text-xs font-bold uppercase tracking-wider underline hover:opacity-80 transition-opacity" style={{ color: "#DA7756" }}>
+                    CANCEL EDIT
+                  </button>
+                </div>
+              )}
+
+            <WeeklyStrip
                 selectedDate={currentDate}
-                onDateChange={(newDate) => setCurrentDate(newDate)}
+                onDateChange={(newDate) => {
+                  setCurrentDate(newDate);
+                  setIsEditingFromPast(false); 
+                }}
                 filledWeekStarts={filledWeekStarts}
                 journalId={journalId}
               />
@@ -850,40 +882,42 @@ const WeeklyJournal = () => {
           </TabsContent>
 
           {/* ── PAST TAB ── */}
-          <TabsContent value="past" className="focus:outline-none">
-            {isLoadingPast ? (
-              <div className="py-20 text-center bg-white rounded-xl" style={{ border: `1px solid ${C.cream}` }}>
-                <div className="flex items-center justify-center gap-3">
-                  <Loader2 className="h-6 w-6 animate-spin" style={{ color: C.coral }} />
-                  <p className="font-bold uppercase tracking-wider" style={{ color: C.charcoal }}>Loading past entries...</p>
+          <TabsContent value="past" className="focus:outline-none outline-none">
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {isLoadingPast ? (
+                <div className="py-20 text-center bg-white rounded-xl" style={{ border: `1px solid ${C.cream}` }}>
+                  <div className="flex items-center justify-center gap-3">
+                    <Loader2 className="h-6 w-6 animate-spin" style={{ color: C.coral }} />
+                    <p className="font-bold uppercase tracking-wider" style={{ color: C.charcoal }}>Loading past entries...</p>
+                  </div>
                 </div>
-              </div>
-            ) : pastJournals.length === 0 ? (
-              <div className="py-20 text-center bg-white rounded-xl" style={{ border: `1px solid ${C.cream}` }}>
-                <div className="flex flex-col items-center justify-center gap-3 opacity-60">
-                  <CalendarDays className="h-10 w-10" style={{ color: C.stone }} strokeWidth={1.5} />
-                  <p className="font-medium text-[15px]" style={{ color: C.stone }}>
-                    No past reflections yet. Complete your first weekly reflection!
-                  </p>
+              ) : pastJournals.length === 0 ? (
+                <div className="py-20 text-center bg-white rounded-xl" style={{ border: `1px solid ${C.cream}` }}>
+                  <div className="flex flex-col items-center justify-center gap-3 opacity-60">
+                    <CalendarDays className="h-10 w-10" style={{ color: C.stone }} strokeWidth={1.5} />
+                    <p className="font-medium text-[15px]" style={{ color: C.stone }}>
+                      No past reflections yet. Complete your first weekly reflection!
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {pastJournals.map((journal) => (
-                  <PastJournalCard key={journal.id} journal={journal}
-                    onDelete={handleDeletePastJournal} onEdit={handleEditPastJournal} />
-                ))}
-              </div>
-            )}
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {pastJournals.map((journal) => (
+                    <PastJournalCard key={journal.id} journal={journal}
+                      onDelete={handleDeletePastJournal} onEdit={handleEditPastJournal} />
+                  ))}
+                </div>
+              )}
+            </div>
           </TabsContent>
 
           {/* ── INSIGHTS TAB ── */}
-          <TabsContent value="insights" className="focus:outline-none">
-            <div className="space-y-4">
+          <TabsContent value="insights" className="focus:outline-none outline-none">
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="rounded-2xl px-6 py-5" style={{ background: C.pageBg, border: `1px solid ${C.cream}` }}>
                 <div className="flex items-center gap-2.5 mb-1">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ background: `linear-gradient(135deg, ${C.coral}, ${C.sand})` }}>
+                    style={{ background:C.coral }}>
                     <Lightbulb className="w-4 h-4 text-white" />
                   </div>
                   <h2 className="text-[18px] font-bold" style={{ color: C.charcoal }}>
@@ -939,10 +973,10 @@ const WeeklyJournal = () => {
                                 <span className="text-sm font-bold" style={{ color: C.charcoal }}>Biggest Challenge</span>
                               </div>
                               <div className="rounded-xl px-4 py-3"
-                                style={{ background: C.crimson8, border: `1px solid rgba(183,43,45,0.18)` }}>
+                                style={{ background: C.crimson8, border: `1px solid rgba(163,45,45,0.18)` }}>
                                 <p className="text-sm" style={{ color: C.charcoal }}>{journal.data.biggest_challenge}</p>
                                 {journal.data.challenge_cause && (
-                                  <p className="text-xs mt-1.5 pt-1.5" style={{ color: C.stone, borderTop: `1px solid rgba(183,43,45,0.1)` }}>
+                                  <p className="text-xs mt-1.5 pt-1.5" style={{ color: C.stone, borderTop: `1px solid rgba(163,45,45,0.1)` }}>
                                     <span className="font-semibold">Cause:</span> {journal.data.challenge_cause}
                                   </p>
                                 )}
@@ -993,7 +1027,7 @@ const WeeklyJournal = () => {
 
       {/* Save bar */}
       {activeTab === "new" && (
-        <div className="bg-white/95 backdrop-blur-md p-4 flex justify-center z-50"
+        <div className=" backdrop-blur-md p-4 flex justify-center z-40"
           style={{ borderTop: `1px solid ${C.cream}` }}>
           <div className="w-full flex justify-end gap-3 px-4">
             <button
@@ -1007,10 +1041,10 @@ const WeeklyJournal = () => {
             </button>
             <button
               onClick={handleSavePlan}
-              disabled={isSaving || isFutureWeek}
+              disabled={isSaving || isFutureWeek}  
               className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-white font-bold text-sm transition-all shadow-md uppercase tracking-wider disabled:opacity-50"
               style={{
-                background: isFutureWeek ? C.stone : `linear-gradient(135deg, ${C.coral}, ${C.sand})`,
+                background: isFutureWeek ? C.stone : C.coral,
                 cursor: isFutureWeek ? "not-allowed" : "pointer",
               }}
             >
@@ -1023,13 +1057,26 @@ const WeeklyJournal = () => {
               )}
               {isSaving
                 ? "Saving..."
-                : journalId
+                : isEditMode
                   ? `Update Plan WK#${format(startOfWeek(currentDate, { weekStartsOn: 0 }), "ww")} ${format(startOfWeek(currentDate, { weekStartsOn: 0 }), "MMM d")}-${format(endOfWeek(currentDate, { weekStartsOn: 0 }), "d")}`
                   : `Save Plan WK#${format(startOfWeek(currentDate, { weekStartsOn: 0 }), "ww")} ${format(startOfWeek(currentDate, { weekStartsOn: 0 }), "MMM d")}-${format(endOfWeek(currentDate, { weekStartsOn: 0 }), "d")}`}
             </button>
           </div>
         </div>
       )}
+
+      {/* ── Custom Toast Component injected here ── */}
+      {customToast && (
+        <div
+          className={`fixed bottom-6 right-6 ${
+            customToast.type === "error" ? "bg-[#A32D2D]" : "bg-[#0B5D41]"
+          } text-white px-4 py-3 rounded-xl shadow-lg flex flex-col min-w-[250px] animate-fade-in z-50`}
+        >
+          <span className="font-bold text-sm">{customToast.type === "error" ? "Error" : "Success"}</span>
+          <span className="text-sm">{customToast.message}</span>
+        </div>
+      )}
+
     </div>
   );
 };

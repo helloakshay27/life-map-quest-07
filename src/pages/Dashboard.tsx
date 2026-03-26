@@ -4,7 +4,8 @@ import {
   TrendingUp, Calendar, Zap, Settings, BookOpen, CalendarDays,
   Trophy, Sparkles, Play, ChevronLeft, ChevronRight, Target,
   CalendarIcon, ListTodo, ArrowRight, Heart, Lock, Flame,
-  Lightbulb, Plus, ListOrdered, AlertCircle,
+  Lightbulb, Plus, ListOrdered, AlertCircle, CheckCircle,
+  Loader2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -132,6 +133,32 @@ const Dashboard = () => {
 
   const [recentJournals, setRecentJournals] = useState<any[]>([]);
   const [weeklyJournals, setWeeklyJournals] = useState<any[]>([]);
+
+  // ── NEW TODOS STATE ──
+  const [todosData, setTodosData] = useState<any[]>([]);
+  const [isLoadingTodos, setIsLoadingTodos] = useState(true);
+
+  // Fetch Todos
+  useEffect(() => {
+    const fetchTodos = async () => {
+      setIsLoadingTodos(true);
+      try {
+        const res = await fetch("https://life-api.lockated.com/todos", {
+          headers: { Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const list = Array.isArray(data) ? data : (data.data || data.todos || []);
+          setTodosData(list);
+        }
+      } catch (err) {
+        console.error("Failed to fetch todos:", err);
+      } finally {
+        setIsLoadingTodos(false);
+      }
+    };
+    fetchTodos();
+  }, [token]);
 
   useEffect(() => {
     const fetchAllJournals = async () => {
@@ -439,7 +466,7 @@ const Dashboard = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Daily Motivator */}
-          <Card className="rounded-2xl overflow-hidden flex flex-col shadow-sm border-2" style={{ background: C.coral8, borderColor: C.coral15 }}>
+          <Card className="rounded-2xl overflow-hidden flex flex-col shadow-sm border-2 transition-all duration-300 hover:shadow-md hover:-translate-y-1" style={{ background: C.coral8, borderColor: C.coral15 }}>
             <div className="p-4 flex-1 flex flex-col">
               <div className="flex items-center gap-2 mb-3">
                 <div className="p-1.5 rounded-lg text-white shadow-sm" style={{ background: C.coral }}>
@@ -454,7 +481,6 @@ const Dashboard = () => {
                 <p className="text-sm font-bold leading-relaxed z-10 relative" style={{ color: C.charcoal }}>
                   {previewData.daily_motivator || "The end of education is character."}
                 </p>
-                <p className="text-[10px] font-bold mt-2" style={{ color: C.coral }}>— Sathya Sai Baba</p>
               </div>
               <div className="rounded-xl p-3 border" style={{ background: C.coral15, borderColor: C.coral25 }}>
                 <div className="flex items-center gap-1.5 mb-1">
@@ -468,35 +494,78 @@ const Dashboard = () => {
             </div>
           </Card>
 
-          {/* Priorities */}
-          <Card className="p-5 flex flex-col shadow-sm rounded-2xl min-h-[180px]" style={{ background: C.sky8, borderColor: C.sky15 }}>
+          {/* Priorities / Top To-Dos */}
+          <Card className="p-5 flex flex-col shadow-sm rounded-2xl min-h-[180px] transition-all duration-300 hover:shadow-md hover:-translate-y-1" style={{ background: "#F4F7FF", borderColor: "#E5EAFA" }}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-[17px] flex items-center gap-2.5 tracking-tight" style={{ color: C.charcoal }}>
-                <ListTodo className="w-5 h-5" style={{ color: C.sky }} strokeWidth={2.5} /> Priorities
+              <h3 className="font-bold text-[18px] flex items-center gap-2.5 tracking-tight" style={{ color: C.charcoal }}>
+                <ListTodo className="w-5 h-5" style={{ color: "#5034BB" }} strokeWidth={2.5} /> Priorities
               </h3>
-              <Badge variant="secondary" className="hover:bg-transparent shadow-none font-semibold text-[12px] px-3 py-1 rounded-full pointer-events-none border-0" style={{ background: C.sky15, color: C.sky }}>
+              <Badge variant="secondary" className="hover:bg-transparent shadow-none font-semibold text-[12px] px-3 py-1 rounded-full pointer-events-none border-0" style={{ background: "#E8EBFE", color: "#5034BB" }}>
                 For: {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}
               </Badge>
             </div>
-            {previewData.priorities.length > 0 ? (
-              <div className="flex-1 flex flex-col gap-3 mt-2">
+
+            {/* RESTORED DAILY JOURNAL PRIORITIES */}
+            {previewData.priorities.length > 0 && (
+              <div className="flex flex-col gap-3 mb-4">
                 {previewData.priorities.map((todo: { id?: string | number; title?: string }, idx) => (
                   <div key={todo.id || idx} className="flex items-start gap-3">
-                    <div className="mt-0.5 flex-shrink-0" style={{ color: C.sky }}>
+                    <div className="mt-0.5 flex-shrink-0" style={{ color: "#5034BB" }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>
                       </svg>
                     </div>
-                    <p className="text-[15px] font-medium leading-snug" style={{ color: C.stone }}>{todo.title}</p>
+                    <p className="text-[15px] font-medium leading-snug" style={{ color: C.charcoal }}>{todo.title}</p>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-center mt-2">
-                <p className="text-sm mb-1.5 font-medium" style={{ color: C.stone }}>No accomplishments recorded yet today.</p>
-                <Link to="/daily-journal" className="text-xs font-bold hover:underline flex items-center gap-1 mt-1" style={{ color: C.sky }}>
+            )}
+            
+            {/* NO PRIORITIES AND NO TODOS MESSAGE */}
+            {previewData.priorities.length === 0 && todosData.length === 0 && (
+              <div className="flex-1 flex flex-col items-center justify-center text-center mt-2 mb-4">
+                <p className="text-sm mb-1.5 font-medium" style={{ color: C.stone }}>No priorities recorded yet.</p>
+                <Link to="/daily-journal" className="text-xs font-bold hover:underline flex items-center gap-1 mt-1" style={{ color: "#5034BB" }}>
                   Go to Daily Journal <ArrowRight className="w-3 h-3" />
                 </Link>
+              </div>
+            )}
+
+            {/* TOP TO-DOS SECTION */}
+            <div className="flex items-center justify-between mb-3 pt-2" style={{ borderTop: previewData.priorities.length > 0 ? "1px solid #D5DDFA" : "none" }}>
+              <h4 className="font-bold text-[14px] flex items-center gap-1.5" style={{ color: "#5034BB" }}>
+                <ListOrdered className="w-4 h-4" /> Top To-Dos
+              </h4>
+              <Link to="/todos" className="text-[13px] font-bold flex items-center gap-1 hover:underline" style={{ color: "#5034BB" }}>
+                See All <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {isLoadingTodos ? (
+              <div className="flex-1 flex flex-col items-center justify-center mt-2">
+                <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#5034BB" }} />
+              </div>
+            ) : todosData.length > 0 ? (
+              <div className="flex-1 flex flex-col gap-2 mt-1">
+                {todosData.slice(0, 3).map((todo: any, idx: number) => {
+                  const p = (todo.priority || "Medium").toLowerCase();
+                  const priorityColor = p === 'high' ? C.coral : p === 'low' ? C.success : C.amber;
+                  return (
+                    <div key={todo.id || idx} className="bg-white border rounded-xl p-3 flex items-start gap-3 shadow-sm" style={{ borderColor: "#D5DDFA" }}>
+                      <div className="mt-0.5 flex-shrink-0" style={{ color: "#8E9FE6" }}>
+                        <CheckCircle className="w-4 h-4" strokeWidth={2} />
+                      </div>
+                      <div className="flex flex-col">
+                        <p className="text-[14px] font-medium leading-snug" style={{ color: C.charcoal }}>{todo.title || todo.name || "Untitled Task"}</p>
+                        <p className="text-[12px] font-bold mt-0.5 capitalize" style={{ color: priorityColor }}>{todo.priority || "Medium"}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-center mt-2 bg-white rounded-xl border p-4" style={{ borderColor: "#D5DDFA" }}>
+                <p className="text-sm font-medium" style={{ color: C.stone }}>No to-dos recorded yet.</p>
               </div>
             )}
           </Card>
@@ -507,12 +576,12 @@ const Dashboard = () => {
               <CalendarIcon className="w-10 h-10 mb-3" style={{ color: C.coral15 }} strokeWidth={1.5} />
             </Card>
           ) : people.length === 0 ? (
-            <Card className="p-4 flex flex-col items-center justify-center min-h-[180px]" style={{ background: C.coral8, borderColor: C.coral15 }}>
+            <Card className="p-4 flex flex-col items-center justify-center min-h-[180px] transition-all duration-300 hover:shadow-md hover:-translate-y-1" style={{ background: C.coral8, borderColor: C.coral15 }}>
               <CalendarIcon className="w-10 h-10 mb-3" style={{ color: C.sand }} strokeWidth={1.5} />
               <p className="text-sm text-center" style={{ color: C.stone }}>No people added yet</p>
             </Card>
           ) : (
-            <Card className="p-5 flex flex-col min-h-[180px] rounded-[16px]" style={{ background: C.dune + "40", borderColor: C.sand }}>
+            <Card className="p-5 flex flex-col min-h-[180px] rounded-[16px] transition-all duration-300 hover:shadow-md hover:-translate-y-1" style={{ background: C.dune + "40", borderColor: C.sand }}>
               <div className="flex items-center justify-between mb-auto">
                 <div className="flex items-center gap-2.5">
                   <div className="w-[30px] h-[30px] rounded-[8px] flex items-center justify-center shadow-sm" style={{ background: C.amber }}>
@@ -574,7 +643,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
         {/* Energy + Calendar */}
-        <Card className="p-5 rounded-2xl border-0 flex flex-col justify-between shadow-sm" style={{ background: `linear-gradient(135deg, ${C.amber8}, ${C.coral8})` }}>
+        <Card className="p-5 rounded-2xl border-0 flex flex-col justify-between shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1" style={{ background: `linear-gradient(135deg, ${C.amber8}, ${C.coral8})` }}>
           <div className="flex justify-between items-center mb-6">
             <div className="flex gap-3 items-center">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-sm" style={{ background: C.amber }}>
@@ -628,7 +697,7 @@ const Dashboard = () => {
         </Card>
 
         {/* Highest Rank */}
-        <Card className="p-5 rounded-2xl flex flex-col justify-between shadow-sm" style={{ background: C.amber8, borderColor: C.amber15 }}>
+        <Card className="p-5 rounded-2xl flex flex-col justify-between shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1" style={{ background: C.amber8, borderColor: C.amber15 }}>
           <div className="flex justify-between items-center mb-10">
             <h3 className="font-bold flex items-center gap-2" style={{ color: C.amber }}>
               <Trophy className="w-5 h-5" style={{ color: C.amber }} /> Highest Rank
@@ -649,7 +718,7 @@ const Dashboard = () => {
         </Card>
 
         {/* Journaling Status */}
-        <Card className="p-5 flex flex-col justify-between rounded-[20px] shadow-sm" style={{ background: C.forest8, border: `1.5px solid ${C.forest}` }}>
+        <Card className="p-5 flex flex-col justify-between rounded-[20px] shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1" style={{ background: C.forest8, border: `1.5px solid ${C.forest}` }}>
           <div className="flex justify-between items-center mb-5">
             <h3 className="font-bold flex items-center gap-2.5 text-[17px]" style={{ color: C.forest }}>
               <BookOpen className="w-5 h-5" style={{ color: C.forest }} strokeWidth={2.5} /> Journaling Status
@@ -720,7 +789,7 @@ const Dashboard = () => {
           <Heart className="w-[18px] h-[18px]" style={{ color: C.coral }} strokeWidth={2} />
           <h2 className="text-[15px] font-bold" style={{ color: C.charcoal }}>Purpose &amp; Direction</h2>
         </div>
-        <Card className="rounded-[16px] shadow-sm transition-all hover:shadow-md p-4 sm:p-5" style={{ background: C.coral8, border: `1px solid ${C.coral}` }}>
+        <Card className="rounded-[16px] shadow-sm p-4 sm:p-5" style={{ background: C.coral8, border: `1px solid ${C.coral}` }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <Sparkles className="w-[18px] h-[18px]" style={{ color: C.charcoal }} strokeWidth={2.5} />
@@ -762,7 +831,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
           {/* Journaling Consistency */}
-          <Card className="p-5 shadow-sm flex flex-col rounded-[20px] transition-all hover:shadow-md" style={{ background: C.amber8, border: `1px solid ${C.amber}` }}>
+          <Card className="p-5 shadow-sm flex flex-col rounded-[20px]" style={{ background: C.amber8, border: `1px solid ${C.amber}` }}>
             <div className="flex items-center gap-3 mb-5">
               <div className="w-8 h-8 rounded-[8px] flex items-center justify-center text-white shadow-sm" style={{ background: C.amber }}>
                 <Flame className="w-4 h-4 fill-current" />
@@ -825,7 +894,7 @@ const Dashboard = () => {
           </Card>
 
           {/* Strategic Focus */}
-          <Card className="p-6 shadow-sm rounded-[20px] flex flex-col min-h-[400px] transition-all hover:shadow-md" style={{ background: C.coral8, border: `1px solid ${C.coral15}` }}>
+          <Card className="p-6 shadow-sm rounded-[20px] flex flex-col min-h-[400px]" style={{ background: C.coral8, border: `1px solid ${C.coral15}` }}>
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
                 <div className="w-[42px] h-[42px] rounded-[12px] flex items-center justify-center text-white shadow-sm" style={{ background: C.coral }}>
@@ -846,7 +915,7 @@ const Dashboard = () => {
 
       {/* ── Habit Tracking ───────────────────────────────────────────────── */}
       <div className="mt-8 mb-8">
-        <Card className="rounded-[20px] overflow-hidden transition-all hover:shadow-md" style={{ background: C.forest8, border: `1.5px solid ${C.forest}` }}>
+        <Card className="rounded-[20px] overflow-hidden shadow-sm" style={{ background: C.forest8, border: `1.5px solid ${C.forest}` }}>
           <div className="p-4 md:p-5 flex items-center justify-between bg-white/50" style={{ borderBottom: `1px solid ${C.forest15}` }}>
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-[8px] flex items-center justify-center text-white shadow-sm" style={{ background: C.forest }}>
@@ -911,7 +980,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
           {/* Recent Journal Entries */}
-          <Card className="p-6 shadow-sm flex flex-col min-h-[220px] rounded-[20px]" style={{ background: C.amber8, border: `2px solid ${C.amber}` }}>
+          <Card className="p-6 shadow-sm flex flex-col min-h-[220px] rounded-[20px] transition-all duration-300 hover:shadow-md hover:-translate-y-1" style={{ background: C.amber8, border: `2px solid ${C.amber}` }}>
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-[16px]" style={{ color: C.charcoal }}>Recent Journal Entries</h3>
               <Link to="/daily-journal">
@@ -971,7 +1040,7 @@ const Dashboard = () => {
           </Card>
 
           {/* Personalized Insights */}
-          <Card className="p-6 shadow-sm flex flex-col min-h-[220px] rounded-[20px] transition-all hover:shadow-md" style={{ background: C.violet8, border: `1px solid ${C.violet15}` }}>
+          <Card className="p-6 shadow-sm flex flex-col min-h-[220px] rounded-[20px] transition-all duration-300 hover:shadow-md hover:-translate-y-1" style={{ background: C.violet8, border: `1px solid ${C.violet15}` }}>
             <div className="flex items-center gap-3 mb-6">
               <div className="w-[42px] h-[42px] rounded-[12px] flex items-center justify-center text-white shadow-sm" style={{ background: C.violet }}>
                 <Lightbulb className="w-[20px] h-[20px] fill-current" />
@@ -1005,7 +1074,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
 
         {/* Bucket List */}
-        <Card className="p-6 shadow-sm flex flex-col min-h-[350px] rounded-[20px] transition-all hover:shadow-md" style={{ background: C.coral8, border: `1px solid ${C.coral15}` }}>
+        <Card className="p-6 shadow-sm flex flex-col min-h-[350px] rounded-[20px] transition-all duration-300 hover:shadow-md hover:-translate-y-1" style={{ background: C.coral8, border: `1px solid ${C.coral15}` }}>
           <div className="flex justify-between items-start mb-8">
             <div className="flex gap-3">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm" style={{ background: `linear-gradient(135deg, ${C.coral}, #e87c5a)` }}>
@@ -1036,7 +1105,7 @@ const Dashboard = () => {
         </Card>
 
         {/* Leaderboard */}
-        <Card className="p-6 bg-white border shadow-sm rounded-[20px] transition-all hover:shadow-md flex flex-col min-h-[350px]" style={{ borderColor: C.mist }}>
+        <Card className="p-6 bg-white border shadow-sm rounded-[20px] transition-all duration-300 hover:shadow-md hover:-translate-y-1 flex flex-col min-h-[350px]" style={{ borderColor: C.mist }}>
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-3">
               <div className="w-[42px] h-[42px] rounded-[12px] flex items-center justify-center text-white shadow-sm" style={{ background: C.violet }}>
@@ -1081,19 +1150,6 @@ const Dashboard = () => {
           </div>
         </Card>
       </div>
-
-      {/* ── Beta Notice ───────────────────────────────────────────────────── */}
-      <Card className="p-4 rounded-[16px]" style={{ background: C.amber8, borderLeft: `4px solid ${C.amber}`, border: `1px solid ${C.amber15}` }}>
-        <div className="flex gap-3">
-          <span className="text-lg flex-shrink-0">🔔</span>
-          <div>
-            <h4 className="font-semibold text-sm" style={{ color: C.charcoal }}>Beta Testing Notice</h4>
-            <p className="text-xs mt-1" style={{ color: C.stone }}>
-              We are continuously improving your experience. If you face any challenges, we cannot provide performance guarantees at this stage. We recommend bookmarking your regularly for safekeeping.
-            </p>
-          </div>
-        </div>
-      </Card>
 
     </div>
   );

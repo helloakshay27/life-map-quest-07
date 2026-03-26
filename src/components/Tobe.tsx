@@ -369,15 +369,15 @@ function Tobe() {
                         : "border-[#D6B99D] hover:border-[#DA7756] bg-white"
                     }`}
                   >
-                    <div
+                  <div
                       className="flex-1 flex items-start gap-3 cursor-pointer"
                       onClick={() => handleToggleCheck(goal.id)}
                     >
                       <input
                         type="checkbox"
                         checked={goal.checked}
-                        onChange={() => handleToggleCheck(goal.id)}
-                        className="mt-1 w-4 h-4 accent-[#0B5D41] cursor-pointer"
+                        readOnly
+                        className="mt-1 w-4 h-4 accent-[#0B5D41] cursor-pointer pointer-events-none"
                       />
                       <div>
                         <h4 className="text-sm font-bold text-[#2C2C2A] flex items-center flex-wrap gap-2">

@@ -364,13 +364,15 @@ function Values() {
               </div>
 
               {/* Priority Slider */}
+              {/* Priority Slider */}
               <div>
-                <div className="flex justify-between items-center mb-2">
+                <div className="flex justify-between items-center mb-4">
                   <label className="block text-sm font-semibold text-[#2C2C2A]">Priority (1-10)</label>
                   <span className={`font-bold text-lg ${getPriorityColor(Number(formData.priority))}`}>
                     {formData.priority}
                   </span>
                 </div>
+                
                 <input
                   type="range"
                   name="priority"
@@ -379,8 +381,18 @@ function Values() {
                   value={formData.priority}
                   onChange={handleInputChange}
                   disabled={isFetchingDetails}
-                  style={{ accentColor: getPriorityAccent(Number(formData.priority)) }}
-                  className="w-full h-2 bg-[#D6B99D] rounded-lg appearance-none cursor-pointer disabled:opacity-50"
+                  style={{ 
+                    // Calculate percentage to fill the left side with active color and right side with gray
+                    background: `linear-gradient(to right, ${getPriorityAccent(Number(formData.priority))} 0%, ${getPriorityAccent(Number(formData.priority))} ${((Number(formData.priority) - 1) / 9) * 100}%, #E5E7EB ${((Number(formData.priority) - 1) / 9) * 100}%, #E5E7EB 100%)`,
+                    // Passing dynamic color to CSS variable for the thumb (dot)
+                    "--thumb-color": getPriorityAccent(Number(formData.priority))
+                  }}
+                  className="w-full h-1.5 rounded-lg appearance-none cursor-pointer disabled:opacity-50 outline-none
+                             [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 
+                             [&::-webkit-slider-thumb]:bg-[var(--thumb-color)] [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white 
+                             [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-md
+                             [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:bg-[var(--thumb-color)] 
+                             [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:shadow-md"
                 />
               </div>
 

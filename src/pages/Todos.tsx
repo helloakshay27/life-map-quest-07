@@ -111,10 +111,12 @@ const Todos = () => {
               priority: priorityMap[item.priority] || "Medium",
             };
           });
-          // Prefer locally-saved values so drag/drop "sticks" across navigation.
+
           const localById = new Map<string, TodoItem>(
             (savedTodos ?? []).map((t) => [String(t.id), t]),
           );
+
+          // FIX: API ka status use karo (t.status), local ka nahi
           const merged: TodoItem[] = formattedData.map((t: TodoItem) => {
             const local = localById.get(String(t.id));
             return local
@@ -124,7 +126,7 @@ const Todos = () => {
                   description: local.description ?? t.description,
                   lifeArea: local.lifeArea ?? t.lifeArea,
                   priority: local.priority ?? t.priority,
-                  status: local.status ?? t.status,
+                  status: t.status, // ← API ka fresh status hamesha use hoga
                 }
               : t;
           });
@@ -224,7 +226,6 @@ const Todos = () => {
       }
 
       if (!res.ok) {
-        // fallback: flat payload
         const payloadFlat: any = {
           ...updated,
           status: toApiStatus(updated.status),
@@ -291,7 +292,6 @@ const Todos = () => {
           },
         };
 
-        // Try common API shapes/methods (PUT then PATCH fallback)
         let res = await fetchWithAuth(`/todos/${id}`, {
           method: "PUT",
           body: JSON.stringify(payloadWrapped),
@@ -303,7 +303,6 @@ const Todos = () => {
           });
         }
         if (!res.ok) {
-          // fallback: some endpoints accept unwrapped payload
           const payloadFlat = { ...updatedTodo, status: toApiStatus(newStatus) };
           res = await fetchWithAuth(`/todos/${id}`, {
             method: "PUT",
@@ -352,7 +351,6 @@ const Todos = () => {
 
   const handlePointerDown = (e: React.PointerEvent, todoId: string) => {
     if (e.button !== undefined && e.button !== 0) return;
-    // Prevent text selection / native drag behaviors from interfering.
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -413,7 +411,6 @@ const Todos = () => {
     document.body.style.userSelect = "";
   }, []);
 
-  // Ensure dragging stays smooth even if the pointer leaves the card quickly.
   useEffect(() => {
     if (!dragState) return;
 

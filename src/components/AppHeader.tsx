@@ -110,7 +110,7 @@ export function AppHeader() {
             <Avatar className="h-8 w-8">
               <AvatarFallback
                 className="text-xs font-bold text-white"
-                style={{ background: `linear-gradient(135deg, ${C.coral}, ${C.sand})` }}
+                style={{ background: C.coral }}
               >
                 {initials}
               </AvatarFallback>
@@ -138,7 +138,7 @@ export function AppHeader() {
               <Avatar className="h-11 w-11 flex-shrink-0">
                 <AvatarFallback
                   className="font-bold text-white text-sm"
-                  style={{ background: `linear-gradient(135deg, ${C.coral}, ${C.sand})` }}
+                  style={{ background: C.coral }}
                 >
                   {initials}
                 </AvatarFallback>

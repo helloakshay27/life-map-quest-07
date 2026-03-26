@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Info, Plus, Lightbulb, X } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Info, Plus, Lightbulb, X, Loader2 } from "lucide-react";
 import { format, startOfWeek, addDays } from "date-fns";
 import {
   Popover,
@@ -12,10 +12,6 @@ export interface Win {
   day: string;
   category: string;
   completed: boolean;
-}
-
-interface DailyEntry {
-  accomplishments: { title: string; checked: boolean }[];
 }
 
 interface WeeklyReflectionProps {
@@ -46,7 +42,6 @@ const LIFE_BALANCE_CATEGORIES = [
   { key: "Finance",       emoji: "💰", label: "Finance" },
 ];
 
-// Mapped directly to the Semantic & Dashboard Tertiary colors from your palette
 const CATEGORY_COLORS: Record<string, string> = {
   Career:            "#1858A5",  // Sky
   Health:            "#DA7756",  // Coral
@@ -55,7 +50,6 @@ const CATEGORY_COLORS: Record<string, string> = {
   Finance:           "#BA7517",  // Amber
 };
 
-// Using Mist (#D5D8D8) for the inactive background of the bars
 const CATEGORY_BG_INACTIVE: Record<string, string> = {
   Career:            "#D5D8D8",
   Health:            "#D5D8D8",
@@ -78,9 +72,11 @@ export default function WeeklyReflection({
   weeklyStory,
   setWeeklyStory,
   currentDate = new Date(),
-  dailyJournals = [],
 }: WeeklyReflectionProps) {
-const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [apiEntries, setApiEntries] = useState<any[]>([]);
+  const [isLoadingEntries, setIsLoadingEntries] = useState(false);
+
   const addNewWin = () => {
     setWins([...wins, { description: "", day: "Tue", category: "Career", completed: true }]);
   };
@@ -108,51 +104,89 @@ const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const filledCategories = categoryCounts.filter((c) => c.count > 0).length;
   const autoScore = totalWins === 0 ? 0 : Math.round((filledCategories / 5) * 10);
 
-  // ── Local storage helpers ─────────────────────────────────────────────────
-  const getWeekEntriesFromLocalStorage = (): { date: Date; entry: DailyEntry }[] => {
-    const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
-    const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-    const result: { date: Date; entry: DailyEntry }[] = [];
-    for (const day of days) {
-      const dateKey = format(day, "yyyy-MM-dd");
-      try {
-        const stored = localStorage.getItem(`daily_journal_${dateKey}`);
-        if (stored) result.push({ date: day, entry: JSON.parse(stored) });
-      } catch { /* skip */ }
-    }
-    return result.sort((a, b) => b.date.getTime() - a.date.getTime());
-  };
+  // ── Fetch Daily Entries from API ──────────────────────────────────────────
+  useEffect(() => {
+    if (!isPopoverOpen) return;
 
-  const importDayToStory = (date: Date, entry: DailyEntry) => {
-    const dateLabel = format(date, "EEEE, MMMM d");
+    const fetchJournals = async () => {
+      setIsLoadingEntries(true);
+      try {
+        const token = localStorage.getItem("auth_token") || sessionStorage.getItem("auth_token");
+        const res = await fetch("https://life-api.lockated.com/user_journals?journal_type=daily", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          const journals = Array.isArray(data) ? data : (data.user_journals || []);
+
+          // Calculate current week's exact dates (Sun-Sat)
+          const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
+          const weekDays = Array.from({ length: 7 }, (_, i) => format(addDays(weekStart, i), "yyyy-MM-dd"));
+
+          // Filter for only daily journals matching this week's dates
+          const thisWeekEntries = journals.filter((j: any) => 
+            (j.journal_type === "daily" || !j.journal_type) && weekDays.includes(j.start_date)
+          );
+
+          // Sort latest first
+          thisWeekEntries.sort((a: any, b: any) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
+          
+          setApiEntries(thisWeekEntries);
+        }
+      } catch (err) {
+        console.error("Failed to fetch daily journals", err);
+      } finally {
+        setIsLoadingEntries(false);
+      }
+    };
+
+    fetchJournals();
+  }, [isPopoverOpen, currentDate]);
+
+  // ── Import Handlers ───────────────────────────────────────────────────────
+  const importDayToStory = (entry: any) => {
+    const [y, m, d] = entry.start_date.split("-").map(Number);
+    const localDate = new Date(y, m - 1, d);
+    const dateLabel = format(localDate, "EEEE, MMMM d");
+    
     const lines: string[] = [`**${dateLabel}**`];
     for (const acc of entry.accomplishments ?? []) {
-      if (acc.title?.trim()) lines.push(acc.checked ? `✅ ${acc.title}` : `• ${acc.title}`);
+      if (acc.title?.trim()) lines.push(`✅ ${acc.title}`);
     }
+    
     setWeeklyStory((prev) => (prev ? `${prev}\n\n${lines.join("\n")}` : lines.join("\n")));
     setIsPopoverOpen(false);
   };
 
   const importAllToStory = () => {
-    const entries = getWeekEntriesFromLocalStorage();
-    if (entries.length === 0) return;
+    if (apiEntries.length === 0) return;
     const allLines: string[] = [];
-    for (const { date, entry } of entries) {
-      allLines.push(`**${format(date, "EEEE, MMMM d")}**`);
+    
+    // Reverse to show oldest to newest if you want chronological order, or keep newest first
+    const chronologicalEntries = [...apiEntries].reverse();
+    
+    for (const entry of chronologicalEntries) {
+      const [y, m, d] = entry.start_date.split("-").map(Number);
+      const localDate = new Date(y, m - 1, d);
+      
+      allLines.push(`**${format(localDate, "EEEE, MMMM d")}**`);
       for (const acc of entry.accomplishments ?? []) {
-        if (acc.title?.trim()) allLines.push(acc.checked ? `✅ ${acc.title}` : `• ${acc.title}`);
+        if (acc.title?.trim()) allLines.push(`✅ ${acc.title}`);
       }
       allLines.push("");
     }
+    
     const text = allLines.join("\n").trim();
     if (text) setWeeklyStory((prev) => (prev ? `${prev}\n\n${text}` : text));
     setIsPopoverOpen(false);
   };
 
-  const localEntries = getWeekEntriesFromLocalStorage();
-
   // ── Shared select chevron ─────────────────────────────────────────────────
-  const ChevronDown = () => (
+  const ChevronDownIcon = () => (
     <svg
       className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#888780]"
       fill="none"
@@ -176,7 +210,6 @@ const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   return (
     <div className="font-sans bg-[#FEF4EE]">
-
       {/* ── Section Header ──────────────────────────────────────────────────── */}
       <div className="px-6 pt-5 pb-6 border-b border-[#D6B99D] bg-[#FEF4EE]">
         <div className="flex items-center gap-3 mb-6">
@@ -208,14 +241,20 @@ const [isPopoverOpen, setIsPopoverOpen] = useState(false);
                 <span className="font-bold text-sm text-[#2C2C2A]">Daily Entries</span>
                 <button
                   onClick={importAllToStory}
-                  className="text-xs text-[#DA7756] font-bold hover:text-[#C26547] transition-colors"
+                  disabled={apiEntries.length === 0}
+                  className="text-xs text-[#DA7756] font-bold hover:text-[#C26547] transition-colors disabled:opacity-50 disabled:hover:text-[#DA7756]"
                 >
                   Import All
                 </button>
               </div>
 
               <div className="max-h-80 overflow-y-auto p-3 flex flex-col gap-2 bg-white rounded-b-xl">
-                {localEntries.length === 0 ? (
+                {isLoadingEntries ? (
+                  <div className="flex flex-col items-center justify-center py-6 gap-2 text-[#888780]">
+                    <Loader2 className="w-5 h-5 animate-spin text-[#DA7756]" />
+                    <p className="text-sm">Fetching daily entries...</p>
+                  </div>
+                ) : apiEntries.length === 0 ? (
                   <p className="text-sm text-[#888780] text-center py-4">
                     No daily entries found for this week.
                     <br />
@@ -224,17 +263,20 @@ const [isPopoverOpen, setIsPopoverOpen] = useState(false);
                     </span>
                   </p>
                 ) : (
-                  localEntries.map(({ date, entry }) => {
+                  apiEntries.map((entry) => {
                     const accs = entry.accomplishments ?? [];
+                    const [y, m, d] = entry.start_date.split("-").map(Number);
+                    const localDate = new Date(y, m - 1, d);
+
                     return (
                       <div
-                        key={format(date, "yyyy-MM-dd")}
+                        key={entry.id}
                         className="group flex flex-col gap-1 cursor-pointer bg-[#FEF4EE] border border-[#D6B99D] p-3 rounded-xl hover:border-[#DA7756] transition-all"
-                        onClick={() => importDayToStory(date, entry)}
+                        onClick={() => importDayToStory(entry)}
                       >
                         <div className="flex justify-between items-center">
                           <span className="font-bold text-sm text-[#2C2C2A]">
-                            {format(date, "EEEE, MMMM d")}
+                            {format(localDate, "EEEE, MMMM d")}
                           </span>
                           <span className="text-[10px] uppercase font-bold text-[#DA7756] opacity-0 group-hover:opacity-100 transition-opacity bg-[#DA7756]/10 px-1.5 py-0.5 rounded-full">
                             + Import
@@ -245,9 +287,9 @@ const [isPopoverOpen, setIsPopoverOpen] = useState(false);
                             <span className="italic text-[#888780]">No accomplishments</span>
                           ) : (
                             accs
-                              .filter((a) => a.title?.trim())
-                              .map((a, i) => (
-                                <div key={i}>{a.checked ? `✅ ${a.title}` : `• ${a.title}`}</div>
+                              .filter((a: any) => a.title?.trim())
+                              .map((a: any, i: number) => (
+                                <div key={i}>✅ {a.title}</div>
                               ))
                           )}
                         </div>
@@ -271,7 +313,6 @@ const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
       {/* ── Body ────────────────────────────────────────────────────────────── */}
       <div className="p-6 pt-5 space-y-6 bg-white">
-
         {/* 1. TOP WINS */}
         <section>
           <div className="flex items-center justify-between mb-3">
@@ -328,10 +369,10 @@ const [isPopoverOpen, setIsPopoverOpen] = useState(false);
                     />
 
                     {/* Description */}
-                    <textarea
+                  <textarea
                       value={win.description}
                       onChange={(e) => updateWin(idx, "description", e.target.value)}
-                      autoFocus
+                     
                       rows={1}
                       placeholder="Describe your win..."
                       className={`flex-1 outline-none text-[14px] bg-transparent px-2 resize-y leading-relaxed min-h-[28px] placeholder:text-[#888780] ${
@@ -356,7 +397,7 @@ const [isPopoverOpen, setIsPopoverOpen] = useState(false);
                           <option value="Fri">Fri</option>
                           <option value="Sat">Sat</option>
                         </select>
-                        <ChevronDown />
+                        <ChevronDownIcon />
                       </div>
 
                       {/* Category dropdown */}
@@ -372,7 +413,7 @@ const [isPopoverOpen, setIsPopoverOpen] = useState(false);
                           <option value="Personal Growth">🌱 Growth</option>
                           <option value="Finance">💰 Finance</option>
                         </select>
-                        <ChevronDown />
+                        <ChevronDownIcon />
                       </div>
 
                       {/* Remove */}
@@ -445,7 +486,6 @@ const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
         {/* 4. AUTO-CALCULATED LIFE BALANCE */}
         <section className="bg-[#FEF4EE] border border-[#D6B99D] rounded-xl p-5 shadow-sm">
-          {/* Auto score header */}
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm font-semibold text-[#2C2C2A] flex items-center gap-2">
               Auto-Calculated Life Balance
@@ -456,7 +496,6 @@ const [isPopoverOpen, setIsPopoverOpen] = useState(false);
             </span>
           </div>
 
-          {/* Category bars */}
           <div className="flex gap-2 mb-3">
             {LIFE_BALANCE_CATEGORIES.map(({ key }) => {
               const count = categoryCounts.find((c) => c.key === key)?.count ?? 0;
@@ -481,7 +520,6 @@ const [isPopoverOpen, setIsPopoverOpen] = useState(false);
             })}
           </div>
 
-          {/* Emoji labels */}
           <div className="flex justify-around px-1 mb-6">
             {LIFE_BALANCE_CATEGORIES.map(({ key, emoji, label }) => {
               const count = categoryCounts.find((c) => c.key === key)?.count ?? 0;

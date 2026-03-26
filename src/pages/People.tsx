@@ -211,9 +211,9 @@ const People = () => {
             {people.length > 0 && (
               <button 
                 onClick={() => navigate(-1)} 
-                className="w-[42px] h-[42px] rounded-full bg-white border border-[#D6B99D] flex items-center justify-center shadow-sm hover:bg-[#FEF4EE] transition-colors shrink-0 outline-none"
+                className="w-9 h-9 rounded-full bg-white border border-[#D6B99D] flex items-center justify-center shadow-sm hover:bg-[#FEF4EE] transition-colors shrink-0 outline-none"
               >
-                <ArrowLeft className="w-5 h-5 text-[#2C2C2A]" />
+                <ArrowLeft className="w-4 h-4 text-[#2C2C2A]" />
               </button>
             )}
             <div>
@@ -250,7 +250,7 @@ const People = () => {
           
           {/* Card 1: Upcoming Dates */}
           {people.length > 0 ? (
-            <div className="flex flex-col rounded-2xl border border-[#D6B99D] bg-[#FEF4EE] px-5 pt-5 pb-6 shadow-sm min-h-[140px] justify-between transition-all hover:shadow-md">
+            <div className="flex flex-col rounded-2xl border border-[#D6B99D] bg-[#FEF4EE] px-5 pt-5 pb-6 shadow-sm min-h-[140px] justify-between transition-all duration-300 hover:shadow-md hover:-translate-y-1">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-[32px] h-[32px] rounded-lg bg-[#DA7756] flex items-center justify-center shadow-sm">
@@ -273,7 +273,7 @@ const People = () => {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm border border-[#D6B99D] min-h-[140px] justify-between">
+            <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm border border-[#D6B99D] min-h-[140px] justify-between transition-all duration-300 hover:shadow-md hover:-translate-y-1">
               <div className="flex items-center gap-2 mb-2">
                 <Calendar className="h-5 w-5 text-[#DA7756]" />
                 <h3 className="text-lg font-bold text-[#2C2C2A]">
@@ -289,7 +289,7 @@ const People = () => {
           )}
 
           {/* Card 2: Reach Out To */}
-          <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm border border-[#D6B99D] min-h-[140px] justify-between">
+          <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm border border-[#D6B99D] min-h-[140px] justify-between transition-all duration-300 hover:shadow-md hover:-translate-y-1">
             <div className="flex items-center gap-2 mb-2">
               <MessageSquare className="h-5 w-5 text-[#DA7756]" />
               <h3 className="text-lg font-bold text-[#2C2C2A]">
@@ -313,7 +313,7 @@ const People = () => {
           </div>
 
           {/* Card 3: Avg Health */}
-          <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm border border-[#D6B99D] min-h-[140px] justify-between">
+          <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm border border-[#D6B99D] min-h-[140px] justify-between transition-all duration-300 hover:shadow-md hover:-translate-y-1">
             <div className="flex items-center gap-2 mb-2">
               <Heart className="h-5 w-5 text-[#DA7756]" />
               <h3 className="text-lg font-bold text-[#2C2C2A]">
@@ -335,7 +335,7 @@ const People = () => {
               )}
             </div>
           </div>
-        </div> {/* <--- MAIN FIX: Ye grid div yahan close hona zaroori tha */}
+        </div> 
 
         {/* FILTER + PEOPLE LIST */}
         <div className="w-full min-h-[400px] flex flex-col bg-[#FEF4EE] rounded-2xl border border-[#D6B99D] overflow-hidden">

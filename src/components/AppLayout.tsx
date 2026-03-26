@@ -17,7 +17,7 @@ export function AppLayout() {
         <AppHeader />
         <div className="flex flex-1">
           <AppSidebar />
-          <main className="flex-1 overflow-auto p-2 md:p-3">
+          <main className="flex-1 bg-[#F7F4EE] overflow-auto p-2 md:p-3">
             <Outlet />
           </main>
         </div>
