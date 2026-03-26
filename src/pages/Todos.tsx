@@ -398,7 +398,7 @@ const Todos = () => {
         handleUpdateStatus(current.todoId, targetStatus);
       }
     }
-    setDragState(null);
+    setDragState(null); 
     setHoveredStatus(null);
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
