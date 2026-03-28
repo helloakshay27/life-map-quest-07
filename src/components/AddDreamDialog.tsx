@@ -241,14 +241,14 @@ export function AddDreamDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
 
-      <DialogContent className="max-w-[750px] max-h-[90vh] overflow-y-auto p-0 border-[#E8E4D9] bg-[#FDFCF9] shadow-2xl rounded-2xl custom-scrollbar">
-        <DialogHeader className="p-8 pb-5 border-b border-[#E8E4D9] sticky top-0 bg-[#FAF9F6] z-10 rounded-t-2xl">
+      <DialogContent className="max-w-[750px] max-h-[90vh] overflow-y-auto p-0 border border-gray-200 bg-white shadow-2xl rounded-2xl custom-scrollbar">
+        <DialogHeader className="p-8 pb-5 border-b border-gray-200 sticky top-0 bg-[#F6F4EE] z-10 rounded-t-2xl">
           <DialogTitle className="flex items-center gap-4 text-[24px] font-bold text-[#111111] tracking-tight">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white border border-[#E8E4D9] shadow-sm">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white border border-gray-200 shadow-sm">
               {initialData ? (
-                <Edit className="h-6 w-6 text-[#BBA48B]" />
+                <Edit className="h-6 w-6 text-[#DA7756]" />
               ) : (
-                <Sparkles className="h-6 w-6 text-[#BBA48B]" />
+                <Sparkles className="h-6 w-6 text-[#DA7756]" />
               )}
             </div>
             <div className="flex flex-col">
@@ -266,7 +266,7 @@ export function AddDreamDialog({
           {/* Main Input */}
           <div className="space-y-3">
             <label className="flex items-center gap-2 text-[11px] font-bold text-[#555555] uppercase tracking-widest opacity-80">
-              <Sparkles className="w-3.5 h-3.5 text-[#BBA48B]" />
+              <Sparkles className="w-3.5 h-3.5 text-[#DA7756]" />
               What's Your Dream? *
             </label>
             <input
@@ -274,7 +274,7 @@ export function AddDreamDialog({
               value={dreamTitle}
               onChange={(e) => setDreamTitle(e.target.value)}
               placeholder="e.g., Visit the Northern Lights, Write a Book, Learn to Surf..."
-              className="w-full bg-white border border-[#E8E4D9] rounded-xl px-5 py-4 text-[#111111] font-bold text-[16px] outline-none shadow-none focus:border-[#BBA48B] transition-all placeholder:text-[#CCCCCC]"
+              className="w-full bg-white border border-gray-200 rounded-xl px-5 py-4 text-[#111111] font-bold text-[16px] outline-none shadow-none focus:border-[#DA7756] transition-all placeholder:text-[#CCCCCC]"
             />
           </div>
 
@@ -288,7 +288,7 @@ export function AddDreamDialog({
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full appearance-none bg-white border border-[#E8E4D9] rounded-xl py-3.5 pl-5 pr-12 text-sm text-[#111111] font-bold outline-none focus:border-[#BBA48B] shadow-none cursor-pointer transition-all"
+                  className="w-full appearance-none bg-white border border-gray-200 rounded-xl py-3.5 pl-5 pr-12 text-sm text-[#111111] font-bold outline-none focus:border-[#DA7756] shadow-none cursor-pointer transition-all"
                 >
                   <option value="Personal">🌟 Personal</option>
                   <option value="Travel">✈️ Travel</option>
@@ -322,7 +322,7 @@ export function AddDreamDialog({
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
-                  className="w-full appearance-none bg-white border border-[#E8E4D9] rounded-xl py-3.5 pl-5 pr-12 text-sm text-[#111111] font-bold outline-none focus:border-[#BBA48B] shadow-none cursor-pointer transition-all"
+                  className="w-full appearance-none bg-white border border-gray-200 rounded-xl py-3.5 pl-5 pr-12 text-sm text-[#111111] font-bold outline-none focus:border-[#DA7756] shadow-none cursor-pointer transition-all"
                 >
                   <option value="Dreaming & Ideas">Dreaming & Ideas</option>
                   <option value="Planning & Research">
@@ -353,31 +353,31 @@ export function AddDreamDialog({
           {/* Description */}
           <div className="space-y-3">
             <label className="flex items-center gap-2 text-[11px] font-bold text-[#555555] uppercase tracking-widest opacity-80">
-              <BookOpen className="w-3.5 h-3.5 text-[#BBA48B]" />
+              <BookOpen className="w-3.5 h-3.5 text-[#DA7756]" />
               Describe Your Dream
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Paint the picture... What will it look, feel, and mean to you when you achieve this dream?"
-              className="w-full bg-white border border-[#E8E4D9] rounded-xl px-5 py-4 text-sm text-[#111111] font-medium outline-none shadow-none focus:border-[#BBA48B] resize-y min-h-[120px] transition-all placeholder:text-[#CCCCCC]"
+              className="w-full bg-white border border-gray-200 rounded-xl px-5 py-4 text-sm text-[#111111] font-medium outline-none shadow-none focus:border-[#DA7756] resize-y min-h-[120px] transition-all placeholder:text-[#CCCCCC]"
             />
           </div>
 
           {/* Linked Sections */}
           <div className="space-y-5 pt-2">
-            <div className="border border-[#E8E4D9] bg-[#FAF9F6] rounded-2xl p-6">
+            <div className="border border-gray-200 bg-[#F6F4EE] rounded-2xl p-6">
               <h4 className="flex items-center gap-2 text-[12px] font-bold text-[#333333] uppercase tracking-widest mb-3">
-                <Heart className="w-[15px] h-[15px] text-[#BBA48B]" />
+                <Heart className="w-[15px] h-[15px] text-[#DA7756]" />
                 Linked Core Values
               </h4>
               <p className="flex items-center gap-2 text-[11px] text-[#888888] mb-4 font-bold uppercase tracking-wide">
-                <span className="text-[#BBA48B]">💡</span> Connect your dream
+                <span className="text-[#DA7756]">💡</span> Connect your dream
                 to your values
               </p>
 
               {isLoadingDetails ? (
-                <div className="flex items-center gap-2 text-[12px] text-[#BBA48B] font-bold">
+                <div className="flex items-center gap-2 text-[12px] text-[#DA7756] font-bold">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" /> FETCHING VALUES...
                 </div>
               ) : coreValues.length > 0 ? (
@@ -385,7 +385,7 @@ export function AddDreamDialog({
                   {coreValues.map((cv, idx) => (
                     <span
                       key={idx}
-                      className="px-3 py-1.5 text-[11px] font-bold bg-white border border-[#E8E4D9] text-[#777777] rounded-lg uppercase tracking-wider"
+                      className="px-3 py-1.5 text-[11px] font-bold bg-white border border-gray-200 text-[#777777] rounded-lg uppercase tracking-wider"
                     >
                       {String(cv.name || "Unnamed Value")}
                     </span>
@@ -398,17 +398,17 @@ export function AddDreamDialog({
               )}
             </div>
 
-            <div className="border border-[#E8E4D9] bg-[#FAF9F6] rounded-2xl p-6">
+            <div className="border border-gray-200 bg-[#F6F4EE] rounded-2xl p-6">
               <h4 className="flex items-center gap-2 text-[12px] font-bold text-[#333333] uppercase tracking-widest mb-3">
-                <Target className="w-[15px] h-[15px] text-[#BBA48B]" />
+                <Target className="w-[15px] h-[15px] text-[#DA7756]" />
                 Linked Goals
               </h4>
               <p className="flex items-center gap-2 text-[11px] text-[#888888] mb-4 font-bold uppercase tracking-wide">
-                <span className="text-[#BBA48B]">💡</span> Map steps for success
+                <span className="text-[#DA7756]">💡</span> Map steps for success
               </p>
 
               {isLoadingDetails ? (
-                <div className="flex items-center gap-2 text-[12px] text-[#BBA48B] font-bold">
+                <div className="flex items-center gap-2 text-[12px] text-[#DA7756] font-bold">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" /> FETCHING GOALS...
                 </div>
               ) : goals.length > 0 ? (
@@ -416,7 +416,7 @@ export function AddDreamDialog({
                   {goals.map((g, idx) => (
                     <span
                       key={idx}
-                      className="px-3 py-1.5 text-[11px] font-bold bg-white border border-[#E8E4D9] text-[#777777] rounded-lg uppercase tracking-wider"
+                      className="px-3 py-1.5 text-[11px] font-bold bg-white border border-gray-200 text-[#777777] rounded-lg uppercase tracking-wider"
                     >
                       {String(g.title || "Unnamed Goal")}
                     </span>
@@ -429,9 +429,9 @@ export function AddDreamDialog({
               )}
             </div>
 
-            <div className="border border-[#E8E4D9] bg-[#FDFCF9] rounded-2xl p-6">
+            <div className="border border-gray-200 bg-white rounded-2xl p-6">
               <h4 className="flex items-center gap-2 text-[12px] font-bold text-[#333333] uppercase tracking-widest mb-4">
-                <BookOpen className="w-[15px] h-[15px] text-[#BBA48B]" />
+                <BookOpen className="w-[15px] h-[15px] text-[#DA7756]" />
                 Progress History
               </h4>
 
@@ -441,7 +441,7 @@ export function AddDreamDialog({
                   onChange={(e) => setProgressNotes(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="What steps have you taken today? (Ctrl+Enter to add)"
-                  className="w-full bg-white border border-[#E8E4D9] rounded-xl px-4 py-3 text-sm outline-none resize-none focus:border-[#BBA48B] min-h-[100px] transition-all placeholder:text-[#CCCCCC]"
+                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none resize-none focus:border-[#DA7756] min-h-[100px] transition-all placeholder:text-[#CCCCCC]"
                 />
                 <div className="flex justify-between items-center mt-3">
                   <div className="text-[11px] text-[#AAAAAA] font-bold uppercase tracking-widest">
@@ -450,7 +450,7 @@ export function AddDreamDialog({
                   <button
                     onClick={handleAddNote}
                     disabled={isAddingNote || !progressNotes.trim()}
-                    className="bg-[#BBA48B] text-white hover:bg-[#A68F76] disabled:opacity-50 disabled:cursor-not-allowed transition-all rounded-lg px-5 py-2 text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 shadow-sm"
+                    className="bg-[#DA7756] hover:bg-[#C96B4D] text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all rounded-lg px-5 py-2 text-[12px] font-bold uppercase tracking-widest flex items-center gap-2 shadow-sm"
                   >
                     {isAddingNote ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -524,10 +524,10 @@ export function AddDreamDialog({
                     return (
                       <div
                         key={idx}
-                        className="flex flex-col gap-1.5 bg-white border border-[#5eead4] rounded-lg p-3 shadow-sm text-xs relative"
+                        className="flex flex-col gap-1.5 bg-white border border-gray-200 rounded-lg p-3 shadow-sm text-xs relative"
                       >
                         <div className="flex justify-between items-center w-full">
-                          <span className="font-bold text-[#0d9488]">
+                          <span className="font-bold text-[#DA7756]">
                             {dateStr}
                           </span>
                           <button
@@ -536,7 +536,7 @@ export function AddDreamDialog({
                               handleDeleteNoteById(n.id as string | number)
                             }
                             disabled={isDeletingNoteId === n.id || !n.id}
-                            className="p-1 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-md transition-all disabled:opacity-50"
+                            className="p-1 text-[#DA7756] hover:bg-[#DA7756]/10 hover:text-[#C96B4D] rounded-md transition-all disabled:opacity-50"
                           >
                             {isDeletingNoteId === n.id ? (
                               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -564,12 +564,12 @@ export function AddDreamDialog({
         </div>
 
         <DialogFooter
-          className={`p-6 border-t border-[#E8E4D9] bg-[#FAF9F6] sticky bottom-0 z-10 flex-row ${initialData ? "justify-between" : "justify-end"} items-center space-x-3 rounded-b-2xl`}
+          className={`p-6 border-t border-gray-200 bg-[#F6F4EE] sticky bottom-0 z-10 flex-row ${initialData ? "justify-between" : "justify-end"} items-center space-x-3 rounded-b-2xl`}
         >
           {initialData && (
             <button
               onClick={handleDelete}
-              className="flex items-center gap-2 px-5 py-3 text-[12px] font-bold text-red-600 bg-white border border-red-100 hover:bg-red-50 rounded-xl transition-all uppercase tracking-widest shadow-sm"
+              className="flex items-center gap-2 px-5 py-3 text-[12px] font-bold text-[#DA7756] bg-white border border-[#DA7756]/30 hover:bg-[#DA7756]/10 rounded-xl transition-all uppercase tracking-widest shadow-sm"
             >
               <Trash2 className="w-4 h-4" />
               Delete
@@ -578,13 +578,13 @@ export function AddDreamDialog({
           <div className="flex gap-3">
             <button
               onClick={() => setOpen(false)}
-              className="px-6 py-3 text-[12px] font-bold text-[#777777] bg-white border border-[#E8E4D9] rounded-xl hover:bg-gray-50 transition-all uppercase tracking-widest"
+              className="px-6 py-3 text-[12px] font-bold text-[#777777] bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all uppercase tracking-widest"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
-              className="flex items-center gap-2 px-8 py-3 text-[12px] font-bold text-white bg-[#BBA48B] hover:bg-[#A68F76] rounded-xl transition-all shadow-md uppercase tracking-widest"
+              className="flex items-center gap-2 px-8 py-3 text-[12px] font-bold text-white bg-[#DA7756] hover:bg-[#C96B4D] rounded-xl transition-all shadow-md uppercase tracking-widest"
             >
               <Save className="w-4 h-4" />
               {initialData ? "Save Changes" : "Forge Vision"}
