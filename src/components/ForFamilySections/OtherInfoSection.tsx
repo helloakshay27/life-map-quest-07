@@ -1,5 +1,18 @@
 import { Label } from "@/components/ui/label";
 import { ChevronDown, FileEdit } from "lucide-react";
+import {
+  ffSectionShell,
+  ffSectionHeader,
+  ffSectionHeaderIconWrap,
+  ffSectionHeaderTitle,
+  ffSectionHeaderSubtitle,
+  ffSubCard,
+  ffAccordionTrigger,
+  ffAccordionTitle,
+  ffAccordionHint,
+  ffChevron,
+  ffNestedPanel,
+} from "@/components/ForFamilySections/forFamilySectionStyles";
 
 interface OtherInfoSectionProps {
   otherInfo: { notes: string };
@@ -16,52 +29,45 @@ export default function OtherInfoSection({
 }: OtherInfoSectionProps) {
   return (
     <div className="space-y-6">
-      <div className="bg-orange-50 border border-orange-200 rounded-xl overflow-hidden">
-        
-        {/* Header Block */}
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-5 py-4">
+      <div className={ffSectionShell}>
+        <div className={ffSectionHeader}>
           <div className="flex items-center gap-3">
-            <div className="bg-white/20 p-2 rounded-lg">
-              <FileEdit className="h-5 w-5" />
+            <div className={ffSectionHeaderIconWrap}>
+              <FileEdit className="h-4 w-4 text-white" strokeWidth={2.5} />
             </div>
             <div>
-              <h3 className="font-semibold text-lg">Other Information</h3>
-              <p className="text-sm text-orange-50">Any additional notes or instructions for your family</p>
+              <h3 className={ffSectionHeaderTitle}>Other Information</h3>
+              <p className={ffSectionHeaderSubtitle}>Any additional notes or instructions for your family</p>
             </div>
           </div>
         </div>
 
         <div className="p-5 space-y-4">
-          <div className="bg-white border border-orange-200 rounded-lg overflow-hidden">
-            
-            {/* Expandable Accordion Button */}
+          <div className={ffSubCard}>
             <button
               onClick={() => onToggleSection("otherInfoDetails")}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+              className={ffAccordionTrigger}
             >
               <div className="flex flex-col items-start text-left">
-                <h3 className="text-[16px] font-semibold text-black">Notes & Details</h3>
-                <p className="text-[14px] text-gray-500 mt-0.5">Locker details, important locations, etc.</p>
+                <h3 className={ffAccordionTitle}>Notes & Details</h3>
+                <p className={ffAccordionHint}>Locker details, important locations, etc.</p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">Click to expand</span>
+                <span className="text-sm text-[#888780]">Click to expand</span>
                 <ChevronDown 
-                  className={`h-5 w-5 text-orange-700 transition-transform duration-200 ${
-                    expandedSections.otherInfoDetails ? 'rotate-180' : ''
-                  }`} 
+                  className={`${ffChevron} ${expandedSections.otherInfoDetails ? 'rotate-180' : ''}`} 
                 />
               </div>
             </button>
 
-            {/* Expanded Content */}
             {expandedSections.otherInfoDetails && (
-              <div className="p-4 border-t border-orange-100 bg-gray-50 space-y-4">
+              <div className={ffNestedPanel}>
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-black uppercase tracking-wider">
+                  <Label className="text-xs font-semibold text-foreground uppercase tracking-wider">
                     Additional Notes
                   </Label>
                   <textarea
-                    className="flex min-h-[200px] w-full rounded-md border border-gray-300 bg-white px-4 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow resize-y shadow-sm"
+                    className="flex min-h-[200px] w-full rounded-xl border border-[#D6B99D] bg-white px-4 py-3 text-sm text-[#2C2C2A] placeholder:text-[#888780] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#DA7756] focus-visible:border-[#DA7756] transition-shadow resize-y shadow-sm"
                     placeholder="E.g., Locker key is in the bedroom cupboard. The spare house keys are kept with..."
                     value={otherInfo.notes}
                     onChange={(e) => onUpdateOtherInfo("notes", e.target.value)}

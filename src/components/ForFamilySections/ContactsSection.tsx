@@ -1,27 +1,17 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Users, ChevronDown } from "lucide-react";
-
-// ─── Brand Palette ────────────────────────────────────────────────────────────
-const C = {
-  coral:     "#D5474E",
-  coral8:    "rgba(213,71,78,0.08)",
-  coral15:   "rgba(213,71,78,0.15)",
-  charcoal:  "#2A2A2A",
-  cream:     "#F5CECA",
-  forest:    "#0B5541",
-  forest8:   "rgba(11,85,65,0.08)",
-  violet:    "#5534B7",
-  violet8:   "rgba(85,52,183,0.08)",
-  sand:      "#C5AB92",
-  dune:      "#E8C0A8",
-  mist:      "#D1D4A6",
-  stone:     "#888765",
-  success:   "#44AF90",
-  warning:   "#F4A94C",
-  crimson:   "#C72540",
-  sky:       "#2B6CC5",
-};
+import {
+  ffSectionShell,
+  ffSectionHeader,
+  ffSectionHeaderIconWrap,
+  ffSectionHeaderTitle,
+  ffSectionHeaderSubtitle,
+  ffSubCard,
+  ffChevron,
+  ffLabelUpper,
+} from "@/components/ForFamilySections/forFamilySectionStyles";
+import { cn } from "@/lib/utils";
 
 interface ImportantContacts {
   employerSupervisor: string;
@@ -62,27 +52,6 @@ interface ContactsSectionProps {
   onToggleSection: (section: string) => void;
 }
 
-// ─── Shared styles ────────────────────────────────────────────────────────────
-const labelStyle: React.CSSProperties = {
-  color: C.stone,
-  fontWeight: 600,
-  fontSize: 11,
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-};
-
-const cardStyle: React.CSSProperties = {
-  background: "#fff",
-  border: `1px solid ${C.sand}`,
-  borderRadius: 8,
-  overflow: "hidden",
-};
-
-const dividerStyle: React.CSSProperties = {
-  borderTop: `1px solid ${C.mist}`,
-};
-
-// ─── Section toggle header ────────────────────────────────────────────────────
 function SectionHeader({
   title,
   subtitle,
@@ -96,58 +65,28 @@ function SectionHeader({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      style={{
-        width: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "14px 16px",
-        background: expanded ? C.coral8 : "transparent",
-        border: "none",
-        cursor: "pointer",
-        textAlign: "left",
-        transition: "background 0.15s",
-      }}
-      onMouseEnter={e => {
-        if (!expanded) e.currentTarget.style.background = C.forest8;
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.background = expanded ? C.coral8 : "transparent";
-      }}
+      className={cn(
+        "w-full flex items-center justify-between px-4 py-3.5 text-left transition-colors border-0",
+        expanded ? "bg-[#DA7756]/10" : "bg-transparent hover:bg-[#FEF4EE]"
+      )}
     >
       <div>
-        <span style={{ fontWeight: 600, color: C.charcoal, fontSize: 14 }}>{title}</span>
-        {subtitle && (
-          <span style={{ fontSize: 12, color: C.stone, marginLeft: 8 }}>— {subtitle}</span>
-        )}
+        <span className="font-semibold text-sm text-foreground">{title}</span>
+        {subtitle && <span className="text-xs text-[#888780] ml-2">— {subtitle}</span>}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ fontSize: 12, color: C.stone }}>
-          Click to {expanded ? "collapse" : "expand"}
-        </span>
-        <ChevronDown
-          className="h-5 w-5"
-          style={{
-            color: C.coral,
-            transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
-            transition: "transform 0.2s",
-          }}
-        />
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-[#888780]">Click to {expanded ? "collapse" : "expand"}</span>
+        <ChevronDown className={cn(ffChevron, expanded && "rotate-180")} />
       </div>
     </button>
   );
 }
 
-// ─── Reusable field grid ──────────────────────────────────────────────────────
 function FieldGrid({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      style={{ ...dividerStyle, padding: 16 }}
-      className="grid grid-cols-1 md:grid-cols-2 gap-4"
-    >
-      {children}
-    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border p-4">{children}</div>
   );
 }
 
@@ -167,71 +106,38 @@ function Field({
   return (
     <div className={fullWidth ? "md:col-span-2" : ""}>
       <div className="space-y-1">
-        <Label style={labelStyle}>{label}</Label>
-        <Input
-          placeholder={placeholder}
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          style={{ borderColor: C.mist }}
-        />
+        <Label className={cn(ffLabelUpper, "block")}>{label}</Label>
+        <Input placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
       </div>
     </div>
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
 export default function ContactsSection({
   importantContacts,
   expandedSections,
   onUpdateImportantContact,
   onToggleSection,
 }: ContactsSectionProps) {
-  const u = (field: keyof ImportantContacts) =>
-    (v: string) => onUpdateImportantContact(field, v);
+  const u = (field: keyof ImportantContacts) => (v: string) => onUpdateImportantContact(field, v);
 
   return (
     <div className="space-y-6">
-      <div
-        style={{
-          background: `linear-gradient(135deg, ${C.coral8}, ${C.forest8})`,
-          border: `1px solid ${C.sand}`,
-          borderRadius: 10,
-          overflow: "hidden",
-        }}
-      >
-        {/* ── Header ─────────────────────────────────────────────────────── */}
-        <div
-          style={{
-            background: C.charcoal,
-            padding: "16px 20px",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div
-              style={{
-                background: "rgba(255,255,255,0.12)",
-                padding: 8,
-                borderRadius: 8,
-              }}
-            >
-              <Users className="h-5 w-5" style={{ color: "#fff" }} />
+      <div className={ffSectionShell}>
+        <div className={ffSectionHeader}>
+          <div className="flex items-center gap-3">
+            <div className={ffSectionHeaderIconWrap}>
+              <Users className="h-4 w-4 text-white" strokeWidth={2.5} />
             </div>
             <div>
-              <h3 style={{ fontWeight: 600, fontSize: 18, color: "#fff" }}>
-                Important Contacts
-              </h3>
-              <p style={{ fontSize: 13, color: C.cream }}>
-                Professional contacts &amp; advisors
-              </p>
+              <h3 className={ffSectionHeaderTitle}>Important Contacts</h3>
+              <p className={ffSectionHeaderSubtitle}>Professional contacts and advisors</p>
             </div>
           </div>
         </div>
 
-        {/* ── Contact cards ───────────────────────────────────────────────── */}
-        <div style={{ padding: 20 }} className="space-y-4">
-
-          {/* Employer / Supervisor */}
-          <div style={cardStyle}>
+        <div className="p-5 space-y-4">
+          <div className={ffSubCard}>
             <SectionHeader
               title="Employer / Supervisor"
               expanded={!!expandedSections.employer}
@@ -239,18 +145,14 @@ export default function ContactsSection({
             />
             {expandedSections.employer && (
               <FieldGrid>
-                <Field label="Immediate Supervisor" placeholder="Immediate Supervisor"
-                  value={importantContacts.employerSupervisor} onChange={u("employerSupervisor")} />
-                <Field label="Office Phone" placeholder="Office Phone"
-                  value={importantContacts.employerPhone} onChange={u("employerPhone")} />
-                <Field label="Email" placeholder="Email"
-                  value={importantContacts.employerEmail} onChange={u("employerEmail")} fullWidth />
+                <Field label="Immediate Supervisor" placeholder="Immediate Supervisor" value={importantContacts.employerSupervisor} onChange={u("employerSupervisor")} />
+                <Field label="Office Phone" placeholder="Office Phone" value={importantContacts.employerPhone} onChange={u("employerPhone")} />
+                <Field label="Email" placeholder="Email" value={importantContacts.employerEmail} onChange={u("employerEmail")} fullWidth />
               </FieldGrid>
             )}
           </div>
 
-          {/* Personal Physician */}
-          <div style={cardStyle}>
+          <div className={ffSubCard}>
             <SectionHeader
               title="Personal Physician"
               subtitle="Doctor name, phone, address"
@@ -259,20 +161,15 @@ export default function ContactsSection({
             />
             {expandedSections.physician && (
               <FieldGrid>
-                <Field label="Doctor Name" placeholder="Doctor Name"
-                  value={importantContacts.physicianName} onChange={u("physicianName")} />
-                <Field label="Phone" placeholder="Phone"
-                  value={importantContacts.physicianPhone} onChange={u("physicianPhone")} />
-                <Field label="Address" placeholder="Address"
-                  value={importantContacts.physicianAddress} onChange={u("physicianAddress")} />
-                <Field label="Email" placeholder="Email"
-                  value={importantContacts.physicianEmail} onChange={u("physicianEmail")} />
+                <Field label="Doctor Name" placeholder="Doctor Name" value={importantContacts.physicianName} onChange={u("physicianName")} />
+                <Field label="Phone" placeholder="Phone" value={importantContacts.physicianPhone} onChange={u("physicianPhone")} />
+                <Field label="Address" placeholder="Address" value={importantContacts.physicianAddress} onChange={u("physicianAddress")} />
+                <Field label="Email" placeholder="Email" value={importantContacts.physicianEmail} onChange={u("physicianEmail")} />
               </FieldGrid>
             )}
           </div>
 
-          {/* Pandit / Priest */}
-          <div style={cardStyle}>
+          <div className={ffSubCard}>
             <SectionHeader
               title="Pandit / Priest / Religious Contact"
               subtitle="Name, phone, address"
@@ -281,18 +178,14 @@ export default function ContactsSection({
             />
             {expandedSections.pandit && (
               <FieldGrid>
-                <Field label="Name" placeholder="Name"
-                  value={importantContacts.lawyerName} onChange={u("lawyerName")} />
-                <Field label="Phone" placeholder="Phone"
-                  value={importantContacts.lawyerPhone} onChange={u("lawyerPhone")} />
-                <Field label="Address" placeholder="Address"
-                  value={importantContacts.lawyerAddress} onChange={u("lawyerAddress")} fullWidth />
+                <Field label="Name" placeholder="Name" value={importantContacts.lawyerName} onChange={u("lawyerName")} />
+                <Field label="Phone" placeholder="Phone" value={importantContacts.lawyerPhone} onChange={u("lawyerPhone")} />
+                <Field label="Address" placeholder="Address" value={importantContacts.lawyerAddress} onChange={u("lawyerAddress")} fullWidth />
               </FieldGrid>
             )}
           </div>
 
-          {/* Attorney */}
-          <div style={cardStyle}>
+          <div className={ffSubCard}>
             <SectionHeader
               title="Attorney"
               subtitle="Name, phone, email"
@@ -301,18 +194,14 @@ export default function ContactsSection({
             />
             {expandedSections.attorney && (
               <FieldGrid>
-                <Field label="Attorney Name" placeholder="Attorney Name"
-                  value={importantContacts.attorneyName} onChange={u("attorneyName")} />
-                <Field label="Phone" placeholder="Phone"
-                  value={importantContacts.attorneyPhone} onChange={u("attorneyPhone")} />
-                <Field label="Email" placeholder="Email"
-                  value={importantContacts.attorneyEmail} onChange={u("attorneyEmail")} fullWidth />
+                <Field label="Attorney Name" placeholder="Attorney Name" value={importantContacts.attorneyName} onChange={u("attorneyName")} />
+                <Field label="Phone" placeholder="Phone" value={importantContacts.attorneyPhone} onChange={u("attorneyPhone")} />
+                <Field label="Email" placeholder="Email" value={importantContacts.attorneyEmail} onChange={u("attorneyEmail")} fullWidth />
               </FieldGrid>
             )}
           </div>
 
-          {/* Accountant */}
-          <div style={cardStyle}>
+          <div className={ffSubCard}>
             <SectionHeader
               title="Accountant"
               subtitle="Name, phone, address"
@@ -321,18 +210,14 @@ export default function ContactsSection({
             />
             {expandedSections.accountant && (
               <FieldGrid>
-                <Field label="Name" placeholder="Accountant Name"
-                  value={importantContacts.accountantName} onChange={u("accountantName")} />
-                <Field label="Phone" placeholder="Phone"
-                  value={importantContacts.accountantPhone} onChange={u("accountantPhone")} />
-                <Field label="Address" placeholder="Address"
-                  value={importantContacts.accountantAddress} onChange={u("accountantAddress")} fullWidth />
+                <Field label="Name" placeholder="Accountant Name" value={importantContacts.accountantName} onChange={u("accountantName")} />
+                <Field label="Phone" placeholder="Phone" value={importantContacts.accountantPhone} onChange={u("accountantPhone")} />
+                <Field label="Address" placeholder="Address" value={importantContacts.accountantAddress} onChange={u("accountantAddress")} fullWidth />
               </FieldGrid>
             )}
           </div>
 
-          {/* Insurance Agent */}
-          <div style={cardStyle}>
+          <div className={ffSubCard}>
             <SectionHeader
               title="Insurance Agent"
               subtitle="Agent name, agency, phone"
@@ -341,20 +226,15 @@ export default function ContactsSection({
             />
             {expandedSections.insurance && (
               <FieldGrid>
-                <Field label="Agent Name" placeholder="Agent Name"
-                  value={importantContacts.insuranceAgentName} onChange={u("insuranceAgentName")} />
-                <Field label="Agency Name" placeholder="Agency Name"
-                  value={importantContacts.insuranceAgencyName} onChange={u("insuranceAgencyName")} />
-                <Field label="Phone" placeholder="Phone"
-                  value={importantContacts.insurancePhone} onChange={u("insurancePhone")} />
-                <Field label="Address" placeholder="Address"
-                  value={importantContacts.insuranceAddress} onChange={u("insuranceAddress")} />
+                <Field label="Agent Name" placeholder="Agent Name" value={importantContacts.insuranceAgentName} onChange={u("insuranceAgentName")} />
+                <Field label="Agency Name" placeholder="Agency Name" value={importantContacts.insuranceAgencyName} onChange={u("insuranceAgencyName")} />
+                <Field label="Phone" placeholder="Phone" value={importantContacts.insurancePhone} onChange={u("insurancePhone")} />
+                <Field label="Address" placeholder="Address" value={importantContacts.insuranceAddress} onChange={u("insuranceAddress")} />
               </FieldGrid>
             )}
           </div>
 
-          {/* Banker */}
-          <div style={cardStyle}>
+          <div className={ffSubCard}>
             <SectionHeader
               title="Banker"
               subtitle="Banker name, bank, phone"
@@ -363,20 +243,15 @@ export default function ContactsSection({
             />
             {expandedSections.banker && (
               <FieldGrid>
-                <Field label="Banker Name" placeholder="Banker Name"
-                  value={importantContacts.bankerName} onChange={u("bankerName")} />
-                <Field label="Bank Name" placeholder="Bank Name"
-                  value={importantContacts.bankName} onChange={u("bankName")} />
-                <Field label="Phone" placeholder="Phone"
-                  value={importantContacts.bankPhone} onChange={u("bankPhone")} />
-                <Field label="Address" placeholder="Address"
-                  value={importantContacts.bankAddress} onChange={u("bankAddress")} />
+                <Field label="Banker Name" placeholder="Banker Name" value={importantContacts.bankerName} onChange={u("bankerName")} />
+                <Field label="Bank Name" placeholder="Bank Name" value={importantContacts.bankName} onChange={u("bankName")} />
+                <Field label="Phone" placeholder="Phone" value={importantContacts.bankPhone} onChange={u("bankPhone")} />
+                <Field label="Address" placeholder="Address" value={importantContacts.bankAddress} onChange={u("bankAddress")} />
               </FieldGrid>
             )}
           </div>
 
-          {/* Broker / Investment */}
-          <div style={cardStyle}>
+          <div className={ffSubCard}>
             <SectionHeader
               title="Broker / Investment"
               subtitle="Broker name, company, phone"
@@ -385,18 +260,13 @@ export default function ContactsSection({
             />
             {expandedSections.broker && (
               <FieldGrid>
-                <Field label="Broker Name" placeholder="Broker Name"
-                  value={importantContacts.brokerName} onChange={u("brokerName")} />
-                <Field label="Company Name" placeholder="Company Name"
-                  value={importantContacts.investmentCompany} onChange={u("investmentCompany")} />
-                <Field label="Phone" placeholder="Phone"
-                  value={importantContacts.brokerPhone} onChange={u("brokerPhone")} />
-                <Field label="Address" placeholder="Address"
-                  value={importantContacts.brokerAddress} onChange={u("brokerAddress")} />
+                <Field label="Broker Name" placeholder="Broker Name" value={importantContacts.brokerName} onChange={u("brokerName")} />
+                <Field label="Company Name" placeholder="Company Name" value={importantContacts.investmentCompany} onChange={u("investmentCompany")} />
+                <Field label="Phone" placeholder="Phone" value={importantContacts.brokerPhone} onChange={u("brokerPhone")} />
+                <Field label="Address" placeholder="Address" value={importantContacts.brokerAddress} onChange={u("brokerAddress")} />
               </FieldGrid>
             )}
           </div>
-
         </div>
       </div>
     </div>

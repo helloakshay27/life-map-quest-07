@@ -2,6 +2,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Shield, X } from "lucide-react";
+import {
+  ffSectionShell,
+  ffSectionHeader,
+  ffSectionHeaderIconWrap,
+  ffSectionHeaderTitle,
+  ffSectionHeaderSubtitle,
+  ffAddDashed,
+  ffRemoveGhost,
+  ffItemIndex,
+} from "@/components/ForFamilySections/forFamilySectionStyles";
 
 interface PropertyAsset {
   id: string;
@@ -45,15 +55,15 @@ export default function AssetsSection({
 }: AssetsSectionProps) {
   return (
     <div className="space-y-6">
-      <div className="bg-amber-50 border border-amber-200 rounded-xl overflow-hidden">
-        <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white px-5 py-4">
+      <div className={ffSectionShell}>
+        <div className={ffSectionHeader}>
           <div className="flex items-center gap-3">
-            <div className="bg-white/20 p-2 rounded-lg">
-              <Shield className="h-5 w-5" />
+            <div className={ffSectionHeaderIconWrap}>
+              <Shield className="h-4 w-4 text-white" strokeWidth={2.5} />
             </div>
             <div>
-              <h3 className="font-semibold text-lg">Real Estate & Vehicles</h3>
-              <p className="text-sm text-amber-50">Properties and motor vehicles</p>
+              <h3 className={ffSectionHeaderTitle}>Real Estate & Vehicles</h3>
+              <p className={ffSectionHeaderSubtitle}>Properties and motor vehicles</p>
             </div>
           </div>
         </div>
@@ -61,16 +71,16 @@ export default function AssetsSection({
         <div className="p-5 space-y-6">
           {/* Properties */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-amber-900">Properties</h4>
+            <h4 className="font-semibold text-foreground">Properties</h4>
             {propertyAssets.map((property, idx) => (
-              <div key={property.id} className="bg-white border border-amber-200 rounded-lg p-4">
+              <div key={property.id} className="bg-card border border-border rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="font-semibold text-amber-700">Property #{idx + 1}</span>
+                  <span className={ffItemIndex}>Property #{idx + 1}</span>
                   <Button 
                     variant="ghost"
                     size="sm"
                     onClick={() => onRemovePropertyAsset(property.id)}
-                    className="text-red-500"
+                    className={ffRemoveGhost}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -108,7 +118,7 @@ export default function AssetsSection({
             <Button 
               variant="outline"
               onClick={onAddPropertyAsset}
-              className="w-full border-dashed border-amber-300 text-amber-600"
+              className={ffAddDashed}
             >
               + Add Property
             </Button>
@@ -116,16 +126,16 @@ export default function AssetsSection({
 
           {/* Vehicles */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-amber-900">Vehicles</h4>
+            <h4 className="font-semibold text-foreground">Vehicles</h4>
             {vehicleAssets.map((vehicle, idx) => (
-              <div key={vehicle.id} className="bg-white border border-amber-200 rounded-lg p-4">
+              <div key={vehicle.id} className="bg-card border border-border rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="font-semibold text-amber-700">Vehicle #{idx + 1}</span>
+                  <span className={ffItemIndex}>Vehicle #{idx + 1}</span>
                   <Button 
                     variant="ghost"
                     size="sm"
                     onClick={() => onRemoveVehicleAsset(vehicle.id)}
-                    className="text-red-500"
+                    className={ffRemoveGhost}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -168,7 +178,7 @@ export default function AssetsSection({
             <Button 
               variant="outline"
               onClick={onAddVehicleAsset}
-              className="w-full border-dashed border-amber-300 text-amber-600"
+              className={ffAddDashed}
             >
               + Add Vehicle
             </Button>

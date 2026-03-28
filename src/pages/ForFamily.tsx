@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Heart, Shield, Info, X, Loader2, ArrowRight, ArrowLeft, Save } from "lucide-react";
+import { Shield, Info, X, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  ffBtnPrimary,
+  ffBtnSecondary,
+} from "@/components/ForFamilySections/forFamilySectionStyles";
 
 // --- Components ---
 import PersonalSection from "@/components/ForFamilySections/PersonalSection";
@@ -555,35 +558,43 @@ export default function ForFamily() {
           <p className="text-sm font-medium text-[#888780] mt-0.5">A guide to getting your affairs in order</p>
         </div>
         
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="border-[#DA7756]/40 text-[#DA7756] hover:bg-[#DA7756]/10 hover:text-[#C96B4D]" 
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            className={ffBtnSecondary}
             disabled={isFetching || isSaving}
             onClick={handleDownload}
           >
             Download
-          </Button>
-          <Button size="sm" className="bg-[#DA7756] hover:bg-[#C96B4D] text-white" onClick={handleSave} disabled={isFetching || isSaving}>
-            {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {hasExistingProfile ? "Updating..." : "Saving..."}</> : hasExistingProfile ? "Update Profile" : "Save Profile"}
-          </Button>
+          </button>
+          <button
+            type="button"
+            className={ffBtnPrimary}
+            onClick={handleSave}
+            disabled={isFetching || isSaving}
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {hasExistingProfile ? "Updating..." : "Saving..."}
+              </>
+            ) : hasExistingProfile ? (
+              "Update Profile"
+            ) : (
+              "Save Profile"
+            )}
+          </button>
         </div>
       </div>
 
       {/* Progress Card */}
-      <div className="rounded-2xl bg-[#FEF4EE] p-6 shadow-sm border border-[#D6B99D]">
+      <div className="rounded-2xl border border-[#D6B99D] bg-[#FEF4EE] px-5 pt-5 pb-6 shadow-sm">
         <div className="space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-sm font-bold text-[#2C2C2A]">Completion Progress</span>
+            <span className="text-[15px] font-bold text-[#2C2C2A]">Completion Progress</span>
             <span className="text-sm font-extrabold text-[#DA7756]">{completionProgress}%</span>
           </div>
-          <Progress 
-            value={completionProgress} 
-            className="h-2.5 bg-[#D6B99D]/30" 
-            // Inline style logic assuming Progress component forwards style to its indicator
-            indicatorStyle={{ backgroundColor: "#DA7756" }}
-          />
+          <Progress value={completionProgress} className="h-2.5" />
         </div>
       </div>
 
@@ -640,25 +651,26 @@ export default function ForFamily() {
 
         {/* Content */}
         {isFetching ? (
-          <div className="flex flex-col items-center justify-center py-20 rounded-2xl bg-[#FEF4EE] border border-[#D6B99D] shadow-sm">
+          <div className="flex flex-col items-center justify-center py-20 rounded-2xl bg-white border border-[#D6B99D] shadow-sm">
             <Loader2 className="h-10 w-10 animate-spin text-[#DA7756] mb-4" />
             <p className="text-[#888780] font-medium">Fetching your data...</p>
           </div>
         ) : (
-          <div className="w-full min-h-[400px] flex flex-col bg-white rounded-2xl border border-[#D6B99D] overflow-hidden shadow-sm">
-            {/* Stepper Tabs */}
-            <div className="p-4 border-b border-[#D6B99D] bg-[#FEF4EE]">
-              <div className="flex gap-1 overflow-x-auto hide-scrollbar">
+          <div className="w-full min-h-[400px] flex flex-col bg-[#FEF4EE] rounded-2xl border border-[#D6B99D] overflow-hidden shadow-sm">
+            {/* Stepper Tabs — same pill style as People “Sort” */}
+            <div className="flex flex-wrap items-center gap-2 p-4 border-b border-[#D6B99D] bg-[#FEF4EE]">
+              <div className="flex gap-2 overflow-x-auto hide-scrollbar min-w-0">
                 {FORM_STEPS.map((tab, index) => (
                   <button
                     key={tab.id}
+                    type="button"
                     onClick={() => setActiveTab(tab.id)}
-                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2 outline-none ${
-                      activeTab === tab.id 
-                        ? "bg-[#DA7756] text-white shadow-md" 
-                        : index < currentStepIndex 
-                          ? "text-[#2C2C2A] hover:bg-white border border-transparent hover:border-[#D6B99D]" 
-                          : "text-[#888780] hover:text-[#2C2C2A] hover:bg-white border border-transparent hover:border-[#D6B99D]"
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-sm outline-none whitespace-nowrap flex items-center gap-2 ${
+                      activeTab === tab.id
+                        ? "bg-[#DA7756] text-white border border-[#DA7756]"
+                        : index < currentStepIndex
+                          ? "bg-white text-[#2C2C2A] border border-[#D6B99D] hover:bg-[#FEF4EE] hover:text-[#DA7756]"
+                          : "bg-white text-[#888780] border border-[#D6B99D] hover:bg-[#FEF4EE] hover:text-[#DA7756]"
                     }`}
                   >
                     <span className="text-base leading-none">{tab.icon}</span>
@@ -669,7 +681,7 @@ export default function ForFamily() {
             </div>
 
             {/* Main Content Area */}
-            <div className="p-6 space-y-6 min-h-[400px] bg-[#FEF4EE]/30">
+            <div className="p-4 md:p-6 space-y-6 min-h-[400px] bg-[#FEF4EE]">
               {activeTab === "personal" && <PersonalSection personalInfo={personalInfo} personalDocuments={personalDocuments} spouseDocuments={spouseDocuments} expandedSections={expandedSections} onUpdatePersonalInfo={updatePersonalInfo} onAddPersonalDocument={addPersonalDocument} onRemovePersonalDocument={removePersonalDocument} onAddSpouseDocument={addSpouseDocument} onRemoveSpouseDocument={removeSpouseDocument} onToggleSection={toggleSection} />}
               {activeTab === "family" && <FamilySection husbandSiblings={husbandSiblings} wifeSiblings={wifeSiblings} children={children} grandchildren={grandchildren} expandedSections={expandedSections} onAddHusbandSibling={addHusbandSibling} onRemoveHusbandSibling={removeHusbandSibling} onUpdateHusbandSibling={updateHusbandSibling} onAddWifeSibling={addWifeSibling} onRemoveWifeSibling={removeWifeSibling} onUpdateWifeSibling={updateWifeSibling} onAddChild={addChild} onRemoveChild={removeChild} onUpdateChild={updateChild} onAddGrandchild={addGrandchild} onRemoveGrandchild={removeGrandchild} onUpdateGrandchild={updateGrandchild} onToggleSection={toggleSection} />}
               {activeTab === "emergency" && <EmergencySection emergencyContacts={emergencyContacts} onAddEmergencyContact={addEmergencyContact} onRemoveEmergencyContact={removeEmergencyContact} onUpdateEmergencyContact={updateEmergencyContact} />}

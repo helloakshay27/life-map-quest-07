@@ -9,6 +9,22 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import {
+  ffSectionShell,
+  ffSectionHeader,
+  ffSectionHeaderIconWrap,
+  ffSectionHeaderTitle,
+  ffSectionHeaderSubtitle,
+  ffSubCard,
+  ffAccordionTrigger,
+  ffAccordionTitle,
+  ffAccordionHint,
+  ffChevron,
+  ffNestedPanel,
+  ffAddDashed,
+  ffRemoveGhost,
+  ffDocRow,
+} from "@/components/ForFamilySections/forFamilySectionStyles";
 
 interface PersonalInfo {
   fullName: string;
@@ -74,15 +90,15 @@ export default function PersonalSection({
 }: PersonalSectionProps) {
   return (
     <div className="space-y-6">
-      <div className="bg-blue-50 border border-blue-200 rounded-xl overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-5 py-4">
+      <div className={ffSectionShell}>
+        <div className={ffSectionHeader}>
           <div className="flex items-center gap-3">
-            <div className="bg-white/20 p-2 rounded-lg">
-              <Shield className="h-5 w-5" />
+            <div className={ffSectionHeaderIconWrap}>
+              <Shield className="h-4 w-4 text-white" strokeWidth={2.5} />
             </div>
             <div>
-              <h3 className="font-semibold text-lg">Personal Information</h3>
-              <p className="text-sm text-blue-50">Your identity and contact details</p>
+              <h3 className={ffSectionHeaderTitle}>Personal Information</h3>
+              <p className={ffSectionHeaderSubtitle}>Your identity and contact details</p>
             </div>
           </div>
         </div>
@@ -90,18 +106,18 @@ export default function PersonalSection({
         <div className="p-5 space-y-4">
           
           {/* Basic Details */}
-          <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
+          <div className={ffSubCard}>
             <button
               onClick={() => onToggleSection("basicDetails")}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+              className={ffAccordionTrigger}
             >
               <div className="flex flex-col items-start text-left">
-                <h3 className="text-[16px] font-semibold text-blue-900">Basic Details</h3>
+                <h3 className={ffAccordionTitle}>Basic Details</h3>
               </div>
-              <ChevronDown className={`h-5 w-5 text-blue-700 transition-transform duration-200 ${expandedSections.basicDetails ? "rotate-180" : ""}`} />
+              <ChevronDown className={`${ffChevron} ${expandedSections.basicDetails ? "rotate-180" : ""}`} />
             </button>
             {expandedSections.basicDetails && (
-              <div className="p-4 border-t border-blue-200 space-y-4">
+              <div className={ffNestedPanel}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>FULL NAME</Label>
@@ -181,18 +197,18 @@ export default function PersonalSection({
           </div>
 
           {/* Current Home Address */}
-          <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
+          <div className={ffSubCard}>
             <button
               onClick={() => onToggleSection("currentAddress")}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+              className={ffAccordionTrigger}
             >
               <div className="flex flex-col items-start text-left">
-                <h3 className="text-[16px] font-semibold text-blue-900">Address Details</h3>
+                <h3 className={ffAccordionTitle}>Address Details</h3>
               </div>
-              <ChevronDown className={`h-5 w-5 text-blue-700 transition-transform duration-200 ${expandedSections.currentAddress ? "rotate-180" : ""}`} />
+              <ChevronDown className={`${ffChevron} ${expandedSections.currentAddress ? "rotate-180" : ""}`} />
             </button>
             {expandedSections.currentAddress && (
-              <div className="p-4 border-t border-blue-200 space-y-4">
+              <div className={ffNestedPanel}>
                 <div className="space-y-2">
                   <Label>CURRENT HOME ADDRESS</Label>
                   <Input 
@@ -236,27 +252,27 @@ export default function PersonalSection({
           </div>
 
           {/* Personal Documents */}
-          <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
+          <div className={ffSubCard}>
             <button
               onClick={() => onToggleSection("personalDocuments")}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+              className={ffAccordionTrigger}
             >
               <div className="flex flex-col items-start text-left">
-                <h3 className="text-[16px] font-semibold text-blue-900">Personal Documents (Up to 5)</h3>
+                <h3 className={ffAccordionTitle}>Personal Documents (Up to 5)</h3>
               </div>
-              <ChevronDown className={`h-5 w-5 text-blue-700 transition-transform duration-200 ${expandedSections.personalDocuments ? "rotate-180" : ""}`} />
+              <ChevronDown className={`${ffChevron} ${expandedSections.personalDocuments ? "rotate-180" : ""}`} />
             </button>
             {expandedSections.personalDocuments && (
-              <div className="p-4 border-t border-blue-200 space-y-4">
+              <div className={ffNestedPanel}>
                 <div className="space-y-2">
                   {personalDocuments.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between bg-blue-50 p-3 rounded">
+                    <div key={doc.id} className={ffDocRow}>
                       <span className="text-sm">{doc.fileName}</span>
                       <Button 
                         variant="ghost" 
                         size="sm"
                         onClick={() => onRemovePersonalDocument(doc.id)}
-                        className="text-red-500 hover:text-red-700"
+                        className={ffRemoveGhost}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -266,7 +282,7 @@ export default function PersonalSection({
                 <Button 
                   variant="outline"
                   onClick={onAddPersonalDocument}
-                  className="w-full"
+                  className={ffAddDashed}
                 >
                   + Attach Document
                 </Button>
@@ -275,19 +291,19 @@ export default function PersonalSection({
           </div>
 
           {/* Spouse Information */}
-          <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
+          <div className={ffSubCard}>
             <button
               onClick={() => onToggleSection("spouseInfo")}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+              className={ffAccordionTrigger}
             >
               <div className="flex flex-col items-start text-left">
-                <h3 className="text-[16px] font-semibold text-blue-900">Spouse Information</h3>
-                <p className="text-[14px] text-gray-500 mt-0.5">Spouse name, Aadhar, PAN, employer</p>
+                <h3 className={ffAccordionTitle}>Spouse Information</h3>
+                <p className={ffAccordionHint}>Spouse name, Aadhar, PAN, employer</p>
               </div>
-              <ChevronDown className={`h-5 w-5 text-blue-700 transition-transform duration-200 ${expandedSections.spouseInfo ? "rotate-180" : ""}`} />
+              <ChevronDown className={`${ffChevron} ${expandedSections.spouseInfo ? "rotate-180" : ""}`} />
             </button>
             {expandedSections.spouseInfo && (
-              <div className="p-4 border-t border-blue-200 space-y-4">
+              <div className={ffNestedPanel}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>SPOUSE NAME</Label>
@@ -372,17 +388,17 @@ export default function PersonalSection({
                 </div>
 
                 {/* Spouse Documents */}
-                <div className="mt-6 pt-6 border-t border-blue-200">
-                  <h4 className="font-semibold text-blue-900 mb-4">Uploaded Documents (up to 5)</h4>
+                <div className="mt-6 pt-6 border-t border-border">
+                  <h4 className="font-semibold text-foreground mb-4">Uploaded Documents (up to 5)</h4>
                   <div className="space-y-2 mb-4">
                     {spouseDocuments.map((doc) => (
-                      <div key={doc.id} className="flex items-center justify-between bg-blue-50 p-3 rounded">
+                      <div key={doc.id} className={ffDocRow}>
                         <span className="text-sm">{doc.fileName}</span>
                         <Button 
                           variant="ghost" 
                           size="sm"
                           onClick={() => onRemoveSpouseDocument(doc.id)}
-                          className="text-red-500 hover:text-red-700"
+                          className={ffRemoveGhost}
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -392,7 +408,7 @@ export default function PersonalSection({
                   <Button 
                     variant="outline"
                     onClick={onAddSpouseDocument}
-                    className="w-full"
+                    className={ffAddDashed}
                   >
                     + Attach Document
                   </Button>
@@ -402,19 +418,19 @@ export default function PersonalSection({
           </div>
 
           {/* Former Spouse Information */}
-          <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
+          <div className={ffSubCard}>
             <button
               onClick={() => onToggleSection("formerSpouseInfo")}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+              className={ffAccordionTrigger}
             >
               <div className="flex flex-col items-start text-left">
-                <h3 className="text-[16px] font-semibold text-blue-900">Former Spouse (if any)</h3>
-                <p className="text-[14px] text-gray-500 mt-0.5">Fill only if applicable</p>
+                <h3 className={ffAccordionTitle}>Former Spouse (if any)</h3>
+                <p className={ffAccordionHint}>Fill only if applicable</p>
               </div>
-              <ChevronDown className={`h-5 w-5 text-blue-700 transition-transform duration-200 ${expandedSections.formerSpouseInfo ? "rotate-180" : ""}`} />
+              <ChevronDown className={`${ffChevron} ${expandedSections.formerSpouseInfo ? "rotate-180" : ""}`} />
             </button>
             {expandedSections.formerSpouseInfo && (
-              <div className="p-4 border-t border-blue-200 space-y-4">
+              <div className={ffNestedPanel}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>FORMER SPOUSE NAME</Label>

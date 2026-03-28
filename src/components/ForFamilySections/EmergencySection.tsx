@@ -2,6 +2,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertCircle, X } from "lucide-react";
+import {
+  ffSectionShell,
+  ffSectionHeader,
+  ffSectionHeaderIconWrap,
+  ffSectionHeaderTitle,
+  ffSectionHeaderSubtitle,
+  ffAddDashed,
+  ffRemoveGhost,
+  ffItemIndex,
+} from "@/components/ForFamilySections/forFamilySectionStyles";
 
 interface EmergencyContact {
   id: string;
@@ -28,29 +38,29 @@ export default function EmergencySection({
 }: EmergencySectionProps) {
   return (
     <div className="space-y-6">
-      <div className="bg-red-50 border border-red-200 rounded-xl overflow-hidden">
-        <div className="bg-gradient-to-r from-red-500 to-red-600 text-white px-5 py-4">
+      <div className={ffSectionShell}>
+        <div className={ffSectionHeader}>
           <div className="flex items-center gap-3">
-            <div className="bg-white/20 p-2 rounded-lg">
-              <AlertCircle className="h-5 w-5" />
+            <div className={ffSectionHeaderIconWrap}>
+              <AlertCircle className="h-4 w-4 text-white" strokeWidth={2.5} />
             </div>
             <div>
-              <h3 className="font-semibold text-lg">Emergency Contacts</h3>
-              <p className="text-sm text-red-50">People to notify in emergencies</p>
+              <h3 className={ffSectionHeaderTitle}>Emergency Contacts</h3>
+              <p className={ffSectionHeaderSubtitle}>People to notify in emergencies</p>
             </div>
           </div>
         </div>
 
         <div className="p-5 space-y-4">
           {emergencyContacts.map((contact, idx) => (
-            <div key={contact.id} className="bg-white border border-red-200 rounded-lg p-4">
+            <div key={contact.id} className="bg-card border border-border rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
-                <span className="font-semibold text-red-700">Contact #{idx + 1}</span>
+                <span className={ffItemIndex}>Contact #{idx + 1}</span>
                 <Button 
                   variant="ghost"
                   size="sm"
                   onClick={() => onRemoveEmergencyContact(contact.id)}
-                  className="text-red-500"
+                  className={ffRemoveGhost}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -92,7 +102,7 @@ export default function EmergencySection({
           <Button 
             variant="outline"
             onClick={onAddEmergencyContact}
-            className="w-full border-dashed border-red-300 text-red-600"
+            className={ffAddDashed}
           >
             + Add Emergency Contact
           </Button>

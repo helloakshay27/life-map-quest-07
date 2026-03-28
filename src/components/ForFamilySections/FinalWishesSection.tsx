@@ -9,6 +9,16 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import {
+  ffSectionShell,
+  ffSectionHeader,
+  ffSectionHeaderIconWrap,
+  ffSectionHeaderTitle,
+  ffSectionHeaderSubtitle,
+  ffAddDashed,
+  ffRemoveGhost,
+  ffItemIndex,
+} from "@/components/ForFamilySections/forFamilySectionStyles";
 
 interface FinalWish {
   id: string;
@@ -48,29 +58,29 @@ export default function FinalWishesSection({
 }: FinalWishesSectionProps) {
   return (
     <div className="space-y-6">
-      <div className="bg-pink-50 border border-pink-200 rounded-xl overflow-hidden">
-        <div className="bg-gradient-to-r from-pink-500 to-pink-600 text-white px-5 py-4">
+      <div className={ffSectionShell}>
+        <div className={ffSectionHeader}>
           <div className="flex items-center gap-3">
-            <div className="bg-white/20 p-2 rounded-lg">
-              <Heart className="h-5 w-5" />
+            <div className={ffSectionHeaderIconWrap}>
+              <Heart className="h-4 w-4 text-white" strokeWidth={2.5} />
             </div>
             <div>
-              <h3 className="font-semibold text-lg">Final Wishes</h3>
-              <p className="text-sm text-pink-50">Funeral preferences and last wishes</p>
+              <h3 className={ffSectionHeaderTitle}>Final Wishes</h3>
+              <p className={ffSectionHeaderSubtitle}>Funeral preferences and last wishes</p>
             </div>
           </div>
         </div>
 
         <div className="p-5 space-y-4">
           {finalWishes.map((wish, index) => (
-            <div key={wish.id} className="bg-white border border-pink-200 rounded-lg p-5 space-y-4">
+            <div key={wish.id} className="bg-card border border-border rounded-lg p-5 space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-pink-600">Person #{index + 1}</h4>
+                <h4 className={ffItemIndex}>Person #{index + 1}</h4>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => onRemoveFinalWish(wish.id)}
-                  className="text-red-500 hover:text-red-700"
+                  className={ffRemoveGhost}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -196,15 +206,10 @@ export default function FinalWishesSection({
           <Button
             variant="outline"
             onClick={onAddFinalWish}
-            className="w-full border-2 border-dashed border-gray-300 text-gray-700 hover:bg-gray-50"
+            className={ffAddDashed}
           >
             <span className="mr-2">+</span> Add Final Wishes Entry
           </Button>
-
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="outline">Cancel</Button>
-            <Button className="bg-purple-600 hover:bg-purple-700">Save & Continue</Button>
-          </div>
         </div>
       </div>
     </div>

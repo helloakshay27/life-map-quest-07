@@ -9,6 +9,16 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import {
+  ffSectionShell,
+  ffSectionHeader,
+  ffSectionHeaderIconWrap,
+  ffSectionHeaderTitle,
+  ffSectionHeaderSubtitle,
+  ffAddDashed,
+  ffRemoveGhost,
+  ffItemIndex,
+} from "@/components/ForFamilySections/forFamilySectionStyles";
 
 interface LifeInsurancePolicy {
   id: string;
@@ -52,15 +62,15 @@ export default function BenefitsSection({
 }: BenefitsSectionProps) {
   return (
     <div className="space-y-6">
-      <div className="bg-indigo-50 border border-indigo-200 rounded-xl overflow-hidden">
-        <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white px-5 py-4">
+      <div className={ffSectionShell}>
+        <div className={ffSectionHeader}>
           <div className="flex items-center gap-3">
-            <div className="bg-white/20 p-2 rounded-lg">
-              <Shield className="h-5 w-5" />
+            <div className={ffSectionHeaderIconWrap}>
+              <Shield className="h-4 w-4 text-white" strokeWidth={2.5} />
             </div>
             <div>
-              <h3 className="font-semibold text-lg">Benefits & Retirement</h3>
-              <p className="text-sm text-indigo-50">Insurance, leave, and retirement</p>
+              <h3 className={ffSectionHeaderTitle}>Benefits & Retirement</h3>
+              <p className={ffSectionHeaderSubtitle}>Insurance, leave, and retirement</p>
             </div>
           </div>
         </div>
@@ -68,7 +78,7 @@ export default function BenefitsSection({
         <div className="p-5 space-y-6">
           {/* Health Insurance */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-indigo-900">Health Insurance</h4>
+            <h4 className="font-semibold text-foreground">Health Insurance</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input 
                 placeholder="Coverage Type"
@@ -101,16 +111,16 @@ export default function BenefitsSection({
 
           {/* Life Insurance Policies */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-indigo-900">Life Insurance Policies</h4>
+            <h4 className="font-semibold text-foreground">Life Insurance Policies</h4>
             {lifeInsurancePolicies.map((policy, idx) => (
-              <div key={policy.id} className="bg-white border border-indigo-200 rounded-lg p-4">
+              <div key={policy.id} className="bg-card border border-border rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="font-semibold text-indigo-700">Policy #{idx + 1}</span>
+                  <span className={ffItemIndex}>Policy #{idx + 1}</span>
                   <Button 
                     variant="ghost"
                     size="sm"
                     onClick={() => onRemoveLifeInsurancePolicy(policy.id)}
-                    className="text-red-500"
+                    className={ffRemoveGhost}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -147,7 +157,7 @@ export default function BenefitsSection({
             <Button 
               variant="outline"
               onClick={onAddLifeInsurancePolicy}
-              className="w-full border-dashed border-indigo-300 text-indigo-600"
+              className={ffAddDashed}
             >
               + Add Policy
             </Button>
@@ -155,7 +165,7 @@ export default function BenefitsSection({
 
           {/* Employment Benefits */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-indigo-900">Employment Benefits</h4>
+            <h4 className="font-semibold text-foreground">Employment Benefits</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input 
                 placeholder="Annual Leave Hours"
@@ -192,10 +202,6 @@ export default function BenefitsSection({
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline">Cancel</Button>
-            <Button className="bg-indigo-600 hover:bg-indigo-700">Save</Button>
-          </div>
         </div>
       </div>
     </div>
