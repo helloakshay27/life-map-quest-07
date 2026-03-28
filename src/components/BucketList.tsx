@@ -4,6 +4,25 @@ import { AddDreamDialog } from "@/components/AddDreamDialog";
 import { toast } from "sonner";
 import { getAuthHeaders } from "@/config/api";
 
+const LANE_COLORS: Record<string, { base: string; hover: string }> = {
+  "Dreaming & Ideas": {
+    base: "bg-indigo-50 border-indigo-200",
+    hover: "bg-indigo-100 border-indigo-500 shadow-lg shadow-indigo-100",
+  },
+  "Planning & Research": {
+    base: "bg-blue-50 border-blue-200",
+    hover: "bg-blue-100 border-blue-500 shadow-lg shadow-blue-100",
+  },
+  "In Progress": {
+    base: "bg-green-50 border-green-200",
+    hover: "bg-green-100 border-green-500 shadow-lg shadow-green-100",
+  },
+  Achieved: {
+    base: "bg-purple-50 border-purple-200",
+    hover: "bg-purple-100 border-purple-500 shadow-lg shadow-purple-100",
+  },
+};
+
 // Types
 type Category =
   | "All Categories"
@@ -117,6 +136,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
   const [categoryFilter, setCategoryFilter] =
     useState<Category>("All Categories");
   const [viewMode, setViewMode] = useState<"list" | "board">("board");
+  const [hoveredLane, setHoveredLane] = useState<Progress | null>(null);
 
   React.useEffect(() => {
     const fetchDreams = async () => {
@@ -351,29 +371,31 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
   );
 
   return (
-    <div className="w-full mx-auto flex flex-col h-full bg-[#FDFCF9] font-sans max-w-[1400px] p-4 sm:p-8">
+    <div className="w-full mx-auto flex flex-col h-full font-sans max-w-[1400px] p-3 sm:p-4"
+      style={{ background: "#F6F4EE" }}
+    >
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-3 sm:mb-4">
         <div>
-          <h1 className="text-2xl sm:text-[31px] font-bold text-[#111111] tracking-tight">
+          <h1 className="text-3xl font-bold text-foreground">
             Bucket List
           </h1>
-          <p className="text-[#BBA48B] font-bold mt-1 text-sm sm:text-base uppercase tracking-widest opacity-80">
-            What you Seek, is Seeking You !
+          <p className="text-sm text-muted-foreground">
+            Dreams, plans, and achievements
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <div className="flex items-center border border-[#E8E4D9] rounded-md p-1 bg-white">
+          <div className="flex items-center rounded-md p-1 bg-white border border-gray-200">
             <button
               onClick={() => setViewMode("list")}
-              className={`p-1.5 rounded-sm transition-colors ${viewMode === "list" ? "bg-[#FAF9F6] text-[#BBA48B]" : "text-[#CCCCCC] hover:text-[#BBA48B] hover:bg-[#FAF9F6]"}`}
+              className={`p-1.5 rounded-sm transition-colors ${viewMode === "list" ? "bg-[#DA7756] text-white border-[#DA7756]" : "text-[#DA7756] hover:bg-[#DA7756]/10"}`}
             >
               <List className="w-[18px] h-[18px]" strokeWidth={2.5} />
             </button>
             <button
               onClick={() => setViewMode("board")}
-              className={`p-1.5 rounded-sm transition-colors ${viewMode === "board" ? "bg-[#FAF9F6] text-[#BBA48B]" : "text-[#CCCCCC] hover:text-[#BBA48B] hover:bg-[#FAF9F6]"}`}
+              className={`p-1.5 rounded-sm transition-colors ${viewMode === "board" ? "bg-[#DA7756] text-white border-[#DA7756]" : "text-[#DA7756] hover:bg-[#DA7756]/10"}`}
             >
               <LayoutGrid className="w-[18px] h-[18px]" strokeWidth={2.5} />
             </button>
@@ -382,7 +404,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
           {!samplesLoaded && (
             <button
               onClick={loadSamples}
-              className="flex items-center gap-1.5 px-4 py-2 bg-[#FAF9F6] border border-[#E8E4D9] rounded-md text-sm font-bold text-[#BBA48B] hover:bg-white transition-colors shadow-none"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-bold transition-colors shadow-none text-[#DA7756] border border-[#DA7756]/40 hover:bg-[#DA7756]/10"
             >
               <Sparkles className="w-4 h-4" />
               Load Samples
@@ -390,7 +412,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
           )}
 
           <AddDreamDialog onSave={handleSave}>
-            <button className="flex items-center gap-1.5 px-4 py-2 bg-[#BBA48B] text-white rounded-md text-sm font-bold hover:bg-[#A68F76] transition-colors shadow-none">
+            <button className="flex items-center gap-1.5 px-4 py-2 bg-[#DA7756] hover:bg-[#C96B4D] text-white rounded-md text-sm font-bold transition-colors shadow-none">
               <Plus className="w-4 h-4 stroke-[2.5]" />
               Add Dream
             </button>
@@ -399,7 +421,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
       </div>
 
       {/* Info Banner */}
-      <div className="bg-[#FAF9F6] border-l-[3px] border-[#BBA48B] p-5 rounded-r-xl mb-8 border border-y-[#E8E4D9] border-r-[#E8E4D9]">
+      <div className="p-4 sm:p-5 rounded-xl mb-4 border border-gray-200 bg-white">
         <p className="text-[14px] text-[#555555] leading-relaxed font-medium">
           <span className="font-bold text-[#333333]">
             💡 What is a Bucket List?
@@ -413,13 +435,14 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 mb-6">
-        <Filter className="w-5 h-5 text-gray-400" />
+      <div className="flex items-center gap-3 mb-4">
+        <Filter className="w-5 h-5 text-[#DA7756]" />
         <div className="relative w-48">
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value as Category)}
-            className="w-full appearance-none bg-white border border-[#E8E4D9] rounded-md py-1.5 pl-3 pr-8 text-sm text-[#333333] font-bold outline-none hover:border-[#BBA48B] focus:border-[#BBA48B] cursor-pointer shadow-none"
+            className="w-full appearance-none bg-white border rounded-md py-1.5 pl-3 pr-8 text-sm text-[#333333] font-bold outline-none cursor-pointer shadow-none"
+            style={{ borderColor: "#DA7756" }}
           >
             <option value="All Categories">All Categories</option>
             <option value="Travel">Travel</option>
@@ -449,22 +472,33 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
 
       {/* Board View */}
       {viewMode === "board" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 min-h-[400px] pb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 min-h-[400px] pb-4">
           {COLUMNS.map((col) => {
             const colItems = filteredItems.filter((i) => i.progress === col.id);
             return (
               <div
                 key={col.id}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => handleDrop(e, col.id)}
-                className={`flex flex-col rounded-2xl border-2 ${col.borderColor} ${col.bgColor} p-6 h-full`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setHoveredLane(col.id);
+                }}
+                onDragLeave={() => setHoveredLane(null)}
+                onDrop={(e) => {
+                  handleDrop(e, col.id);
+                  setHoveredLane(null);
+                }}
+                className={`flex flex-col rounded-lg border-2 border-dashed p-3 sm:p-4 min-h-64 sm:min-h-80 lg:min-h-96 transition-all ${
+                  hoveredLane === col.id
+                    ? LANE_COLORS[col.id].hover
+                    : LANE_COLORS[col.id].base
+                }`}
               >
-                <div className="flex justify-between items-center mb-8">
-                  <h3 className="font-extrabold text-[#333333] text-[16px] uppercase tracking-wider opacity-90">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-semibold text-foreground text-sm sm:text-base">
                     {col.title}
                   </h3>
                   <span
-                    className={`text-[12px] font-bold px-2.5 py-0.5 rounded-full border border-[#E8E4D9] bg-white text-[#BBA48B] shadow-none`}
+                    className="rounded-full bg-gray-200 px-2 py-0.5 text-xs sm:text-sm font-medium text-gray-700"
                   >
                     {colItems.length}
                   </span>
@@ -472,7 +506,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
 
                 <div className="flex-1 flex flex-col">
                   {colItems.length > 0 ? (
-                    <div className="space-y-3">
+                    <div className="space-y-2 sm:space-y-3">
                       {colItems.map((item) => (
                         <AddDreamDialog
                           key={item.id}
@@ -483,23 +517,24 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
                           <div
                             draggable
                             onDragStart={(e) => handleDragStart(e, item.id)}
-                            className="bg-white p-5 rounded-xl shadow-none border border-[#E8E4D9] flex flex-col cursor-pointer hover:shadow-md hover:-translate-y-1 hover:border-[#BBA48B] transition-all text-left grab"
+                            className="bg-white p-2 sm:p-3 rounded-lg shadow-sm border flex flex-col select-none touch-none cursor-pointer transition-all duration-150 hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5"
                           >
                             <div
-                              className={`w-10 h-10 rounded-lg flex items-center justify-center text-white mb-4 shadow-sm ${CATEGORY_COLORS[item.category] || "bg-[#BBA48B]"}`}
+                              className="w-10 h-10 rounded-lg flex items-center justify-center text-white mb-3 shadow-sm"
+                              style={{ background: CATEGORY_COLORS[item.category] || "#DA7756" }}
                             >
                               <Star className="w-5 h-5 fill-current" />
                             </div>
-                            <h4 className="font-bold text-[15px] text-[#111111] leading-tight mb-2">
+                            <h4 className="font-medium text-foreground text-sm sm:text-base leading-tight mb-1.5">
                               {item.title}
                             </h4>
                             <div className="mb-4">
-                              <span className="inline-block border border-[#E8E4D9] text-[#777777] bg-[#FAF9F6] px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider">
+                              <span className="inline-block text-xs text-gray-700 bg-gray-100 px-2 py-1 rounded">
                                 {item.category}
                               </span>
                             </div>
                             {item.description && (
-                              <p className="text-[13px] text-[#6B7280] leading-relaxed max-w-full font-medium">
+                              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-full">
                                 {item.description}
                               </p>
                             )}
@@ -508,8 +543,13 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
                       ))}
                     </div>
                   ) : (
-                    <div className="flex-1 flex items-center justify-center text-[#94a3b8] text-sm font-medium">
-                      No items yet
+                    <div className="flex h-full min-h-48 sm:min-h-56 flex-col items-center justify-center">
+                      <svg className="mb-3 h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground/30 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <circle cx="12" cy="12" r="2" fill="currentColor" />
+                        <circle cx="12" cy="12" r="6" fill="none" />
+                        <circle cx="12" cy="12" r="10" fill="none" />
+                      </svg>
+                      <p className="text-center text-xs sm:text-sm text-muted-foreground">No items</p>
                     </div>
                   )}
                 </div>
@@ -523,10 +563,10 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
       {viewMode === "list" && (
         <div className="flex-1 flex flex-col">
           {filteredItems.length > 0 ? (
-            <div className="overflow-x-auto border border-[#E8E4D9] rounded-xl bg-white shadow-none">
+            <div className="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-none">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-[#FAF9F6] border-b border-[#E8E4D9]">
+                  <tr className="bg-[#F6F4EE] border-b border-gray-200">
                     <th className="px-6 py-4 text-left text-[11px] font-bold text-[#777777] uppercase tracking-widest">
                       Dream Title
                     </th>
@@ -597,7 +637,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
                           >
                             <button
                               title="Edit dream"
-                              className="p-2 rounded-lg text-[#BBA48B] hover:bg-[#FAF9F6] transition-colors"
+                              className="p-2 rounded-lg text-[#DA7756] hover:bg-[#DA7756]/10 transition-colors"
                             >
                               <Edit className="w-4.5 h-4.5" />
                             </button>
@@ -605,7 +645,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
                           <button
                             onClick={() => handleDelete(item.id)}
                             title="Delete dream"
-                            className="p-2 rounded-lg text-[#BBA48B] hover:bg-[#FAF9F6] transition-colors"
+                            className="p-2 rounded-lg text-[#DA7756] hover:bg-[#DA7756]/10 transition-colors"
                           >
                             <Trash2 className="w-4.5 h-4.5" />
                           </button>
