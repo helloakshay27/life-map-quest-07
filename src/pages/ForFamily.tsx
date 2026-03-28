@@ -64,7 +64,7 @@ export default function ForFamily() {
   const [showPrivacyAlert, setShowPrivacyAlert] = useState(true);
   const [showInfoAlert, setShowInfoAlert] = useState(true);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    basicDetails: true, spouseInfo: true, formerSpouseInfo: true, personalDocuments: true, spouseDocuments: true, otherInfoDetails: true,
+    basicDetails: true, spouseInfo: true, formerSpouseInfo: true, personalDocuments: true, spouseDocuments: true, otherInfoDetails: true, attachedDocuments: true,
   });
 
   // --- Form States ---
@@ -91,6 +91,7 @@ export default function ForFamily() {
   
   // Other Info
   const [otherInfo, setOtherInfo] = useState({ notes: "" }); 
+  const [attachedDocuments, setAttachedDocuments] = useState<UploadedDocument[]>([]); 
 
   const createId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const toggleSection = (section: string) => setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -123,13 +124,13 @@ export default function ForFamily() {
       lifeInsurancePolicies.length > 0 || !!benefitsDetails.healthPlanName || !!benefitsDetails.retirementDate,
       !!legalDetails.willLocatedAt || legalDetails.hasLivingWill || !!legalDetails.attorneyWhoHandledWill,
       finalWishes.length > 0,
-      !!otherInfo.notes // Included in progress
+      !!otherInfo.notes || attachedDocuments.length > 0 // Included in progress
     ];
     setCompletionProgress(Math.round((checks.filter(Boolean).length / checks.length) * 100));
   }, [
     personalInfo, children, husbandSiblings, wifeSiblings, emergencyContacts, 
     importantContacts, propertyAssets, vehicleAssets, lifeInsurancePolicies, 
-    benefitsDetails, legalDetails, finalWishes, otherInfo
+    benefitsDetails, legalDetails, finalWishes, otherInfo, attachedDocuments
   ]);
 
   // --- API: Fetch Initial Data ---
@@ -508,6 +509,8 @@ export default function ForFamily() {
   const removePersonalDocument = (id: string) => setPersonalDocuments(prev => prev.filter(doc => doc.id !== id));
   const addSpouseDocument = () => setSpouseDocuments(prev => [...prev, { id: createId(), fileName: `spouse-document-${Date.now()}.pdf`, uploadedAt: new Date().toLocaleDateString() }]);
   const removeSpouseDocument = (id: string) => setSpouseDocuments(prev => prev.filter(doc => doc.id !== id));
+  const addAttachedDocument = () => setAttachedDocuments(prev => [...prev, { id: createId(), fileName: `document-${Date.now()}.pdf`, uploadedAt: new Date().toLocaleDateString() }]);
+  const removeAttachedDocument = (id: string) => setAttachedDocuments(prev => prev.filter(doc => doc.id !== id));
   const addHusbandSibling = () => setHusbandSiblings(prev => [...prev, { id: createId(), name: "", aadhar: "", address: "", phone: "", relation: "brother" }]);
   const removeHusbandSibling = (id: string) => setHusbandSiblings(prev => prev.filter(s => s.id !== id));
   const updateHusbandSibling = (id: string, field: keyof Sibling, value: string) => setHusbandSiblings(prev => prev.map(s => (s.id === id ? { ...s, [field]: value } : s)));
@@ -695,8 +698,11 @@ export default function ForFamily() {
               {activeTab === "other" && (
                 <OtherInfoSection 
                   otherInfo={otherInfo} 
+                  attachedDocuments={attachedDocuments}
                   expandedSections={expandedSections} 
                   onUpdateOtherInfo={(field, value) => setOtherInfo(prev => ({ ...prev, [field]: value }))} 
+                  onAddAttachedDocument={addAttachedDocument}
+                  onRemoveAttachedDocument={removeAttachedDocument}
                   onToggleSection={toggleSection} 
                 />
               )}

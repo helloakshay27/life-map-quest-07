@@ -1,5 +1,6 @@
 import { Label } from "@/components/ui/label";
-import { ChevronDown, FileEdit } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ChevronDown, FileEdit, Plus } from "lucide-react";
 import {
   ffSectionShell,
   ffSectionHeader,
@@ -12,19 +13,34 @@ import {
   ffAccordionHint,
   ffChevron,
   ffNestedPanel,
+  ffAddDashed,
+  ffRemoveGhost,
+  ffDocRow,
 } from "@/components/ForFamilySections/forFamilySectionStyles";
+
+interface UploadedDocument {
+  id: string;
+  fileName: string;
+  uploadedAt: string;
+}
 
 interface OtherInfoSectionProps {
   otherInfo: { notes: string };
+  attachedDocuments: UploadedDocument[];
   expandedSections: Record<string, boolean>;
   onUpdateOtherInfo: (field: string, value: string) => void;
+  onAddAttachedDocument: () => void;
+  onRemoveAttachedDocument: (id: string) => void;
   onToggleSection: (section: string) => void;
 }
 
 export default function OtherInfoSection({
   otherInfo,
+  attachedDocuments,
   expandedSections,
   onUpdateOtherInfo,
+  onAddAttachedDocument,
+  onRemoveAttachedDocument,
   onToggleSection,
 }: OtherInfoSectionProps) {
   return (
@@ -72,6 +88,52 @@ export default function OtherInfoSection({
                     value={otherInfo.notes}
                     onChange={(e) => onUpdateOtherInfo("notes", e.target.value)}
                   />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className={ffSubCard}>
+            <button
+              onClick={() => onToggleSection("attachedDocuments")}
+              className={ffAccordionTrigger}
+            >
+              <div className="flex flex-col items-start text-left">
+                <h3 className={ffAccordionTitle}>Attached Documents</h3>
+                <p className={ffAccordionHint}>Upload any important documents with a name and description so your family knows what they are.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-[#888780]">Click to expand</span>
+                <ChevronDown 
+                  className={`${ffChevron} ${expandedSections.attachedDocuments ? 'rotate-180' : ''}`} 
+                />
+              </div>
+            </button>
+
+            {expandedSections.attachedDocuments && (
+              <div className={ffNestedPanel}>
+                <div className="space-y-2">
+                  {attachedDocuments.map((doc) => (
+                    <div key={doc.id} className={ffDocRow}>
+                      <span className="text-sm">{doc.fileName}</span>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => onRemoveAttachedDocument(doc.id)}
+                        className={ffRemoveGhost}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                  <Button 
+                    variant="outline"
+                    onClick={onAddAttachedDocument}
+                    className={ffAddDashed}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Document
+                  </Button>
                 </div>
               </div>
             )}
