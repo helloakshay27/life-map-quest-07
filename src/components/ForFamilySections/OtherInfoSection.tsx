@@ -1,5 +1,5 @@
 import { Label } from "@/components/ui/label";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, FileEdit } from "lucide-react";
 
 interface OtherInfoSectionProps {
   otherInfo: { notes: string };
