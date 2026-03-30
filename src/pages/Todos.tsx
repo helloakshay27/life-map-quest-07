@@ -73,7 +73,6 @@ const Todos = () => {
 
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [hoveredStatus, setHoveredStatus] = useState<string | null>(null);
-  const [newlyCreatedTodos, setNewlyCreatedTodos] = useState<Set<string>>(new Set());
   const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const dragStateRef = useRef<DragState | null>(null);
 
@@ -140,8 +139,6 @@ const Todos = () => {
 
           setTodos(merged);
           localStorage.setItem("user_todos", JSON.stringify(merged));
-          // Clear newly created set when todos are loaded from API/storage
-          setNewlyCreatedTodos(new Set());
           return;
         }
         throw new Error("Failed to fetch from API");
@@ -149,10 +146,8 @@ const Todos = () => {
         console.log("API unavailable, falling back to local storage", error);
         try {
           const savedTodos = localStorage.getItem("user_todos");
-          if (savedTodos) { 
+          if (savedTodos) {
             setTodos(JSON.parse(savedTodos));
-            // Clear newly created set when todos are loaded from localStorage
-            setNewlyCreatedTodos(new Set());
           }
         } catch (parseError) {
           console.error("Failed to parse local storage todos");
@@ -207,18 +202,11 @@ const Todos = () => {
         const updated = [...prev, finalTodo]; 
         localStorage.setItem("user_todos", JSON.stringify(updated)); 
         console.log("Todo added with status:", finalTodo.status);
-        return updated; 
-      });
-      // Mark this todo as newly created to permanently prevent drag and drop
-      console.log("Adding todo to newly created set:", finalTodo.id);
-      setNewlyCreatedTodos(prev => {
-        const newSet = new Set(prev).add(finalTodo.id);
-        console.log("Updated newly created set:", Array.from(newSet));
-        return newSet;
+        return updated;
       });
       toast({
         title: "To do created",
-        description: "Saved successfully. Drag and drop disabled - use status dropdown to change status.",
+        description: "Saved successfully. Drag cards between columns to change status.",
         variant: "goalsSuccess",
       });
     } catch (error) {
@@ -388,22 +376,6 @@ const Todos = () => {
 
   const handlePointerDown = (e: React.PointerEvent, todoId: string) => {
     if (e.button !== undefined && e.button !== 0) return;
-    console.log("Pointer down on todo:", todoId);
-    console.log("Newly created todos:", Array.from(newlyCreatedTodos));
-    
-    // Prevent drag and drop for newly created todos (permanent protection)
-    if (newlyCreatedTodos.has(todoId)) {
-      console.log("Drag disabled for todo:", todoId);
-      // Show a message to the user
-      toast({
-        title: "Drag disabled",
-        description: "Use the status dropdown to change this todo's status.",
-        variant: "default",
-      });
-      return;
-    }
-    
-    console.log("Drag enabled for todo:", todoId);
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -630,7 +602,6 @@ const Todos = () => {
                         <div className="space-y-2 sm:space-y-3">
                           {statusTodos.map((todo) => {
                             const isBeingDragged = dragState?.todoId === todo.id && dragState?.isDragging;
-                            const isNewlyCreated = newlyCreatedTodos.has(todo.id);
                             return (
                               <Card
                                 key={todo.id}
@@ -641,15 +612,13 @@ const Todos = () => {
                                   transition-all duration-150
                                   ${isBeingDragged
                                     ? "opacity-25 scale-95 shadow-none"
-                                    : isNewlyCreated
-                                    ? "cursor-not-allowed opacity-90 border-l-4 border-l-blue-400"
                                     : "cursor-grab hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5 active:cursor-grabbing"
                                   }
                                 `}
                               >
                                 <div className="space-y-2">
                                   <div className="flex items-start justify-between gap-2">
-                                    <GripVertical className={`h-4 w-4 flex-shrink-0 mt-0.5 ${isNewlyCreated ? "text-blue-400" : "text-muted-foreground/40"}`} />
+                                    <GripVertical className="h-4 w-4 flex-shrink-0 mt-0.5 text-muted-foreground/40" />
                                     <p className="text-sm sm:text-base font-medium text-foreground flex-1 line-clamp-2">{todo.title}</p>
                                     <button
                                       onPointerDown={(e) => e.stopPropagation()}
