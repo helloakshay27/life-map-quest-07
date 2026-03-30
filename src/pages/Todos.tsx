@@ -210,7 +210,12 @@ const Todos = () => {
         return updated; 
       });
       // Mark this todo as newly created to permanently prevent drag and drop
-      setNewlyCreatedTodos(prev => new Set(prev).add(finalTodo.id));
+      console.log("Adding todo to newly created set:", finalTodo.id);
+      setNewlyCreatedTodos(prev => {
+        const newSet = new Set(prev).add(finalTodo.id);
+        console.log("Updated newly created set:", Array.from(newSet));
+        return newSet;
+      });
       toast({
         title: "To do created",
         description: "Saved successfully. Drag and drop disabled - use status dropdown to change status.",
@@ -383,8 +388,12 @@ const Todos = () => {
 
   const handlePointerDown = (e: React.PointerEvent, todoId: string) => {
     if (e.button !== undefined && e.button !== 0) return;
+    console.log("Pointer down on todo:", todoId);
+    console.log("Newly created todos:", Array.from(newlyCreatedTodos));
+    
     // Prevent drag and drop for newly created todos (permanent protection)
     if (newlyCreatedTodos.has(todoId)) {
+      console.log("Drag disabled for todo:", todoId);
       // Show a message to the user
       toast({
         title: "Drag disabled",
@@ -393,6 +402,8 @@ const Todos = () => {
       });
       return;
     }
+    
+    console.log("Drag enabled for todo:", todoId);
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
