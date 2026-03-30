@@ -116,7 +116,6 @@ const Todos = () => {
             (savedTodos ?? []).map((t) => [String(t.id), t]),
           );
 
-          // FIX: API ka status use karo (t.status), local ka nahi
           const merged: TodoItem[] = formattedData.map((t: TodoItem) => {
             const local = localById.get(String(t.id));
             return local
@@ -126,7 +125,7 @@ const Todos = () => {
                   description: local.description ?? t.description,
                   lifeArea: local.lifeArea ?? t.lifeArea,
                   priority: local.priority ?? t.priority,
-                  status: t.status, // ← API ka fresh status hamesha use hoga
+                  status: t.status,
                 }
               : t;
           });
@@ -178,30 +177,24 @@ const Todos = () => {
     try {
       const finalTodo = { ...newTodo };
       try {
-        // Convert to API format before sending
         const apiPayload = {
           ...newTodo,
           status: toApiStatus(newTodo.status),
           priority: toApiPriority(newTodo.priority),
           life_area: newTodo.lifeArea,
         };
-        console.log("Sending to API:", apiPayload);
-        
         const response = await fetchWithAuth("/todos", { method: "POST", body: JSON.stringify(apiPayload) });
-        if (response.ok) { 
+        if (response.ok) {
           const data = await response.json();
-          console.log("API Response:", data);
           finalTodo.id = data.id || newTodo.id;
-          // Keep the UI format status, not the API format
           finalTodo.status = newTodo.status;
         }
-      } catch { 
-        console.log("API unavailable, saving locally"); 
+      } catch {
+        console.log("API unavailable, saving locally");
       }
-      setTodos((prev) => { 
-        const updated = [...prev, finalTodo]; 
-        localStorage.setItem("user_todos", JSON.stringify(updated)); 
-        console.log("Todo added with status:", finalTodo.status);
+      setTodos((prev) => {
+        const updated = [...prev, finalTodo];
+        localStorage.setItem("user_todos", JSON.stringify(updated));
         return updated;
       });
       toast({
@@ -297,69 +290,75 @@ const Todos = () => {
     }
   };
 
+  // ✅ FIX: Added previous state snapshot, rollback on failure, correct error toast in catch
   const handleUpdateStatus = async (id: string, newStatus: string) => {
-    try {
-      const updatedTodo = todos.find((t) => t.id === id);
-      if (!updatedTodo) return;
-      setTodos((prev) => {
-        const newTodos = prev.map((t) => t.id === id ? { ...t, status: newStatus } : t);
-        localStorage.setItem("user_todos", JSON.stringify(newTodos));
-        return newTodos;
-      });
-      try {
-        const payloadWrapped = {
-          todo: {
-            status: toApiStatus(newStatus),
-            priority: toApiPriority(updatedTodo.priority),
-            life_area: updatedTodo.lifeArea,
-            title: updatedTodo.title,
-            description: updatedTodo.description,
-          },
-        };
+    // ✅ FIX 1: Save previous state for rollback
+    const previous = [...todos];
 
-        let res = await fetchWithAuth(`/todos/${id}`, {
-          method: "PUT",
+    const updatedTodo = todos.find((t) => t.id === id);
+    if (!updatedTodo) return;
+
+    // Optimistic UI update
+    setTodos((prev) => {
+      const newTodos = prev.map((t) => t.id === id ? { ...t, status: newStatus } : t);
+      localStorage.setItem("user_todos", JSON.stringify(newTodos));
+      return newTodos;
+    });
+
+    try {
+      const payloadWrapped = {
+        todo: {
+          status: toApiStatus(newStatus),
+          priority: toApiPriority(updatedTodo.priority),
+          life_area: updatedTodo.lifeArea,
+          title: updatedTodo.title,
+          description: updatedTodo.description,
+        },
+      };
+
+      let res = await fetchWithAuth(`/todos/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(payloadWrapped),
+      });
+      if (!res.ok) {
+        res = await fetchWithAuth(`/todos/${id}`, {
+          method: "PATCH",
           body: JSON.stringify(payloadWrapped),
+        });
+      }
+      if (!res.ok) {
+        const payloadFlat = { ...updatedTodo, status: toApiStatus(newStatus) };
+        res = await fetchWithAuth(`/todos/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(payloadFlat),
         });
         if (!res.ok) {
           res = await fetchWithAuth(`/todos/${id}`, {
             method: "PATCH",
-            body: JSON.stringify(payloadWrapped),
-          });
-        }
-        if (!res.ok) {
-          const payloadFlat = { ...updatedTodo, status: toApiStatus(newStatus) };
-          res = await fetchWithAuth(`/todos/${id}`, {
-            method: "PUT",
             body: JSON.stringify(payloadFlat),
           });
-          if (!res.ok) {
-            res = await fetchWithAuth(`/todos/${id}`, {
-              method: "PATCH",
-              body: JSON.stringify(payloadFlat),
-            });
-          }
         }
-        if (res.ok) {
-          toast({
-            title: "To do moved",
-            description: `Updated status to ${newStatus}.`,
-            variant: "goalsSuccess",
-          });
-        } else {
-          toast({ title: "Error", description: "Failed to move to do", variant: "destructive" });
-        }
-      } catch {
-        console.log("API unavailable, updating locally");
+      }
+
+      if (res.ok) {
+        // ✅ Success — show success toast
         toast({
           title: "To do moved",
           description: `Updated status to ${newStatus}.`,
           variant: "goalsSuccess",
         });
+      } else {
+        // ✅ FIX 2: Non-ok response — rollback UI + show error toast
+        setTodos(previous);
+        localStorage.setItem("user_todos", JSON.stringify(previous));
+        toast({ title: "Error", description: "Failed to move to do", variant: "destructive" });
       }
     } catch (error) {
-      console.error("Failed to update todo:", error);
-      toast({ title: "Error", description: "Failed to move to do", variant: "destructive" });
+      // ✅ FIX 3: Network/exception — rollback UI + show error toast (not success)
+      console.error("Failed to update todo status:", error);
+      setTodos(previous);
+      localStorage.setItem("user_todos", JSON.stringify(previous));
+      toast({ title: "Error", description: "Failed to move to do. Please try again.", variant: "destructive" });
     }
   };
 
@@ -423,7 +422,7 @@ const Todos = () => {
         handleUpdateStatus(current.todoId, targetStatus);
       }
     }
-    setDragState(null); 
+    setDragState(null);
     setHoveredStatus(null);
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
