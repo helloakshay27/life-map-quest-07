@@ -73,6 +73,7 @@ const Todos = () => {
 
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [hoveredStatus, setHoveredStatus] = useState<string | null>(null);
+  const [newlyCreatedTodos, setNewlyCreatedTodos] = useState<Set<string>>(new Set());
   const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const dragStateRef = useRef<DragState | null>(null);
 
@@ -139,6 +140,8 @@ const Todos = () => {
 
           setTodos(merged);
           localStorage.setItem("user_todos", JSON.stringify(merged));
+          // Clear newly created set when todos are loaded from API/storage
+          setNewlyCreatedTodos(new Set());
           return;
         }
         throw new Error("Failed to fetch from API");
@@ -146,7 +149,11 @@ const Todos = () => {
         console.log("API unavailable, falling back to local storage", error);
         try {
           const savedTodos = localStorage.getItem("user_todos");
-          if (savedTodos) { setTodos(JSON.parse(savedTodos)); }
+          if (savedTodos) { 
+            setTodos(JSON.parse(savedTodos));
+            // Clear newly created set when todos are loaded from localStorage
+            setNewlyCreatedTodos(new Set());
+          }
         } catch (parseError) {
           console.error("Failed to parse local storage todos");
         }
@@ -174,14 +181,39 @@ const Todos = () => {
 
   const handleCreateTodo = async (newTodo: TodoItem) => {
     try {
+      const finalTodo = { ...newTodo };
       try {
-        const response = await fetchWithAuth("/todos", { method: "POST", body: JSON.stringify(newTodo) });
-        if (response.ok) { const data = await response.json(); newTodo.id = data.id || newTodo.id; }
-      } catch { console.log("API unavailable, saving locally"); }
-      setTodos((prev) => { const updated = [...prev, newTodo]; localStorage.setItem("user_todos", JSON.stringify(updated)); return updated; });
+        // Convert to API format before sending
+        const apiPayload = {
+          ...newTodo,
+          status: toApiStatus(newTodo.status),
+          priority: toApiPriority(newTodo.priority),
+          life_area: newTodo.lifeArea,
+        };
+        console.log("Sending to API:", apiPayload);
+        
+        const response = await fetchWithAuth("/todos", { method: "POST", body: JSON.stringify(apiPayload) });
+        if (response.ok) { 
+          const data = await response.json();
+          console.log("API Response:", data);
+          finalTodo.id = data.id || newTodo.id;
+          // Keep the UI format status, not the API format
+          finalTodo.status = newTodo.status;
+        }
+      } catch { 
+        console.log("API unavailable, saving locally"); 
+      }
+      setTodos((prev) => { 
+        const updated = [...prev, finalTodo]; 
+        localStorage.setItem("user_todos", JSON.stringify(updated)); 
+        console.log("Todo added with status:", finalTodo.status);
+        return updated; 
+      });
+      // Mark this todo as newly created to permanently prevent drag and drop
+      setNewlyCreatedTodos(prev => new Set(prev).add(finalTodo.id));
       toast({
         title: "To do created",
-        description: "Saved successfully.",
+        description: "Saved successfully. Drag and drop disabled - use status dropdown to change status.",
         variant: "goalsSuccess",
       });
     } catch (error) {
@@ -351,6 +383,16 @@ const Todos = () => {
 
   const handlePointerDown = (e: React.PointerEvent, todoId: string) => {
     if (e.button !== undefined && e.button !== 0) return;
+    // Prevent drag and drop for newly created todos (permanent protection)
+    if (newlyCreatedTodos.has(todoId)) {
+      // Show a message to the user
+      toast({
+        title: "Drag disabled",
+        description: "Use the status dropdown to change this todo's status.",
+        variant: "default",
+      });
+      return;
+    }
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -577,6 +619,7 @@ const Todos = () => {
                         <div className="space-y-2 sm:space-y-3">
                           {statusTodos.map((todo) => {
                             const isBeingDragged = dragState?.todoId === todo.id && dragState?.isDragging;
+                            const isNewlyCreated = newlyCreatedTodos.has(todo.id);
                             return (
                               <Card
                                 key={todo.id}
@@ -587,13 +630,15 @@ const Todos = () => {
                                   transition-all duration-150
                                   ${isBeingDragged
                                     ? "opacity-25 scale-95 shadow-none"
+                                    : isNewlyCreated
+                                    ? "cursor-not-allowed opacity-90 border-l-4 border-l-blue-400"
                                     : "cursor-grab hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5 active:cursor-grabbing"
                                   }
                                 `}
                               >
                                 <div className="space-y-2">
                                   <div className="flex items-start justify-between gap-2">
-                                    <GripVertical className="h-4 w-4 text-muted-foreground/40 flex-shrink-0 mt-0.5" />
+                                    <GripVertical className={`h-4 w-4 flex-shrink-0 mt-0.5 ${isNewlyCreated ? "text-blue-400" : "text-muted-foreground/40"}`} />
                                     <p className="text-sm sm:text-base font-medium text-foreground flex-1 line-clamp-2">{todo.title}</p>
                                     <button
                                       onPointerDown={(e) => e.stopPropagation()}
