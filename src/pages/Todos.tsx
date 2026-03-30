@@ -84,8 +84,15 @@ const Todos = () => {
     const loadTodos = async () => {
       try {
         const savedTodosRaw = localStorage.getItem("user_todos");
-        const savedTodos: TodoItem[] | null = savedTodosRaw ? JSON.parse(savedTodosRaw) : null;
-        if (savedTodos) setTodos(savedTodos);
+        let savedTodos: TodoItem[] | null = savedTodosRaw ? JSON.parse(savedTodosRaw) : null;
+        // Normalize targetDate to Date object if present
+        if (savedTodos) {
+          savedTodos = savedTodos.map((t) => ({
+            ...t,
+            targetDate: t.targetDate ? new Date(t.targetDate) : undefined,
+          }));
+          setTodos(savedTodos);
+        }
 
         const response = await fetchWithAuth("/todos", { method: "GET" });
         if (response.ok) {
@@ -109,6 +116,7 @@ const Todos = () => {
               lifeArea: item.life_area || "General",
               status: statusMap[item.status] || "Not Started",
               priority: priorityMap[item.priority] || "Medium",
+              targetDate: item.target_date ? new Date(item.target_date) : undefined,
             };
           });
 
@@ -126,6 +134,7 @@ const Todos = () => {
                   lifeArea: local.lifeArea ?? t.lifeArea,
                   priority: local.priority ?? t.priority,
                   status: t.status,
+                  targetDate: local.targetDate ?? t.targetDate,
                 }
               : t;
           });
@@ -137,7 +146,11 @@ const Todos = () => {
           }
 
           setTodos(merged);
-          localStorage.setItem("user_todos", JSON.stringify(merged));
+          // Serialize targetDate as ISO string for storage
+          localStorage.setItem("user_todos", JSON.stringify(merged.map(t => ({
+            ...t,
+            targetDate: t.targetDate ? new Date(t.targetDate).toISOString() : undefined,
+          }))));
           return;
         }
         throw new Error("Failed to fetch from API");
@@ -146,7 +159,11 @@ const Todos = () => {
         try {
           const savedTodos = localStorage.getItem("user_todos");
           if (savedTodos) {
-            setTodos(JSON.parse(savedTodos));
+            const todosParsed = JSON.parse(savedTodos).map((t: any) => ({
+              ...t,
+              targetDate: t.targetDate ? new Date(t.targetDate) : undefined,
+            }));
+            setTodos(todosParsed);
           }
         } catch (parseError) {
           console.error("Failed to parse local storage todos");
@@ -194,7 +211,10 @@ const Todos = () => {
       }
       setTodos((prev) => {
         const updated = [...prev, finalTodo];
-        localStorage.setItem("user_todos", JSON.stringify(updated));
+        localStorage.setItem("user_todos", JSON.stringify(updated.map(t => ({
+          ...t,
+          targetDate: t.targetDate ? new Date(t.targetDate).toISOString() : undefined,
+        }))));
         return updated;
       });
       toast({
@@ -212,7 +232,10 @@ const Todos = () => {
     const previous = [...todos];
     setTodos((prev) => {
       const next = prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t));
-      localStorage.setItem("user_todos", JSON.stringify(next));
+      localStorage.setItem("user_todos", JSON.stringify(next.map(t => ({
+        ...t,
+        targetDate: t.targetDate ? new Date(t.targetDate).toISOString() : undefined,
+      }))));
       return next;
     });
 
@@ -278,7 +301,14 @@ const Todos = () => {
   const handleDeleteTodo = async (id: string) => {
     try {
       try { await fetchWithAuth(`/todos/${id}`, { method: "DELETE" }); } catch { console.log("API unavailable, deleting locally"); }
-      setTodos((prev) => { const updated = prev.filter((t) => t.id !== id); localStorage.setItem("user_todos", JSON.stringify(updated)); return updated; });
+      setTodos((prev) => {
+        const updated = prev.filter((t) => t.id !== id);
+        localStorage.setItem("user_todos", JSON.stringify(updated.map(t => ({
+          ...t,
+          targetDate: t.targetDate ? new Date(t.targetDate).toISOString() : undefined,
+        }))));
+        return updated;
+      });
       toast({
         title: "To do deleted",
         description: "Removed successfully.",
@@ -301,7 +331,10 @@ const Todos = () => {
     // Optimistic UI update
     setTodos((prev) => {
       const newTodos = prev.map((t) => t.id === id ? { ...t, status: newStatus } : t);
-      localStorage.setItem("user_todos", JSON.stringify(newTodos));
+      localStorage.setItem("user_todos", JSON.stringify(newTodos.map(t => ({
+        ...t,
+        targetDate: t.targetDate ? new Date(t.targetDate).toISOString() : undefined,
+      }))));
       return newTodos;
     });
 
@@ -350,7 +383,10 @@ const Todos = () => {
       } else {
         // ✅ FIX 2: Non-ok response — rollback UI + show error toast
         setTodos(previous);
-        localStorage.setItem("user_todos", JSON.stringify(previous));
+        localStorage.setItem("user_todos", JSON.stringify(previous.map(t => ({
+          ...t,
+          targetDate: t.targetDate ? new Date(t.targetDate).toISOString() : undefined,
+        }))));
         toast({ title: "Error", description: "Failed to move to do", variant: "destructive" });
       }
     } catch (error) {
