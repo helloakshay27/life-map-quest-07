@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Plus, Eye, EyeOff, GripVertical, Pencil } from "lucide-react";
+import { Plus, Eye, EyeOff, GripVertical, Pencil, CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -640,10 +640,16 @@ const Todos = () => {
                                     </button>
                                   </div>
                                   <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1">{todo.description}</p>
-                                  <div className="flex flex-wrap gap-1 sm:gap-2 mt-2">
+                                  <div className="flex flex-wrap gap-1 sm:gap-2 mt-2 items-center">
                                     <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{todo.lifeArea}</span>
                                     <span className={`text-xs font-medium px-2 py-1 rounded ${getPriorityColor(todo.priority)}`}>{todo.priority}</span>
                                     <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">{todo.status}</span>
+                                    {todo.targetDate && (
+                                      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded flex items-center gap-1">
+                                        <CalendarIcon className="inline-block h-3 w-3 mr-1" />
+                                        {typeof todo.targetDate === 'string' ? new Date(todo.targetDate).toLocaleDateString() : todo.targetDate.toLocaleDateString()}
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                               </Card>
@@ -673,10 +679,16 @@ const Todos = () => {
                         <div className="flex-1 min-w-0">
                           <h3 className="font-medium text-foreground text-sm sm:text-base line-clamp-1">{todo.title}</h3>
                           <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mt-1">{todo.description}</p>
-                          <div className="flex flex-wrap gap-1 sm:gap-2 mt-2">
+                          <div className="flex flex-wrap gap-1 sm:gap-2 mt-2 items-center">
                             <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{todo.lifeArea}</span>
                             <span className={`text-xs font-medium px-2 py-1 rounded ${getPriorityColor(todo.priority)}`}>{todo.priority}</span>
                             <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">{todo.status}</span>
+                            {todo.targetDate && (
+                              <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded flex items-center gap-1">
+                                <CalendarIcon className="inline-block h-3 w-3 mr-1" />
+                                {typeof todo.targetDate === 'string' ? new Date(todo.targetDate).toLocaleDateString() : todo.targetDate.toLocaleDateString()}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div className="flex gap-2">
