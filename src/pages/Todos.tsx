@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Plus, Eye, EyeOff, GripVertical, Pencil, CalendarIcon } from "lucide-react";
+import { Plus, Eye, EyeOff, GripVertical, Pencil, CalendarIcon, Briefcase, Activity, Heart, Sprout, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +34,13 @@ const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
 
 const LIFE_AREAS = ["Career", "Health", "Relationships", "Personal Growth", "Finance"];
 const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
+const AREA_ICONS: Record<string, JSX.Element> = {
+  Career: <Briefcase className="h-3.5 w-3.5 text-amber-700" />,
+  Health: <Activity className="h-3.5 w-3.5 text-rose-600" />,
+  Relationships: <Heart className="h-3.5 w-3.5 text-pink-600" />,
+  "Personal Growth": <Sprout className="h-3.5 w-3.5 text-emerald-600" />,
+  Finance: <Wallet className="h-3.5 w-3.5 text-yellow-700" />,
+};
 
 const toApiStatus = (ui: string) => {
   const map: Record<string, string> = {
@@ -561,7 +568,9 @@ const Todos = () => {
               <SelectTrigger className="w-full text-sm"><SelectValue placeholder="All Areas" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all-areas">All Areas</SelectItem>
-                {LIFE_AREAS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                {LIFE_AREAS.map((a) => (
+                  <SelectItem key={a} value={a} startIcon={AREA_ICONS[a]}>{a}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={selectedPriority} onValueChange={setSelectedPriority}>
