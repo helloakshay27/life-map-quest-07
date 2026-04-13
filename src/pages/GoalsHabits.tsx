@@ -1606,11 +1606,11 @@ const GoalsHabits = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all-areas">All Areas</SelectItem>
-                <SelectItem value="health">Health & Fitness</SelectItem>
-                <SelectItem value="career">Career</SelectItem>
-                <SelectItem value="personal">Personal Growth</SelectItem>
-                <SelectItem value="relationships">Relationships</SelectItem>
-                <SelectItem value="financial">Financial</SelectItem>
+                <SelectItem value="health">💪 Health &amp; Fitness</SelectItem>
+                <SelectItem value="career">💼 Career</SelectItem>
+                <SelectItem value="personal">🌱 Personal Growth</SelectItem>
+                <SelectItem value="relationships">❤️ Relationships</SelectItem>
+                <SelectItem value="financial">💰 Financial</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex items-center gap-1 sm:gap-2">

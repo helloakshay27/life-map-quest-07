@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Plus, Eye, EyeOff, GripVertical, Pencil } from "lucide-react";
+import { Plus, Eye, EyeOff, GripVertical, Pencil, CalendarIcon, Briefcase, Activity, Heart, Sprout, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +34,13 @@ const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
 
 const LIFE_AREAS = ["Career", "Health", "Relationships", "Personal Growth", "Finance"];
 const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
+const AREA_ICONS: Record<string, JSX.Element> = {
+  Career: <Briefcase className="h-3.5 w-3.5 text-amber-700" />,
+  Health: <Activity className="h-3.5 w-3.5 text-rose-600" />,
+  Relationships: <Heart className="h-3.5 w-3.5 text-pink-600" />,
+  "Personal Growth": <Sprout className="h-3.5 w-3.5 text-emerald-600" />,
+  Finance: <Wallet className="h-3.5 w-3.5 text-yellow-700" />,
+};
 
 const toApiStatus = (ui: string) => {
   const map: Record<string, string> = {
@@ -84,8 +91,15 @@ const Todos = () => {
     const loadTodos = async () => {
       try {
         const savedTodosRaw = localStorage.getItem("user_todos");
-        const savedTodos: TodoItem[] | null = savedTodosRaw ? JSON.parse(savedTodosRaw) : null;
-        if (savedTodos) setTodos(savedTodos);
+        let savedTodos: TodoItem[] | null = savedTodosRaw ? JSON.parse(savedTodosRaw) : null;
+        // Normalize targetDate to Date object if present
+        if (savedTodos) {
+          savedTodos = savedTodos.map((t) => ({
+            ...t,
+            targetDate: t.targetDate ? new Date(t.targetDate) : undefined,
+          }));
+          setTodos(savedTodos);
+        }
 
         const response = await fetchWithAuth("/todos", { method: "GET" });
         if (response.ok) {
@@ -109,6 +123,7 @@ const Todos = () => {
               lifeArea: item.life_area || "General",
               status: statusMap[item.status] || "Not Started",
               priority: priorityMap[item.priority] || "Medium",
+              targetDate: item.target_date ? new Date(item.target_date) : undefined,
             };
           });
 
@@ -116,7 +131,6 @@ const Todos = () => {
             (savedTodos ?? []).map((t) => [String(t.id), t]),
           );
 
-          // FIX: API ka status use karo (t.status), local ka nahi
           const merged: TodoItem[] = formattedData.map((t: TodoItem) => {
             const local = localById.get(String(t.id));
             return local
@@ -126,7 +140,8 @@ const Todos = () => {
                   description: local.description ?? t.description,
                   lifeArea: local.lifeArea ?? t.lifeArea,
                   priority: local.priority ?? t.priority,
-                  status: t.status, // ← API ka fresh status hamesha use hoga
+                  status: t.status,
+                  targetDate: local.targetDate ?? t.targetDate,
                 }
               : t;
           });
@@ -138,7 +153,11 @@ const Todos = () => {
           }
 
           setTodos(merged);
-          localStorage.setItem("user_todos", JSON.stringify(merged));
+          // Serialize targetDate as ISO string for storage
+          localStorage.setItem("user_todos", JSON.stringify(merged.map(t => ({
+            ...t,
+            targetDate: t.targetDate ? new Date(t.targetDate).toISOString() : undefined,
+          }))));
           return;
         }
         throw new Error("Failed to fetch from API");
@@ -146,7 +165,13 @@ const Todos = () => {
         console.log("API unavailable, falling back to local storage", error);
         try {
           const savedTodos = localStorage.getItem("user_todos");
-          if (savedTodos) { setTodos(JSON.parse(savedTodos)); }
+          if (savedTodos) {
+            const todosParsed = JSON.parse(savedTodos).map((t: any) => ({
+              ...t,
+              targetDate: t.targetDate ? new Date(t.targetDate) : undefined,
+            }));
+            setTodos(todosParsed);
+          }
         } catch (parseError) {
           console.error("Failed to parse local storage todos");
         }
@@ -174,14 +199,34 @@ const Todos = () => {
 
   const handleCreateTodo = async (newTodo: TodoItem) => {
     try {
+      const finalTodo = { ...newTodo };
       try {
-        const response = await fetchWithAuth("/todos", { method: "POST", body: JSON.stringify(newTodo) });
-        if (response.ok) { const data = await response.json(); newTodo.id = data.id || newTodo.id; }
-      } catch { console.log("API unavailable, saving locally"); }
-      setTodos((prev) => { const updated = [...prev, newTodo]; localStorage.setItem("user_todos", JSON.stringify(updated)); return updated; });
+        const apiPayload = {
+          ...newTodo,
+          status: toApiStatus(newTodo.status),
+          priority: toApiPriority(newTodo.priority),
+          life_area: newTodo.lifeArea,
+        };
+        const response = await fetchWithAuth("/todos", { method: "POST", body: JSON.stringify(apiPayload) });
+        if (response.ok) {
+          const data = await response.json();
+          finalTodo.id = data.id || newTodo.id;
+          finalTodo.status = newTodo.status;
+        }
+      } catch {
+        console.log("API unavailable, saving locally");
+      }
+      setTodos((prev) => {
+        const updated = [...prev, finalTodo];
+        localStorage.setItem("user_todos", JSON.stringify(updated.map(t => ({
+          ...t,
+          targetDate: t.targetDate ? new Date(t.targetDate).toISOString() : undefined,
+        }))));
+        return updated;
+      });
       toast({
         title: "To do created",
-        description: "Saved successfully.",
+        description: "Saved successfully. Drag cards between columns to change status.",
         variant: "goalsSuccess",
       });
     } catch (error) {
@@ -194,7 +239,10 @@ const Todos = () => {
     const previous = [...todos];
     setTodos((prev) => {
       const next = prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t));
-      localStorage.setItem("user_todos", JSON.stringify(next));
+      localStorage.setItem("user_todos", JSON.stringify(next.map(t => ({
+        ...t,
+        targetDate: t.targetDate ? new Date(t.targetDate).toISOString() : undefined,
+      }))));
       return next;
     });
 
@@ -260,7 +308,14 @@ const Todos = () => {
   const handleDeleteTodo = async (id: string) => {
     try {
       try { await fetchWithAuth(`/todos/${id}`, { method: "DELETE" }); } catch { console.log("API unavailable, deleting locally"); }
-      setTodos((prev) => { const updated = prev.filter((t) => t.id !== id); localStorage.setItem("user_todos", JSON.stringify(updated)); return updated; });
+      setTodos((prev) => {
+        const updated = prev.filter((t) => t.id !== id);
+        localStorage.setItem("user_todos", JSON.stringify(updated.map(t => ({
+          ...t,
+          targetDate: t.targetDate ? new Date(t.targetDate).toISOString() : undefined,
+        }))));
+        return updated;
+      });
       toast({
         title: "To do deleted",
         description: "Removed successfully.",
@@ -272,69 +327,81 @@ const Todos = () => {
     }
   };
 
+  // ✅ FIX: Added previous state snapshot, rollback on failure, correct error toast in catch
   const handleUpdateStatus = async (id: string, newStatus: string) => {
-    try {
-      const updatedTodo = todos.find((t) => t.id === id);
-      if (!updatedTodo) return;
-      setTodos((prev) => {
-        const newTodos = prev.map((t) => t.id === id ? { ...t, status: newStatus } : t);
-        localStorage.setItem("user_todos", JSON.stringify(newTodos));
-        return newTodos;
-      });
-      try {
-        const payloadWrapped = {
-          todo: {
-            status: toApiStatus(newStatus),
-            priority: toApiPriority(updatedTodo.priority),
-            life_area: updatedTodo.lifeArea,
-            title: updatedTodo.title,
-            description: updatedTodo.description,
-          },
-        };
+    // ✅ FIX 1: Save previous state for rollback
+    const previous = [...todos];
 
-        let res = await fetchWithAuth(`/todos/${id}`, {
-          method: "PUT",
+    const updatedTodo = todos.find((t) => t.id === id);
+    if (!updatedTodo) return;
+
+    // Optimistic UI update
+    setTodos((prev) => {
+      const newTodos = prev.map((t) => t.id === id ? { ...t, status: newStatus } : t);
+      localStorage.setItem("user_todos", JSON.stringify(newTodos.map(t => ({
+        ...t,
+        targetDate: t.targetDate ? new Date(t.targetDate).toISOString() : undefined,
+      }))));
+      return newTodos;
+    });
+
+    try {
+      const payloadWrapped = {
+        todo: {
+          status: toApiStatus(newStatus),
+          priority: toApiPriority(updatedTodo.priority),
+          life_area: updatedTodo.lifeArea,
+          title: updatedTodo.title,
+          description: updatedTodo.description,
+        },
+      };
+
+      let res = await fetchWithAuth(`/todos/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(payloadWrapped),
+      });
+      if (!res.ok) {
+        res = await fetchWithAuth(`/todos/${id}`, {
+          method: "PATCH",
           body: JSON.stringify(payloadWrapped),
+        });
+      }
+      if (!res.ok) {
+        const payloadFlat = { ...updatedTodo, status: toApiStatus(newStatus) };
+        res = await fetchWithAuth(`/todos/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(payloadFlat),
         });
         if (!res.ok) {
           res = await fetchWithAuth(`/todos/${id}`, {
             method: "PATCH",
-            body: JSON.stringify(payloadWrapped),
-          });
-        }
-        if (!res.ok) {
-          const payloadFlat = { ...updatedTodo, status: toApiStatus(newStatus) };
-          res = await fetchWithAuth(`/todos/${id}`, {
-            method: "PUT",
             body: JSON.stringify(payloadFlat),
           });
-          if (!res.ok) {
-            res = await fetchWithAuth(`/todos/${id}`, {
-              method: "PATCH",
-              body: JSON.stringify(payloadFlat),
-            });
-          }
         }
-        if (res.ok) {
-          toast({
-            title: "To do moved",
-            description: `Updated status to ${newStatus}.`,
-            variant: "goalsSuccess",
-          });
-        } else {
-          toast({ title: "Error", description: "Failed to move to do", variant: "destructive" });
-        }
-      } catch {
-        console.log("API unavailable, updating locally");
+      }
+
+      if (res.ok) {
+        // ✅ Success — show success toast
         toast({
           title: "To do moved",
           description: `Updated status to ${newStatus}.`,
           variant: "goalsSuccess",
         });
+      } else {
+        // ✅ FIX 2: Non-ok response — rollback UI + show error toast
+        setTodos(previous);
+        localStorage.setItem("user_todos", JSON.stringify(previous.map(t => ({
+          ...t,
+          targetDate: t.targetDate ? new Date(t.targetDate).toISOString() : undefined,
+        }))));
+        toast({ title: "Error", description: "Failed to move to do", variant: "destructive" });
       }
     } catch (error) {
-      console.error("Failed to update todo:", error);
-      toast({ title: "Error", description: "Failed to move to do", variant: "destructive" });
+      // ✅ FIX 3: Network/exception — rollback UI + show error toast (not success)
+      console.error("Failed to update todo status:", error);
+      setTodos(previous);
+      localStorage.setItem("user_todos", JSON.stringify(previous));
+      toast({ title: "Error", description: "Failed to move to do. Please try again.", variant: "destructive" });
     }
   };
 
@@ -398,7 +465,7 @@ const Todos = () => {
         handleUpdateStatus(current.todoId, targetStatus);
       }
     }
-    setDragState(null); 
+    setDragState(null);
     setHoveredStatus(null);
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
@@ -501,7 +568,9 @@ const Todos = () => {
               <SelectTrigger className="w-full text-sm"><SelectValue placeholder="All Areas" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all-areas">All Areas</SelectItem>
-                {LIFE_AREAS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                {LIFE_AREAS.map((a) => (
+                  <SelectItem key={a} value={a} startIcon={AREA_ICONS[a]}>{a}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={selectedPriority} onValueChange={setSelectedPriority}>
@@ -593,7 +662,7 @@ const Todos = () => {
                               >
                                 <div className="space-y-2">
                                   <div className="flex items-start justify-between gap-2">
-                                    <GripVertical className="h-4 w-4 text-muted-foreground/40 flex-shrink-0 mt-0.5" />
+                                    <GripVertical className="h-4 w-4 flex-shrink-0 mt-0.5 text-muted-foreground/40" />
                                     <p className="text-sm sm:text-base font-medium text-foreground flex-1 line-clamp-2">{todo.title}</p>
                                     <button
                                       onPointerDown={(e) => e.stopPropagation()}
@@ -616,10 +685,16 @@ const Todos = () => {
                                     </button>
                                   </div>
                                   <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1">{todo.description}</p>
-                                  <div className="flex flex-wrap gap-1 sm:gap-2 mt-2">
+                                  <div className="flex flex-wrap gap-1 sm:gap-2 mt-2 items-center">
                                     <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{todo.lifeArea}</span>
                                     <span className={`text-xs font-medium px-2 py-1 rounded ${getPriorityColor(todo.priority)}`}>{todo.priority}</span>
                                     <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">{todo.status}</span>
+                                    {todo.targetDate && (
+                                      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded flex items-center gap-1">
+                                        <CalendarIcon className="inline-block h-3 w-3 mr-1" />
+                                        {typeof todo.targetDate === 'string' ? new Date(todo.targetDate).toLocaleDateString() : todo.targetDate.toLocaleDateString()}
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                               </Card>
@@ -649,10 +724,16 @@ const Todos = () => {
                         <div className="flex-1 min-w-0">
                           <h3 className="font-medium text-foreground text-sm sm:text-base line-clamp-1">{todo.title}</h3>
                           <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mt-1">{todo.description}</p>
-                          <div className="flex flex-wrap gap-1 sm:gap-2 mt-2">
+                          <div className="flex flex-wrap gap-1 sm:gap-2 mt-2 items-center">
                             <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{todo.lifeArea}</span>
                             <span className={`text-xs font-medium px-2 py-1 rounded ${getPriorityColor(todo.priority)}`}>{todo.priority}</span>
                             <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">{todo.status}</span>
+                            {todo.targetDate && (
+                              <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded flex items-center gap-1">
+                                <CalendarIcon className="inline-block h-3 w-3 mr-1" />
+                                {typeof todo.targetDate === 'string' ? new Date(todo.targetDate).toLocaleDateString() : todo.targetDate.toLocaleDateString()}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div className="flex gap-2">
