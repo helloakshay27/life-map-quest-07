@@ -27,7 +27,7 @@ export default defineConfig(({ mode }) => ({
         cleanupOutdatedCaches: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json}']
       },
-      includeAssets: ['favicon.ico', 'pwa-192x192.png', 'pwa-512x512.png'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
       manifest: {
         name: 'Life Compass Lockated',
         short_name: 'Life Compass',
@@ -38,6 +38,16 @@ export default defineConfig(({ mode }) => ({
         orientation: 'portrait-primary',
         categories: ['productivity', 'lifestyle', 'health'],
         icons: [
+          {
+            src: 'favicon.ico',
+            sizes: '16x16 32x32 48x48',
+            type: 'image/x-icon'
+          },
+          {
+            src: 'apple-touch-icon.png',
+            sizes: '180x180',
+            type: 'image/png'
+          },
           {
             src: 'pwa-192x192.png',
             sizes: '192x192',
