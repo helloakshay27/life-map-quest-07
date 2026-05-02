@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Plus, Eye, EyeOff, GripVertical, Pencil, CalendarIcon, Briefcase, Activity, Heart, Sprout, Wallet } from "lucide-react";
+import { Plus, Eye, Trash2, GripVertical, Pencil, CalendarIcon, Briefcase, Activity, Heart, Sprout, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -681,7 +681,7 @@ const Todos = () => {
                                       className="text-[#DA7756] hover:text-[#C96B4D] transition-colors flex-shrink-0"
                                       title="Delete"
                                     >
-                                      <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />
+                                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                                     </button>
                                   </div>
                                   <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1">{todo.description}</p>
@@ -756,7 +756,7 @@ const Todos = () => {
                             <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                           <Button variant="ghost" size="sm" onClick={() => handleDeleteTodo(todo.id)} className="flex-shrink-0 text-[#DA7756] hover:text-[#C96B4D] hover:bg-[#DA7756]/10">
-                            <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />
+                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                         </div>
                       </div>

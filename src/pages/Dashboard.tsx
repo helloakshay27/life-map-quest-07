@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useMemo } from "react";
+import { addDays, format, startOfWeek } from "date-fns";
 
 // ─── Brand Palette ────────────────────────────────────────────────────────────
 const C = {
@@ -42,6 +43,69 @@ const C = {
   success:    "#44AF90",
   crimson:    "#C72540",
   pageBg:     "#FAF7F3",
+};
+
+const LIFE_API = "https://life-api.lockated.com";
+
+const normalizeDateOnly = (date: Date) => {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+};
+
+const weeklyPlanPrioritiesForDate = (weeklyJournals: any[], selectedDate: Date) => {
+  const selected = normalizeDateOnly(selectedDate);
+
+  for (const journal of weeklyJournals) {
+    const planDays = journal?.data?.weekly_plan?.days;
+    if (!journal?.start_date || !Array.isArray(planDays)) continue;
+
+    const journalWeekStart = startOfWeek(new Date(`${journal.start_date}T00:00:00`), { weekStartsOn: 0 });
+    const planWeekStart = addDays(journalWeekStart, 7);
+    const dayIndex = Math.round((selected.getTime() - planWeekStart.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (dayIndex < 0 || dayIndex > 6) continue;
+
+    const planDay = planDays[dayIndex];
+    const priorities = Array.isArray(planDay?.priorities) ? planDay.priorities : [];
+    return priorities
+      .map((priority: any, index: number) => ({
+        id: Number(priority?.id) || Number(`${format(selected, "yyyyMMdd")}${index + 1}`),
+        title: String(priority?.text || priority?.title || "").trim(),
+        day: planDay?.day,
+        category: priority?.category,
+        quadrant: priority?.quadrant,
+      }))
+      .filter((priority: any) => priority.title);
+  }
+
+  return [];
+};
+
+const tomorrowPrioritiesToDashboardItems = (journal: any) => {
+  const priorities = Array.isArray(journal?.priorities) ? journal.priorities : [];
+  const idPrefix = journal?.start_date
+    ? format(new Date(`${journal.start_date}T00:00:00`), "yyyyMMdd")
+    : "0";
+
+  return priorities
+    .map((priority: any, index: number) => ({
+      id: Number(`${idPrefix}${index + 1}`),
+      title: String(priority || "").trim(),
+    }))
+    .filter((priority: any) => priority.title);
+};
+
+const mergeDashboardPriorities = (
+  ...groups: Array<Array<{ id?: number | string; title?: string; [key: string]: unknown }>>
+) => {
+  const seen = new Set<string>();
+  return groups.flat().filter((priority) => {
+    const key = String(priority.title || "").trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 };
 
 const Dashboard = () => {
@@ -117,7 +181,7 @@ const Dashboard = () => {
 
   const [previewData, setPreviewData] = useState<{
     daily_motivator: string | null;
-    priorities: Array<{ id?: number; title?: string; description?: string; [key: string]: unknown }>;
+    priorities: Array<{ id?: number | string; title?: string; description?: string; [key: string]: unknown }>;
     upcoming_dates: Array<{ id?: number; title?: string; date?: string; [key: string]: unknown }>;
     story_of_the_day: string | null;
     mission: string | null;
@@ -269,29 +333,59 @@ const Dashboard = () => {
   }, [token]);
 
   useEffect(() => {
-    const fetchAccomplishments = async () => {
+    const fetchDashboardPriorities = async () => {
+      const authHeader = { Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}` };
+      const today = new Date();
+      const todayStr = format(today, "yyyy-MM-dd");
+
       try {
-        const d = new Date();
-        const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-        const listResponse = await fetch("https://life-api.lockated.com/user_journals", { headers: { Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}` } });
-        if (listResponse.ok) {
-          const listData = await listResponse.json();
-          const journals = Array.isArray(listData) ? listData : listData?.user_journals || [];
-          const todayJournal = journals.find((j: any) => j.start_date === todayStr);
-          if (todayJournal?.id) {
-            const detailRes = await fetch(`https://life-api.lockated.com/user_journals/${todayJournal.id}`, { headers: { Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}` } });
-            if (detailRes.ok) {
-              const detailData = await detailRes.json();
-              const detailedJournal = detailData?.user_journal || detailData;
-              const formatted = (Array.isArray(detailedJournal.accomplishments) ? detailedJournal.accomplishments : []).map((a: any, idx: number) => typeof a === "string" ? { id: idx, title: a } : { id: a.id || idx, title: a.title || a.name || "Unnamed" });
-              setPreviewData((prev) => ({ ...prev, priorities: formatted })); return;
-            }
-          }
+        let savedAccomplishments: Array<{ id?: number | string; title?: string }> = [];
+        let previousDayPriorities: Array<{ id?: number | string; title?: string }> = [];
+        let weeklyPlanPriorities: Array<{ id?: number | string; title?: string; [key: string]: unknown }> = [];
+
+        const todayRes = await fetch(`${LIFE_API}/user_journals/0?date=${todayStr}&journal_type=daily`, { headers: authHeader });
+        if (todayRes.ok) {
+          const todayData = await todayRes.json();
+          const todayJournal = Array.isArray(todayData) ? (todayData.length > 0 ? todayData[0] : null) : (todayData?.user_journal ?? todayData);
+          savedAccomplishments = (Array.isArray(todayJournal?.accomplishments) ? todayJournal.accomplishments : [])
+            .map((a: any, idx: number) => (
+              typeof a === "string"
+                ? { id: idx, title: a }
+                : { id: a?.id || idx, title: a?.title || a?.name || "" }
+            ))
+            .filter((item: any) => item.title);
         }
+
+        const previousDate = format(addDays(today, -1), "yyyy-MM-dd");
+        const previousRes = await fetch(`${LIFE_API}/user_journals/0?date=${previousDate}&journal_type=daily`, { headers: authHeader });
+        if (previousRes.ok) {
+          const previousData = await previousRes.json();
+          const previousJournal = Array.isArray(previousData) ? (previousData.length > 0 ? previousData[0] : null) : (previousData?.user_journal ?? previousData);
+          previousDayPriorities = tomorrowPrioritiesToDashboardItems(previousJournal);
+        }
+
+        const weeklyRes = await fetch(`${LIFE_API}/user_journals?journal_type=weekly`, { headers: authHeader });
+        if (weeklyRes.ok) {
+          const weeklyData = await weeklyRes.json();
+          const weeklyJournals = Array.isArray(weeklyData) ? weeklyData : (weeklyData?.user_journals ?? weeklyData?.data ?? []);
+          weeklyPlanPriorities = weeklyPlanPrioritiesForDate(weeklyJournals, today);
+        }
+
+        setPreviewData((prev) => ({
+          ...prev,
+          priorities: mergeDashboardPriorities(
+            savedAccomplishments,
+            previousDayPriorities,
+            weeklyPlanPriorities,
+          ),
+        }));
+      } catch (error) {
+        console.error("Dashboard priorities API error:", error);
         setPreviewData((prev) => ({ ...prev, priorities: [] }));
-      } catch (error) { console.error("Dashboard accomplishments API error:", error); }
+      }
     };
-    fetchAccomplishments();
+
+    fetchDashboardPriorities();
   }, [token]);
 
   const [people, setPeople] = useState<any[]>([]);
@@ -505,7 +599,7 @@ const Dashboard = () => {
               </Badge>
             </div>
 
-            {/* RESTORED DAILY JOURNAL PRIORITIES */}
+            {/* DAILY + WEEKLY PLAN PRIORITIES */}
             {previewData.priorities.length > 0 && (
               <div className="flex flex-col gap-3 mb-4">
                 {previewData.priorities.map((todo: { id?: string | number; title?: string }, idx) => (
