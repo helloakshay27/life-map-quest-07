@@ -852,14 +852,22 @@ const WeeklyJournal = () => {
               />
               <div className="rounded-2xl overflow-hidden shadow-sm" style={{ background: C.pageBg, border: `1px solid ${C.cream}` }}>
                 <WeeklyReflection
-                  currentDate={currentDate} wins={wins} setWins={setWins}
-                  challenge={challenge} setChallenge={setChallenge}
-                  challengeCause={challengeCause} setChallengeCause={setChallengeCause}
-                  gratitude={gratitude} setGratitude={setGratitude}
-                  insight={insight} setInsight={setInsight}
-                  balanceRating={balanceRating} setBalanceRating={setBalanceRating}
-                  weeklyStory={habitsText} setWeeklyStory={setHabitsText}
-                />
+  currentDate={currentDate}
+  wins={wins}
+  setWins={setWins}
+  challenge={challenge}
+  setChallenge={setChallenge}
+  challengeCause={challengeCause}
+  setChallengeCause={setChallengeCause}
+  gratitude={gratitude}
+  setGratitude={setGratitude}
+  insight={insight}
+  setInsight={setInsight}
+  balanceRating={balanceRating}
+  setBalanceRating={setBalanceRating}
+  weeklyStory={habitsText}
+  setWeeklyStory={setHabitsText}
+/>
               </div>
               <div className="rounded-2xl overflow-hidden shadow-sm" style={{ background: C.pageBg, border: `1px solid ${C.cream}` }}>
                 <MissionHabitsConnection

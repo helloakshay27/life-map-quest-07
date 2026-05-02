@@ -109,12 +109,21 @@ interface Habit {
   id: string | number;
   name: string;
   description?: string;
-  frequency?: "daily" | "weekly" | "custom";
+  frequency?: "daily" | "weekly" | "monthly" | "custom";
   category?: string;
   time?: string;
   place?: string;
   start_date?: string;
   startDate?: string;
+  days_of_week?: string[];
+  repeat_days?: string[];
+  target_days?: string[];
+  day_of_month?: number | string;
+  monthly_day?: number | string;
+  custom_every?: number | string;
+  custom_interval?: number | string;
+  custom_unit?: string;
+  repeat_unit?: string;
 }
 interface CoreValue {
   id: number;
@@ -124,6 +133,41 @@ interface BucketItem {
   id: number;
   title: string;
 }
+
+const WEEKDAY_OPTIONS = [
+  { value: "sunday", label: "Sun" },
+  { value: "monday", label: "Mon" },
+  { value: "tuesday", label: "Tue" },
+  { value: "wednesday", label: "Wed" },
+  { value: "thursday", label: "Thu" },
+  { value: "friday", label: "Fri" },
+  { value: "saturday", label: "Sat" },
+];
+
+const CUSTOM_UNITS = ["days", "weeks", "months"];
+
+const normalizeWeekday = (day: string) => day.toLowerCase();
+
+const getHabitWeekdays = (habit: Habit) =>
+  (habit.days_of_week || habit.repeat_days || habit.target_days || []).map(normalizeWeekday);
+
+const getHabitScheduleLabel = (habit: Habit) => {
+  const frequency = habit.frequency || "daily";
+  if (frequency === "daily") return "Every day";
+  if (frequency === "weekly") {
+    const days = getHabitWeekdays(habit);
+    return days.length
+      ? days.map((day) => WEEKDAY_OPTIONS.find((d) => d.value === day)?.label || day).join(", ")
+      : "Weekly";
+  }
+  if (frequency === "monthly") {
+    const day = habit.day_of_month || habit.monthly_day;
+    return day ? `Day ${day} each month` : "Monthly";
+  }
+  const interval = habit.custom_every || habit.custom_interval || 1;
+  const unit = habit.custom_unit || habit.repeat_unit || "days";
+  return `Every ${interval} ${unit}`;
+};
 
 // ─── STATUS MAPPING ───────────────────────────────────────────────────────────
 const toApiStatus = (s: string): string => {
@@ -342,6 +386,10 @@ const GoalsHabits = () => {
   const [habitPlace, setHabitPlace] = useState("");
   const [habitStartDate, setHabitStartDate] = useState("");
   const [habitLinkedGoals, setHabitLinkedGoals] = useState<string[]>([]);
+  const [habitWeekdays, setHabitWeekdays] = useState<string[]>([]);
+  const [habitMonthDay, setHabitMonthDay] = useState("");
+  const [habitCustomEvery, setHabitCustomEvery] = useState("1");
+  const [habitCustomUnit, setHabitCustomUnit] = useState("days");
   const [editingHabitId, setEditingHabitId] = useState<string | number | null>(
     null,
   );
@@ -551,6 +599,10 @@ const GoalsHabits = () => {
     setHabitPlace("");
     setHabitStartDate("");
     setHabitLinkedGoals([]);
+    setHabitWeekdays([]);
+    setHabitMonthDay("");
+    setHabitCustomEvery("1");
+    setHabitCustomUnit("days");
   };
 
   const openNewHabitDialog = () => {
@@ -1288,8 +1340,31 @@ const GoalsHabits = () => {
       });
       return;
     }
+    if (habitFrequency === "weekly" && habitWeekdays.length === 0) {
+      toast({
+        title: "Choose weekly days",
+        description: "Select at least one day for this weekly habit.",
+        variant: "figmaWarning",
+      });
+      return;
+    }
+    if (habitFrequency === "monthly" && (!habitMonthDay || Number(habitMonthDay) < 1 || Number(habitMonthDay) > 31)) {
+      toast({
+        title: "Choose monthly day",
+        description: "Enter a day between 1 and 31 for this monthly habit.",
+        variant: "figmaWarning",
+      });
+      return;
+    }
     setHabitSaving(true);
     try {
+      const schedulePayload = {
+        days_of_week: habitFrequency === "weekly" ? habitWeekdays : [],
+        repeat_days: habitFrequency === "weekly" ? habitWeekdays : [],
+        day_of_month: habitFrequency === "monthly" && habitMonthDay ? Number(habitMonthDay) : null,
+        custom_every: habitFrequency === "custom" ? Number(habitCustomEvery || 1) : null,
+        custom_unit: habitFrequency === "custom" ? habitCustomUnit : null,
+      };
       const res = await fetchWithAuth("/habits", {
         method: "POST",
         body: JSON.stringify({
@@ -1301,22 +1376,26 @@ const GoalsHabits = () => {
           place: habitPlace,
           start_date: habitStartDate,
           linked_goals: habitLinkedGoals,
+          ...schedulePayload,
         }),
       });
       if (!res.ok) throw new Error("Failed");
       const created = await res.json();
+      const createdHabit = created?.habit ?? created?.data ?? created;
       setHabits((prev) => [
         ...prev,
-        { ...created, id: String(created.id ?? created.habit?.id) },
+        {
+          ...createdHabit,
+          frequency: habitFrequency,
+          days_of_week: schedulePayload.days_of_week,
+          repeat_days: schedulePayload.repeat_days,
+          day_of_month: schedulePayload.day_of_month,
+          custom_every: schedulePayload.custom_every,
+          custom_unit: schedulePayload.custom_unit,
+          id: String(createdHabit.id ?? created?.id ?? created?.habit?.id),
+        },
       ]);
-      setHabitName("");
-      setHabitDescription("");
-      setHabitFrequency("daily");
-      setHabitCategory("");
-      setHabitTime("");
-      setHabitPlace("");
-      setHabitStartDate("");
-      setHabitLinkedGoals([]);
+      resetHabitForm();
       setIsHabitDialogOpen(false);
       toast({
         title: "Habit created",
@@ -1334,10 +1413,39 @@ const GoalsHabits = () => {
     }
   };
 
+  const toggleHabitWeekday = (day: string) => {
+    setHabitWeekdays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
+    );
+  };
+
   const handleUpdateHabit = async () => {
     if (!habitName.trim() || editingHabitId === null) return;
+    if (habitFrequency === "weekly" && habitWeekdays.length === 0) {
+      toast({
+        title: "Choose weekly days",
+        description: "Select at least one day for this weekly habit.",
+        variant: "figmaWarning",
+      });
+      return;
+    }
+    if (habitFrequency === "monthly" && (!habitMonthDay || Number(habitMonthDay) < 1 || Number(habitMonthDay) > 31)) {
+      toast({
+        title: "Choose monthly day",
+        description: "Enter a day between 1 and 31 for this monthly habit.",
+        variant: "figmaWarning",
+      });
+      return;
+    }
     setHabitSaving(true);
     try {
+      const schedulePayload = {
+        days_of_week: habitFrequency === "weekly" ? habitWeekdays : [],
+        repeat_days: habitFrequency === "weekly" ? habitWeekdays : [],
+        day_of_month: habitFrequency === "monthly" && habitMonthDay ? Number(habitMonthDay) : null,
+        custom_every: habitFrequency === "custom" ? Number(habitCustomEvery || 1) : null,
+        custom_unit: habitFrequency === "custom" ? habitCustomUnit : null,
+      };
       const payload = {
         habit: {
           name: habitName,
@@ -1348,6 +1456,7 @@ const GoalsHabits = () => {
           place: habitPlace,
           start_date: habitStartDate,
           linked_goals: habitLinkedGoals,
+          ...schedulePayload,
         },
       };
       let res = await fetchWithAuth(`/habits/${editingHabitId}`, {
@@ -1365,19 +1474,21 @@ const GoalsHabits = () => {
       setHabits((prev) =>
         prev.map((habit) =>
           String(habit.id) === String(editingHabitId)
-            ? { ...habit, ...h, id: String(h?.id ?? editingHabitId) }
+            ? {
+                ...habit,
+                ...h,
+                frequency: habitFrequency,
+                days_of_week: schedulePayload.days_of_week,
+                repeat_days: schedulePayload.repeat_days,
+                day_of_month: schedulePayload.day_of_month,
+                custom_every: schedulePayload.custom_every,
+                custom_unit: schedulePayload.custom_unit,
+                id: String(h?.id ?? editingHabitId),
+              }
             : habit,
         ),
       );
-      setEditingHabitId(null);
-      setHabitName("");
-      setHabitDescription("");
-      setHabitFrequency("daily");
-      setHabitCategory("");
-      setHabitTime("");
-      setHabitPlace("");
-      setHabitStartDate("");
-      setHabitLinkedGoals([]);
+      resetHabitForm();
       setIsHabitDialogOpen(false);
       toast({
         title: "Habit updated",
@@ -1404,6 +1515,10 @@ const GoalsHabits = () => {
     setHabitPlace(habit.place || "");
     setHabitStartDate(habit.start_date || habit.startDate || "");
     setHabitLinkedGoals([]);
+    setHabitWeekdays(getHabitWeekdays(habit));
+    setHabitMonthDay(String(habit.day_of_month || habit.monthly_day || ""));
+    setHabitCustomEvery(String(habit.custom_every || habit.custom_interval || 1));
+    setHabitCustomUnit(habit.custom_unit || habit.repeat_unit || "days");
     setIsHabitDialogOpen(true);
   };
 
@@ -2033,6 +2148,9 @@ const GoalsHabits = () => {
                       </p>
                       <p className="text-xs text-teal-600 mt-1 capitalize">
                         ⚡ {h.frequency}
+                      </p>
+                      <p className="text-xs text-gray-600 mt-1">
+                        {getHabitScheduleLabel(h)}
                       </p>
                       {h.time && (
                         <p className="text-xs text-gray-600 mt-1">
@@ -2711,6 +2829,7 @@ const GoalsHabits = () => {
                   <SelectContent>
                     <SelectItem value="daily">📅 Daily</SelectItem>
                     <SelectItem value="weekly">📆 Weekly</SelectItem>
+                    <SelectItem value="monthly">🗓️ Monthly</SelectItem>
                     <SelectItem value="custom">⚙️ Custom</SelectItem>
                   </SelectContent>
                 </Select>
@@ -2730,6 +2849,86 @@ const GoalsHabits = () => {
                 </Select>
               </div>
             </div>
+            {habitFrequency !== "daily" && (
+              <div className="rounded-xl border border-[#DA7756]/20 bg-[#DA7756]/5 p-4 space-y-3">
+                <div>
+                  <Label className="text-sm font-semibold">
+                    {habitFrequency === "weekly"
+                      ? "Repeat on"
+                      : habitFrequency === "monthly"
+                        ? "Monthly repeat day"
+                        : "Custom repeat"}
+                  </Label>
+                </div>
+
+                {habitFrequency === "weekly" && (
+                  <div className="flex flex-wrap gap-2">
+                    {WEEKDAY_OPTIONS.map((day) => {
+                      const selected = habitWeekdays.includes(day.value);
+                      return (
+                        <button
+                          key={day.value}
+                          type="button"
+                          onClick={() => toggleHabitWeekday(day.value)}
+                          className={`min-w-12 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${
+                            selected
+                              ? "border-[#DA7756] bg-[#DA7756] text-white"
+                              : "border-[#DA7756]/25 bg-white text-[#2C2C2A] hover:bg-[#DA7756]/10"
+                          }`}
+                        >
+                          {day.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {habitFrequency === "monthly" && (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Day of month</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={31}
+                        placeholder="e.g., 15"
+                        value={habitMonthDay}
+                        onChange={(e) => setHabitMonthDay(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {habitFrequency === "custom" && (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1.4fr]">
+                    <div className="space-y-2">
+                      <Label>Every</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={habitCustomEvery}
+                        onChange={(e) => setHabitCustomEvery(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Unit</Label>
+                      <Select value={habitCustomUnit} onValueChange={setHabitCustomUnit}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CUSTOM_UNITS.map((unit) => (
+                            <SelectItem key={unit} value={unit}>
+                              {unit.charAt(0).toUpperCase() + unit.slice(1)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label className="flex items-center gap-1">

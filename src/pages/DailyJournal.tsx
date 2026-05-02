@@ -115,6 +115,66 @@ const getProgressClass = (progress: string) => {
 };
 const statusToProgress  = (s: string) => ({ dreaming: "Dreaming", planning: "Planning", in_progress: "In Progress", achieved: "Achieved" }[s] || "Dreaming");
 const progressToStatus  = (p: string) => ({ Dreaming: "dreaming", Planning: "planning", "In Progress": "in_progress", Achieved: "achieved" }[p] || "dreaming");
+const habitKey = (habit: any) => String(habit?.habit_id ?? habit?.id ?? "");
+const normalizeDateOnly = (date: Date) => {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+};
+
+const weeklyPlanPrioritiesForDate = (weeklyJournals: any[], selectedDate: Date) => {
+  const selected = normalizeDateOnly(selectedDate);
+
+  for (const journal of weeklyJournals) {
+    const planDays = journal?.data?.weekly_plan?.days;
+    if (!journal?.start_date || !Array.isArray(planDays)) continue;
+
+    const journalWeekStart = startOfWeek(new Date(`${journal.start_date}T00:00:00`), { weekStartsOn: 0 });
+    const planWeekStart = addDays(journalWeekStart, 7);
+    const dayIndex = Math.round((selected.getTime() - planWeekStart.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (dayIndex < 0 || dayIndex > 6) continue;
+
+    const planDay = planDays[dayIndex];
+    const priorities = Array.isArray(planDay?.priorities) ? planDay.priorities : [];
+    return priorities
+      .map((priority: any, index: number) => ({
+        id: Number(priority?.id) || Number(`${format(selected, "yyyyMMdd")}${index + 1}`),
+        title: String(priority?.text || priority?.title || "").trim(),
+        checked: false,
+      }))
+      .filter((priority: any) => priority.title);
+  }
+
+  return [];
+};
+
+const tomorrowPrioritiesToAchievements = (journal: any) => {
+  const priorities = Array.isArray(journal?.priorities) ? journal.priorities : [];
+  const idPrefix = journal?.start_date
+    ? format(new Date(`${journal.start_date}T00:00:00`), "yyyyMMdd")
+    : "0";
+
+  return priorities
+    .map((priority: any, index: number) => ({
+      id: Number(`${idPrefix}${index + 1}`),
+      title: String(priority || "").trim(),
+      checked: false,
+    }))
+    .filter((priority: any) => priority.title);
+};
+
+const mergeSuggestedAchievements = (
+  ...groups: { id: number; title: string; checked: boolean }[][]
+) => {
+  const seen = new Set<string>();
+  return groups.flat().filter((achievement) => {
+    const key = achievement.title.trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
 
 // ─── DailyFortuneModal ────────────────────────────────────────────────────────
 const DailyFortuneModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
@@ -385,7 +445,21 @@ const TodaysReflection = ({
   const removeAccomplishment = (id: number) => setAccomplishments((p: any) => p.filter((a: any) => a.id !== id));
   const updateAccomplishment = (id: number, field: string, value: any) => setAccomplishments((p: any) => p.map((a: any) => a.id === id ? { ...a, [field]: value } : a));
   const toggleMood  = (mood: string) => setSelectedMoods((p: any) => p.includes(mood) ? p.filter((m: any) => m !== mood) : [...p, mood]);
-  const toggleHabit = (idx: number) => { const u = [...habits]; u[idx] = { ...u[idx], completed: !u[idx].completed }; setHabits(u); };
+  const toggleHabit = (idx: number) => {
+    const u = [...habits];
+    const nextCompleted = !u[idx].completed;
+    const weekHistory = [...(u[idx].week_history || [])];
+    weekHistory[selectedDayIdx] = nextCompleted;
+    u[idx] = { ...u[idx], completed: nextCompleted, week_history: weekHistory };
+    setHabits(u);
+  };
+  const setAllHabitsCompleted = (completed: boolean) => {
+    setHabits(habits.map((habit: any) => {
+      const weekHistory = [...(habit.week_history || [])];
+      weekHistory[selectedDayIdx] = completed;
+      return { ...habit, completed, week_history: weekHistory };
+    }));
+  };
 
   const pillBtn = (active: boolean): React.CSSProperties => ({
     flexShrink: 0, padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 500,
@@ -458,11 +532,21 @@ const TodaysReflection = ({
       </div>
 
       {/* Habits */}
-      <div className="bg-white rounded-xl border overflow-hidden mb-4" style={{ borderColor: C.cream }}>
-        <div className="flex items-center justify-between px-4 py-3">
-          <span className="font-semibold text-sm" style={{ color: C.charcoal }}>Today's Habits</span>
-          <button onClick={() => navigate("/goals-habits")} className="text-xs font-semibold transition-colors" style={{ color: C.coral }}
-            onMouseEnter={e => (e.currentTarget.style.color = C.charcoal)} onMouseLeave={e => (e.currentTarget.style.color = C.coral)}>Manage Habits</button>
+      <div className="bg-white rounded-2xl border overflow-hidden mb-4 p-4" style={{ borderColor: C.cream }}>
+        <div className="flex flex-col gap-3 pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <span className="font-bold text-sm" style={{ color: C.charcoal }}>Today's Habits ({format(selectedDate, "EEE dd MMM")})</span>
+          <div className="flex flex-wrap items-center gap-3">
+            {habits.length > 0 && (
+              <>
+                <button onClick={() => setAllHabitsCompleted(true)} className="text-xs font-semibold transition-colors" style={{ color: C.forest }}
+                  onMouseEnter={e => (e.currentTarget.style.color = C.charcoal)} onMouseLeave={e => (e.currentTarget.style.color = C.forest)}>Check All</button>
+                <button onClick={() => setAllHabitsCompleted(false)} className="text-xs font-semibold transition-colors" style={{ color: C.crimson }}
+                  onMouseEnter={e => (e.currentTarget.style.color = C.charcoal)} onMouseLeave={e => (e.currentTarget.style.color = C.crimson)}>Uncheck All</button>
+              </>
+            )}
+            <button onClick={() => navigate("/goals-habits")} className="text-xs font-semibold transition-colors" style={{ color: C.coral }}
+              onMouseEnter={e => (e.currentTarget.style.color = C.charcoal)} onMouseLeave={e => (e.currentTarget.style.color = C.coral)}>Manage Habits</button>
+          </div>
         </div>
         {habits.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-6 px-4 border-t" style={{ borderColor: C.cream }}>
@@ -471,34 +555,34 @@ const TodaysReflection = ({
               style={{ borderColor: C.cream, color: C.stone }}>Create Your First Habit</button>
           </div>
         ) : (
-          <div className="flex flex-col gap-2 px-3 pb-3">
+          <div className="flex flex-col gap-3">
             {habits.map((habit: any, idx: number) => {
               const habitHistory: boolean[] = habit.week_history || [];
               return (
-                <div key={habit.habit_id || idx} className="rounded-xl overflow-hidden border mt-1" style={{ borderColor: C.cream }}>
-                  <div className="flex items-center gap-3 px-4 py-3 bg-white cursor-pointer transition-colors"
+                <div key={habit.habit_id || idx} className="rounded-lg overflow-hidden border transition-all" style={{ borderColor: habit.completed ? C.forest15 : C.cream }}>
+                  <div className="flex items-center gap-3 px-3 py-3 cursor-pointer transition-colors"
                     onClick={() => toggleHabit(idx)}
-                    onMouseEnter={e => (e.currentTarget.style.background = C.pageBg)} onMouseLeave={e => (e.currentTarget.style.background = "#fff")}>
-                    <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
-                      style={{ borderColor: habit.completed ? C.coral : C.cream, background: habit.completed ? C.coral : "#fff" }}>
+                    style={{ background: habit.completed ? C.forest : "#fff" }}>
+                    <div className="w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all"
+                      style={{ borderColor: habit.completed ? "rgba(255,255,255,0.65)" : C.coral, background: habit.completed ? "rgba(255,255,255,0.16)" : "#fff" }}>
                       {habit.completed && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold leading-tight" style={{ color: C.charcoal }}>{habit.name}</p>
+                      <p className="text-sm font-bold leading-tight" style={{ color: habit.completed ? "#fff" : C.charcoal }}>{habit.name}</p>
                       <div className="flex items-center gap-1 mt-0.5">
-                        <span className="text-[12px]">🗓️</span>
-                        <span className="text-xs font-medium" style={{ color: C.stone }}>{habit.frequency || "Daily"}</span>
+                        <CalendarIcon className="w-3 h-3" style={{ color: habit.completed ? "rgba(255,255,255,0.75)" : C.sand }} />
+                        <span className="text-xs font-medium" style={{ color: habit.completed ? "rgba(255,255,255,0.75)" : C.stone }}>{habit.frequency || "Daily"}</span>
                       </div>
                     </div>
                     <span className="text-[11px] font-semibold px-3 py-1 rounded-full border flex-shrink-0"
-                      style={{ borderColor: C.cream, color: C.stone }}>
+                      style={{ borderColor: habit.completed ? "rgba(255,255,255,0.35)" : C.cream, color: habit.completed ? "#fff" : C.stone, background: habit.completed ? "rgba(255,255,255,0.12)" : "#fff" }}>
                       {habit.category || "Other"}
                     </span>
                   </div>
-                  <div className="px-4 pb-3 pt-1 bg-white border-t" style={{ borderColor: C.cream }}>
-                    <div className="grid grid-cols-7 gap-1.5">
+                  <div className="px-3 pb-2 pt-1.5 border-t" style={{ borderColor: C.cream, background: habit.completed ? C.forest8 : C.pageBg }}>
+                    <div className="inline-grid grid-cols-7 gap-1">
                       {DAY_LABELS.map((label, i) => (
-                        <div key={i} className="text-center text-[10px] font-semibold mb-1" style={{ color: C.muted }}>{label}</div>
+                        <div key={i} className="text-center text-[9px] font-semibold leading-none" style={{ color: C.muted }}>{label}</div>
                       ))}
                       {weekDates.map((date, i) => {
                         const dateNorm = new Date(date); dateNorm.setHours(0,0,0,0);
@@ -508,26 +592,34 @@ const TodaysReflection = ({
 
                         if (isSelectedDay) return (
                           <div key={i} className="flex items-center justify-center">
-                            <div className="w-7 h-7 rounded-md flex items-center justify-center text-[11px] font-bold border-2"
-                              style={{ color: C.coral, borderColor: C.coral, background: "#fff" }}>{date.getDate()}</div>
+                            <div className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold border-2"
+                              style={{
+                                color: completed ? "#fff" : C.coral,
+                                borderColor: completed ? C.forest : C.coral,
+                                background: completed ? C.forest : "#fff",
+                              }}>
+                              {completed ? (
+                                <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                              ) : date.getDate()}
+                            </div>
                           </div>
                         );
                         if (isPast && completed) return (
                           <div key={i} className="flex items-center justify-center">
-                            <div className="w-7 h-7 rounded-md flex items-center justify-center" style={{ background: C.dune }}>
+                            <div className="w-6 h-6 rounded flex items-center justify-center" style={{ background: C.forest }}>
                               <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                             </div>
                           </div>
                         );
                         if (isPast && !completed) return (
                           <div key={i} className="flex items-center justify-center">
-                            <div className="w-7 h-7 rounded-md flex items-center justify-center text-[11px] font-bold"
+                            <div className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold"
                               style={{ color: C.crimson, background: C.crimson8 }}>{date.getDate()}</div>
                           </div>
                         );
                         return (
                           <div key={i} className="flex items-center justify-center">
-                            <div className="w-7 h-7 rounded-md flex items-center justify-center text-[11px] font-medium"
+                            <div className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-medium"
                               style={{ color: C.muted, background: C.mist+"30" }}>{date.getDate()}</div>
                           </div>
                         );
@@ -677,6 +769,7 @@ const ShapingTomorrow = ({ priorities, setPriorities, token, showToast }: { prio
   };
 
   const addPriority    = () => setPriorities([...priorities, ""]);
+  const removePriority = (index: number) => setPriorities(priorities.filter((_, i) => i !== index));
   const updatePriority = (index: number, value: string) => { const u = [...priorities]; u[index] = value; setPriorities(u); };
 
   return (
@@ -830,11 +923,28 @@ const ShapingTomorrow = ({ priorities, setPriorities, token, showToast }: { prio
         </div>
         <div className="space-y-3">
           {priorities.map((priority: string, index: number) => (
-            <input key={index} type="text" placeholder={`Priority #${index+1}`} value={priority} onChange={e => updatePriority(index, e.target.value)}
-              className="w-full bg-white border rounded-md px-4 py-3 text-[14px] outline-none shadow-sm transition-all"
-              style={{ borderColor: C.cream, color: C.charcoal }}
-              onFocus={e => { e.target.style.borderColor = C.coral; e.target.style.boxShadow = `0 0 0 3px ${C.coral15}`; }}
-              onBlur={e => { e.target.style.borderColor = C.cream; e.target.style.boxShadow = "none"; }}/>
+            <div key={index} className="flex items-center gap-3 bg-white border rounded-md px-4 py-3 shadow-sm transition-all" style={{ borderColor: C.cream }}>
+              <input type="text" placeholder={`Priority #${index+1}`} value={priority} onChange={e => updatePriority(index, e.target.value)}
+                className="flex-1 bg-transparent text-[14px] outline-none"
+                style={{ color: C.charcoal }}
+                onFocus={e => {
+                  const wrapper = e.currentTarget.parentElement;
+                  if (!wrapper) return;
+                  wrapper.style.borderColor = C.coral;
+                  wrapper.style.boxShadow = `0 0 0 3px ${C.coral15}`;
+                }}
+                onBlur={e => {
+                  const wrapper = e.currentTarget.parentElement;
+                  if (!wrapper) return;
+                  wrapper.style.borderColor = C.cream;
+                  wrapper.style.boxShadow = "none";
+                }}/>
+              <button type="button" onClick={() => removePriority(index)} className="transition-colors flex-shrink-0" style={{ color: C.muted }}
+                onMouseEnter={e => (e.currentTarget.style.color = C.crimson)} onMouseLeave={e => (e.currentTarget.style.color = C.muted)}
+                aria-label={`Remove priority ${index + 1}`}>
+                <X className="w-4 h-4"/>
+              </button>
+            </div>
           ))}
         </div>
       </div>
@@ -927,121 +1037,461 @@ const DailyAffirmation = ({ affirmation, setAffirmation, token }: { affirmation:
 // ─── BucketListProgress ───────────────────────────────────────────────────────
 const PillSelect = ({ value, options, onChange, styleFn }: any) => (
   <div className="relative inline-flex items-center">
-    <select value={value} onChange={e => onChange(e.target.value)}
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
       className="appearance-none pl-2.5 pr-6 py-1 rounded-full text-[11px] font-semibold cursor-pointer outline-none"
-      style={styleFn(value)}>
-      {options.map((o: string) => <option key={o} value={o} className="bg-white text-gray-900">{o}</option>)}
+      style={styleFn(value)}
+    >
+      {options.map((o: string) => (
+        <option key={o} value={o} className="bg-white text-gray-900">
+          {o}
+        </option>
+      ))}
     </select>
-    <ChevronDown className="pointer-events-none absolute right-1.5 w-3 h-3 opacity-60"/>
+
+    <ChevronDown className="pointer-events-none absolute right-1.5 w-3 h-3 opacity-60" />
   </div>
 );
 
-const BucketListProgress = ({ token, showToast }: { token?: string, showToast: (msg: string, type?: "success" | "error") => void }) => {
-  const navigate = useNavigate(); 
-  const [bucketList, setBucketList]         = useState<any[]>([]);
-  const [isLoading, setIsLoading]           = useState(true);
-  const [updateTexts, setUpdateTexts]       = useState<any>({});
+const BucketListProgress = ({
+  token,
+  showToast,
+}: {
+  token?: string;
+  showToast: (msg: string, type?: "success" | "error") => void;
+}) => {
+  const navigate = useNavigate();
+
+  const [bucketList, setBucketList] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [updateTexts, setUpdateTexts] = useState<any>({});
   const [progressFilter, setProgressFilter] = useState("All Progress");
   const [categoryFilter, setCategoryFilter] = useState("All Categories");
 
+  const authHeaders = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${getToken(token)}`,
+  };
+
   useEffect(() => {
-    setIsLoading(true);
-    fetch(`${API_BASE}/dreams`, { headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken(token)}` } })
-      .then(r => r.json()).then(data => {
-        let mapped: any[] = [];
-        if (Array.isArray(data)) {
-          mapped = data.map(item => ({ id: item.id.toString(), title: item.title||"", category: item.category||"Personal", progress: statusToProgress(item.status||"dreaming") }));
-        } else {
-          const mapCat = (arr: any, pLabel: string) => { if (Array.isArray(arr)) arr.forEach(item => mapped.push({ id: item.id.toString(), title: item.title||"", category: item.category||"Personal", progress: pLabel })); };
-          mapCat(data.dreaming,"Dreaming"); mapCat(data.planning,"Planning"); mapCat(data.in_progress,"In Progress"); mapCat(data.achieved,"Achieved");
+    const fetchDreams = async () => {
+      setIsLoading(true);
+
+      try {
+        const response = await fetch(`${API_BASE}/dreams`, {
+          headers: authHeaders,
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch dreams");
         }
+
+        const data = await response.json();
+
+        let mapped: any[] = [];
+
+        if (Array.isArray(data)) {
+          mapped = data.map((item) => ({
+            id: item.id.toString(),
+            title: item.title || "",
+            category: item.category || "Personal",
+            progress: statusToProgress(item.status || "dreaming"),
+          }));
+        } else {
+          const mapCat = (arr: any, progressLabel: string) => {
+            if (!Array.isArray(arr)) return;
+
+            arr.forEach((item) =>
+              mapped.push({
+                id: item.id.toString(),
+                title: item.title || "",
+                category: item.category || "Personal",
+                progress: progressLabel,
+              }),
+            );
+          };
+
+          mapCat(data.dreaming, "Dreaming");
+          mapCat(data.planning, "Planning");
+          mapCat(data.in_progress, "In Progress");
+          mapCat(data.achieved, "Achieved");
+        }
+
         setBucketList(mapped);
-      }).catch(() => showToast("Failed to load bucket list", "error")).finally(() => setIsLoading(false));
+      } catch (error) {
+        console.error(error);
+        showToast("Failed to load bucket list", "error");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDreams();
   }, [token]);
 
-  const handleProgressChange = async (id: string, val: string) => {
-    setBucketList(p => p.map(i => i.id===id ? {...i, progress: val} : i));
-    fetch(`${API_BASE}/dreams/${id}/change_status`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken(token)}` }, body: JSON.stringify({ status: progressToStatus(val) }) }).catch(() => showToast("Failed update", "error"));
-  };
-  const handleCategoryChange = async (id: string, val: string) => {
-    setBucketList(p => p.map(i => i.id===id ? {...i, category: val} : i));
-    fetch(`${API_BASE}/dreams/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken(token)}` }, body: JSON.stringify({ title: bucketList.find(i => i.id===id)?.title, category: val }) }).catch(() => showToast("Failed update", "error"));
+  const handleLocalUpdate = (id: string, field: string, value: string) => {
+    setBucketList((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, [field]: value } : item,
+      ),
+    );
   };
 
-  const filtered = bucketList.filter(item => (progressFilter==="All Progress" || item.progress===progressFilter) && (categoryFilter==="All Categories" || item.category===categoryFilter));
+  const handleProgressChange = async (id: string, newProgress: string) => {
+    const oldItem = bucketList.find((i) => i.id === id);
+
+    if (!oldItem || oldItem.progress === newProgress) return;
+
+    // Optimistic UI update
+    handleLocalUpdate(id, "progress", newProgress);
+
+    try {
+      const response = await fetch(`${API_BASE}/dreams/${id}/change_status`, {
+        method: "PATCH",
+        headers: authHeaders,
+        body: JSON.stringify({
+          status: progressToStatus(newProgress),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update status");
+      }
+
+      showToast(`Status updated to ${newProgress}`, "success");
+    } catch (error) {
+      console.error(error);
+
+      // Rollback UI if API fails
+      handleLocalUpdate(id, "progress", oldItem.progress);
+
+      showToast("Failed to update status", "error");
+    }
+  };
+
+  const handleCategoryChange = async (id: string, newCategory: string) => {
+    const oldItem = bucketList.find((i) => i.id === id);
+
+    if (!oldItem || oldItem.category === newCategory) return;
+
+    // Optimistic UI update
+    handleLocalUpdate(id, "category", newCategory);
+
+    try {
+      const response = await fetch(`${API_BASE}/dreams/${id}`, {
+        method: "PUT",
+        headers: authHeaders,
+        body: JSON.stringify({
+          title: oldItem.title,
+          category: newCategory,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update category");
+      }
+
+      showToast(`Category updated to ${newCategory}`, "success");
+    } catch (error) {
+      console.error(error);
+
+      // Rollback UI if API fails
+      handleLocalUpdate(id, "category", oldItem.category);
+
+      showToast("Failed to update category", "error");
+    }
+  };
+
+  const handleAddUpdate = async (id: string) => {
+    const text = updateTexts[id] || "";
+
+    if (!text.trim()) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/dreams/${id}/add_note`, {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({
+          note: text.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add update");
+      }
+
+      showToast("Update added!", "success");
+
+      setUpdateTexts((prev: any) => ({
+        ...prev,
+        [id]: "",
+      }));
+    } catch (error) {
+      console.error(error);
+      showToast("Failed to add update", "error");
+    }
+  };
+
+  const filtered = bucketList.filter(
+    (item) =>
+      (progressFilter === "All Progress" ||
+        item.progress === progressFilter) &&
+      (categoryFilter === "All Categories" ||
+        item.category === categoryFilter),
+  );
 
   return (
     <>
-      <div className="rounded-2xl p-5 border font-sans w-full" style={{ background: C.pageBg, borderColor: C.cream }}>
+      <div
+        className="rounded-2xl p-5 border font-sans w-full"
+        style={{ background: C.pageBg, borderColor: C.cream }}
+      >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
-              style={{ background: C.coral }}>
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
+              style={{ background: C.coral }}
+            >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z" fill="white" stroke="white" strokeWidth="0.5" strokeLinejoin="round"/>
+                <path
+                  d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"
+                  fill="white"
+                  stroke="white"
+                  strokeWidth="0.5"
+                  strokeLinejoin="round"
+                />
               </svg>
             </div>
-            <span className="font-bold text-[15px] flex items-center gap-2" style={{ color: C.charcoal }}>
+
+            <span
+              className="font-bold text-[15px] flex items-center gap-2"
+              style={{ color: C.charcoal }}
+            >
               Bucket List Progress
+
               <span className="relative group">
-                <Info className="w-4 h-4 cursor-help" style={{ color: C.sand }}/>
-                <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 text-white text-xs font-medium rounded-lg px-3 py-2 w-48 text-center leading-relaxed opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 shadow-lg"
-                  style={{ background: C.charcoal }}>
+                <Info
+                  className="w-4 h-4 cursor-help"
+                  style={{ color: C.sand }}
+                />
+
+                <span
+                  className="absolute left-full top-1/2 -translate-y-1/2 ml-2 text-white text-xs font-medium rounded-lg px-3 py-2 w-48 text-center leading-relaxed opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 shadow-lg"
+                  style={{ background: C.charcoal }}
+                >
                   Track progress on your dreams and long-term aspirations
-                  <span className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-4 border-transparent" style={{ borderRightColor: C.charcoal }}/>
+                  <span
+                    className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-4 border-transparent"
+                    style={{ borderRightColor: C.charcoal }}
+                  />
                 </span>
               </span>
             </span>
           </div>
+
           <div className="flex items-center gap-2">
-            <button onClick={() => navigate("/bucket-list")}
+            <button
+              onClick={() => navigate("/bucket-list")}
               className="flex items-center gap-1 h-8 px-3 rounded-lg text-white text-xs font-semibold transition-all shadow-sm"
               style={{ background: C.coral }}
-              onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")} onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
-              <Plus className="w-3.5 h-3.5"/> Add Dream
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = "0.85";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = "1";
+              }}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add Dream
             </button>
-            {[{ val: progressFilter, set: setProgressFilter, opts: ["All Progress",...PROGRESS_OPTIONS] },
-              { val: categoryFilter, set: setCategoryFilter, opts: ["All Categories",...CATEGORY_OPTIONS] }].map(({ val, set, opts }, i) => (
+
+            {[
+              {
+                val: progressFilter,
+                set: setProgressFilter,
+                opts: ["All Progress", ...PROGRESS_OPTIONS],
+              },
+              {
+                val: categoryFilter,
+                set: setCategoryFilter,
+                opts: ["All Categories", ...CATEGORY_OPTIONS],
+              },
+            ].map(({ val, set, opts }, i) => (
               <div key={i} className="relative">
-                <select value={val} onChange={e => set(e.target.value)} className="appearance-none h-8 pl-3 pr-7 rounded-lg border bg-white text-xs outline-none" style={{ borderColor: C.cream, color: C.stone }}>
-                  {opts.map(o => <option key={o}>{o}</option>)}
+                <select
+                  value={val}
+                  onChange={(e) => set(e.target.value)}
+                  className="appearance-none h-8 pl-3 pr-7 rounded-lg border bg-white text-xs outline-none"
+                  style={{ borderColor: C.cream, color: C.stone }}
+                >
+                  {opts.map((o) => (
+                    <option key={o}>{o}</option>
+                  ))}
                 </select>
-                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: C.muted }}/>
+
+                <ChevronDown
+                  className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
+                  style={{ color: C.muted }}
+                />
               </div>
             ))}
           </div>
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center p-10"><Loader2 className="w-6 h-6 animate-spin" style={{ color: C.coral }}/></div>
+          <div className="flex justify-center p-10">
+            <Loader2
+              className="w-6 h-6 animate-spin"
+              style={{ color: C.coral }}
+            />
+          </div>
         ) : (
           <div className="flex flex-col gap-3 max-h-[380px] overflow-y-auto pr-0.5">
-            {filtered.length > 0 ? filtered.map(item => (
-              <div key={item.id} className="bg-white rounded-xl border shadow-sm px-4 pt-3 pb-3 flex flex-col gap-2" style={{ borderColor: C.cream }}>
-                <div className="flex items-center gap-2">
-                  <span className="text-base leading-none" style={{ color: C.coral }}>✦</span>
-                  <span className="font-semibold text-sm" style={{ color: C.charcoal }}>{item.title}</span>
+            {filtered.length > 0 ? (
+              filtered.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-white rounded-xl border shadow-sm px-4 pt-3 pb-3 flex flex-col gap-2"
+                  style={{ borderColor: C.cream }}
+                >
+                  <div className="flex items-center gap-2">
+                    {item.progress === "Achieved" ? (
+                      <CheckCircle
+                        className="w-4 h-4 flex-shrink-0"
+                        style={{ color: C.coral }}
+                      />
+                    ) : (
+                      <span
+                        className="text-base leading-none"
+                        style={{ color: C.coral }}
+                      >
+                        ✦
+                      </span>
+                    )}
+
+                    <span
+                      className="font-semibold text-sm"
+                      style={{
+                        color:
+                          item.progress === "Achieved"
+                            ? C.muted
+                            : C.charcoal,
+                        textDecoration:
+                          item.progress === "Achieved"
+                            ? "line-through"
+                            : "none",
+                      }}
+                    >
+                      {item.title || "Untitled Dream"}
+                    </span>
+                  </div>
+
+                  <textarea
+                    rows={2}
+                    placeholder="Add update..."
+                    value={updateTexts[item.id] || ""}
+                    onChange={(e) =>
+                      setUpdateTexts((prev: any) => ({
+                        ...prev,
+                        [item.id]: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-lg border px-3 py-2 text-xs resize-none outline-none"
+                    style={{
+                      borderColor: C.cream,
+                      background: C.pageBg,
+                      color: C.charcoal,
+                    }}
+                  />
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={() => handleAddUpdate(item.id)}
+                      className="flex items-center gap-1 h-7 px-3 rounded-full bg-white border text-[11px] font-semibold"
+                      style={{ borderColor: C.cream, color: C.stone }}
+                    >
+                      <svg
+                        width="11"
+                        height="11"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        className="inline-block"
+                      >
+                        <rect
+                          x="3"
+                          y="3"
+                          width="18"
+                          height="18"
+                          rx="3"
+                          fill="currentColor"
+                          opacity="0.2"
+                        />
+                        <path
+                          d="M12 8v8M8 12h8"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      Add progress
+                    </button>
+
+                    <PillSelect
+                      value={item.progress}
+                      options={PROGRESS_OPTIONS}
+                      onChange={(val: string) =>
+                        handleProgressChange(item.id, val)
+                      }
+                      styleFn={getProgressStyle}
+                    />
+
+                    <PillSelect
+                      value={item.category}
+                      options={CATEGORY_OPTIONS}
+                      onChange={(val: string) =>
+                        handleCategoryChange(item.id, val)
+                      }
+                      styleFn={() => ({
+                        background: "#fff",
+                        color: C.stone,
+                        border: `1px solid ${C.cream}`,
+                      })}
+                    />
+                  </div>
                 </div>
-                <textarea rows={2} placeholder="Add update..." value={updateTexts[item.id]||""} onChange={e => setUpdateTexts((p: any) => ({...p,[item.id]:e.target.value}))}
-                  className="w-full rounded-lg border px-3 py-2 text-xs resize-none outline-none" style={{ borderColor: C.cream, background: C.pageBg, color: C.charcoal }}/>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button onClick={() => { if (updateTexts[item.id]?.trim()) { showToast("Update added!", "success"); setUpdateTexts((p: any) => ({...p,[item.id]:""})); }}}
-                    className="flex items-center gap-1 h-7 px-3 rounded-full bg-white border text-[11px] font-semibold" style={{ borderColor: C.cream, color: C.stone }}>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" className="inline-block"><rect x="3" y="3" width="18" height="18" rx="3" fill="currentColor" opacity="0.2"/><path d="M12 8v8M8 12h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg> Add
-                  </button>
-                  <PillSelect value={item.progress} options={PROGRESS_OPTIONS} onChange={(val: string) => handleProgressChange(item.id, val)} styleFn={getProgressStyle}/>
-                  <PillSelect value={item.category} options={CATEGORY_OPTIONS} onChange={(val: string) => handleCategoryChange(item.id, val)} styleFn={() => ({ background: "#fff", color: C.stone, border: `1px solid ${C.cream}` })}/>
-                </div>
-              </div>
-            )) : (
+              ))
+            ) : (
               <div className="flex flex-col items-center justify-center py-10 mt-2">
-                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-3" style={{ stroke: C.cream }}>
-                  <path d="m12 3-1.9 5.8a2 2 0 0 1-1.275 1.275L3 12l5.8 1.9a2 2 0 0 1 1.275 1.275L12 21l1.9-5.8a2 2 0 0 1 1.275-1.275L21 12l-5.8-1.9a2 2 0 0 1-1.275-1.275L12 3Z"/>
+                <svg
+                  width="44"
+                  height="44"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="mb-3"
+                  style={{ stroke: C.cream }}
+                >
+                  <path d="m12 3-1.9 5.8a2 2 0 0 1-1.275 1.275L3 12l5.8 1.9a2 2 0 0 1 1.275 1.275L12 21l1.9-5.8a2 2 0 0 1 1.275-1.275L21 12l-5.8-1.9a2 2 0 0 1-1.275-1.275L12 3Z" />
                 </svg>
-                <p className="text-[15px] font-medium mb-4" style={{ color: C.stone }}>No bucket list items matching filters</p>
-                <button onClick={() => navigate("/bucket-list")} 
-                  className="bg-white border text-[#333] font-semibold text-[14px] px-5 py-2 rounded-lg shadow-sm transition-colors" style={{ borderColor: C.cream }}
-                  onMouseEnter={e => (e.currentTarget.style.background = C.pageBg)} onMouseLeave={e => (e.currentTarget.style.background = "#fff")}>
+
+                <p
+                  className="text-[15px] font-medium mb-4"
+                  style={{ color: C.stone }}
+                >
+                  No bucket list items matching filters
+                </p>
+
+                <button
+                  onClick={() => navigate("/bucket-list")}
+                  className="bg-white border font-semibold text-[14px] px-5 py-2 rounded-lg shadow-sm transition-colors"
+                  style={{
+                    borderColor: C.cream,
+                    color: C.charcoal,
+                  }}
+                >
                   Create Your First Dream
                 </button>
               </div>
@@ -1052,7 +1502,6 @@ const BucketListProgress = ({ token, showToast }: { token?: string, showToast: (
     </>
   );
 };
-
 // ─── PastJournalRow ───────────────────────────────────────────────────────────
 const PastJournalRow = ({ journal, token, onDelete, onEdit, showToast }: { journal: PastJournal; token?: string; onDelete: (id: number) => void; onEdit: (id: number) => void; showToast: (msg: string, type?: "success"| "error") => void }) => {
   const [expanded, setExpanded] = useState(false);
@@ -1442,6 +1891,33 @@ const DailyJournal = () => {
           const hRes = await fetch(`${API_BASE_URL}/habits?date=${d}`, { headers: { Authorization: `Bearer ${getToken(token)}` } });
           if (hRes.ok) { const hData = await hRes.json(); fetchedHabits = Array.isArray(hData) ? hData : (hData.data ?? []); }
         } catch {}
+        const weekHabitHistory: Record<string, boolean[]> = {};
+        try {
+          const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+          const today = new Date(); today.setHours(0,0,0,0);
+          const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+          await Promise.all(weekDates.map(async (date, dayIdx) => {
+            const normalizedDate = new Date(date); normalizedDate.setHours(0,0,0,0);
+            if (normalizedDate > today) return;
+            const dateKey = format(date, "yyyy-MM-dd");
+            const res = await fetch(`${LIFE_API}/user_journals/0?date=${dateKey}&journal_type=daily`, { headers: { Authorization: `Bearer ${getToken(token)}` } });
+            if (!res.ok) return;
+            const data = await res.json();
+            const journal = Array.isArray(data) ? (data.length > 0 ? data[0] : null) : (data?.user_journal ?? data);
+            const savedHabits = journal?.habits_snapshot || [];
+            savedHabits.forEach((habit: any) => {
+              const key = habitKey(habit);
+              if (!key || !habit.completed) return;
+              weekHabitHistory[key] = weekHabitHistory[key] || [];
+              weekHabitHistory[key][dayIdx] = true;
+            });
+          }));
+        } catch {}
+        const mergeWeekHistory = (habit: any) => {
+          const fetchedHistory = habit.week_history || habit.weekly_completion || [];
+          const completedHistory = weekHabitHistory[habitKey(habit)] || [];
+          return Array.from({ length: 7 }, (_, i) => Boolean(fetchedHistory[i] || completedHistory[i]));
+        };
         if (!isMounted) return;
         if (existingJournal) {
           setJournalId(existingJournal.id); 
@@ -1457,17 +1933,41 @@ const DailyJournal = () => {
           setSelectedAreas(existingJournal.data?.selected_life_areas || []);
           const savedHabits = existingJournal.habits_snapshot || [];
           setHabitsSnapshot(savedHabits.map((sh: any) => {
-            const match = fetchedHabits.find(ah => (ah.id || ah.habit_id) === sh.habit_id);
-            return { ...sh, frequency: match?.frequency || match?.repeat_type || "Daily", category: match?.category || match?.habit_category || "Other", week_history: match?.week_history || match?.weekly_completion || [] };
+            const match = fetchedHabits.find(ah => habitKey(ah) === habitKey(sh));
+            return { ...sh, frequency: match?.frequency || match?.repeat_type || "Daily", category: match?.category || match?.habit_category || "Other", week_history: mergeWeekHistory({ ...match, ...sh }) };
           }));
         } else {
+          let weeklyPlanAchievements: { id: number; title: string; checked: boolean }[] = [];
+          let previousDayPriorityAchievements: { id: number; title: string; checked: boolean }[] = [];
+          try {
+            const weeklyRes = await fetch(`${LIFE_API}/user_journals?journal_type=weekly`, { headers: { Authorization: `Bearer ${getToken(token)}` } });
+            if (weeklyRes.ok) {
+              const weeklyData = await weeklyRes.json();
+              const weeklyJournals = Array.isArray(weeklyData) ? weeklyData : (weeklyData?.user_journals ?? weeklyData?.data ?? []);
+              weeklyPlanAchievements = weeklyPlanPrioritiesForDate(weeklyJournals, selectedDate);
+            }
+          } catch {}
+          try {
+            const previousDate = format(addDays(selectedDate, -1), "yyyy-MM-dd");
+            const previousRes = await fetch(`${LIFE_API}/user_journals/0?date=${previousDate}&journal_type=daily`, { headers: { Authorization: `Bearer ${getToken(token)}` } });
+            if (previousRes.ok) {
+              const previousData = await previousRes.json();
+              const previousJournal = Array.isArray(previousData) ? (previousData.length > 0 ? previousData[0] : null) : (previousData?.user_journal ?? previousData);
+              previousDayPriorityAchievements = tomorrowPrioritiesToAchievements(previousJournal);
+            }
+          } catch {}
+          const suggestedAchievements = mergeSuggestedAchievements(
+            previousDayPriorityAchievements,
+            weeklyPlanAchievements,
+          );
+
           setJournalId(null); 
           setIsEditMode(false); 
           setIsEditingFromPast(false);
           setGratitude(""); setChallenges(""); setDescription("");
-          setEnergy(5); setAlignment(5); setPriorities([""]); setSelectedMoods([]); setAchievements([]);
+          setEnergy(5); setAlignment(5); setPriorities([""]); setSelectedMoods([]); setAchievements(suggestedAchievements);
           setSelectedAreas([]); setSelectedValues([]); setAffirmation("");
-          setHabitsSnapshot(fetchedHabits.map((h: any) => ({ habit_id: h.id || h.habit_id, name: h.name || h.title || "Habit", completed: false, frequency: h.frequency || h.repeat_type || "Daily", category: h.category || h.habit_category || "Other", week_history: h.week_history || h.weekly_completion || [] })));
+          setHabitsSnapshot(fetchedHabits.map((h: any) => ({ habit_id: h.id || h.habit_id, name: h.name || h.title || "Habit", completed: false, frequency: h.frequency || h.repeat_type || "Daily", category: h.category || h.habit_category || "Other", week_history: mergeWeekHistory(h) })));
         }
       } catch (err) { console.error(err); } finally { if (isMounted) setIsLoadingDaily(false); }
     };
@@ -1539,6 +2039,7 @@ const DailyJournal = () => {
       localStorage.setItem(`daily_journal_${dateKey}`, JSON.stringify({ accomplishments: achievements.filter(a => a.title?.trim()).map(a => ({ title: a.title, checked: a.checked })) }));
       if (!isUpdate) setShowFortuneModal(true);
       await fetchPastJournals();
+      setActiveTab("past");
     } catch { showToast("Error saving entry", "error"); } finally { setIsSaving(false); }
   };
 

@@ -30,7 +30,7 @@ const BASE_URL = "https://life-api.lockated.com";
 
 function Leaderboard() {
   const [activeTab, setActiveTab] = useState("Rankings");
-  const tabs = ["Rankings", "Today", "Yesterday"];
+  const tabs = ["Rankings", "Today", "Yesterday", "How Scores Work"];
 
   const [rankingsData, setRankingsData]   = useState({ myStats: null, leaderboard: [] });
   const [todayData, setTodayData]         = useState(null);
@@ -51,6 +51,12 @@ function Leaderboard() {
 
   useEffect(() => {
     const fetchTabData = async () => {
+      if (activeTab === "How Scores Work") {
+        setIsLoading(false);
+        setError(null);
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
 
@@ -257,7 +263,6 @@ function Leaderboard() {
                   No ranking data available.
                 </p>
               )}
-              <PointsCalculation />
             </div>
           )}
 
@@ -270,6 +275,12 @@ function Leaderboard() {
           {activeTab === "Yesterday" && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 rounded-xl text-center w-full">
               <YesterdaySubmissions data={yesterdayData} />
+            </div>
+          )}
+
+          {activeTab === "How Scores Work" && (
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 w-full">
+              <PointsCalculation />
             </div>
           )}
         </div>

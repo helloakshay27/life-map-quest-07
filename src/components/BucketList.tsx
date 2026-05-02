@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { List, LayoutGrid, Sparkles, Plus, Filter, Star, Edit, Trash2 } from "lucide-react";
+import { List, LayoutGrid, Sparkles, Plus, Filter, Star, Edit, Trash2, X } from "lucide-react";
 import { AddDreamDialog } from "@/components/AddDreamDialog";
 import { toast } from "sonner";
 import { getAuthHeaders } from "@/config/api";
@@ -30,7 +30,9 @@ type Category =
   | "Career"
   | "Personal"
   | "Adventure"
-  | "Learning";
+  | "Learning"
+  | "Other";
+
 type Progress =
   | "Dreaming & Ideas"
   | "Planning & Research"
@@ -43,6 +45,8 @@ interface BucketListItem {
   progress: Progress;
   category: string;
   description?: string;
+  core_value_ids?: number[];
+  goal_ids?: number[];
 }
 
 const SAMPLE_DATA: BucketListItem[] = [
@@ -91,11 +95,12 @@ const SAMPLE_DATA: BucketListItem[] = [
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
-  Travel: "bg-[#3b82f6]", // blue
-  Career: "bg-[#a855f7]", // purple
-  Personal: "bg-[#ec4899]", // pink
-  Adventure: "bg-[#f97316]", // orange
-  Learning: "bg-[#14b8a6]", // teal
+  Travel: "#3b82f6",    // blue
+  Career: "#a855f7",    // purple
+  Personal: "#ec4899",  // pink
+  Adventure: "#f97316", // orange
+  Learning: "#14b8a6",  // teal
+  Other: "#6b7280",     // gray
 };
 
 const COLUMNS: {
@@ -130,6 +135,27 @@ const COLUMNS: {
   },
 ];
 
+/** Map frontend Progress label → API status string */
+const toApiStatus = (progress: Progress): string => {
+  switch (progress) {
+    case "Dreaming & Ideas":    return "dreaming";
+    case "Planning & Research": return "planning";
+    case "In Progress":         return "in_progress";
+    case "Achieved":            return "achieved";
+  }
+};
+
+/** Map API status string → frontend Progress label */
+const fromApiStatus = (status: string): Progress => {
+  switch (status) {
+    case "planning":    return "Planning & Research";
+    case "in_progress":
+    case "in progress": return "In Progress";
+    case "achieved":    return "Achieved";
+    default:            return "Dreaming & Ideas";
+  }
+};
+
 export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
   const [items, setItems] = useState<BucketListItem[]>(data);
   const [samplesLoaded, setSamplesLoaded] = useState(false);
@@ -160,6 +186,8 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
               title: string;
               description?: string;
               category: string;
+              core_value_ids?: number[];
+              goal_ids?: number[];
             };
             mappedItems.push({
               id: item.id.toString(),
@@ -167,6 +195,8 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
               description: item.description,
               category: item.category,
               progress: progressLabel,
+              core_value_ids: item.core_value_ids || [],
+              goal_ids: item.goal_ids || [],
             });
           });
         };
@@ -176,12 +206,8 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
         mapCategory(data.in_progress, "In Progress");
         mapCategory(data.achieved, "Achieved");
 
-        // Merge with existing data (e.g., if props provided data), but typically we just overwrite with API data
         setItems(mappedItems);
-
-        if (mappedItems.length > 0) {
-          setSamplesLoaded(true); // Auto-hide 'Load Samples' if we have real API data
-        }
+        if (mappedItems.length > 0) setSamplesLoaded(true);
       } catch (error) {
         console.error("Error fetching dreams:", error);
       }
@@ -209,22 +235,19 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
       ),
     );
 
-    try {
-      const apiStatus =
-        progressLane === "Dreaming & Ideas"
-          ? "dreaming"
-          : progressLane === "Planning & Research"
-            ? "planning"
-            : progressLane === "In Progress"
-              ? "in_progress"
-              : "achieved";
+    // 💡 Early return for sample items
+    if (itemId.startsWith("s")) {
+      toast.success(`Moved to ${progressLane}`);
+      return;
+    }
 
+    try {
       const response = await fetch(
         `https://life-api.lockated.com/dreams/${itemId}/change_status`,
         {
           method: "PATCH",
           headers: getAuthHeaders(),
-          body: JSON.stringify({ status: apiStatus }),
+          body: JSON.stringify({ status: toApiStatus(progressLane) }),
         },
       );
 
@@ -233,7 +256,12 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
     } catch (error) {
       console.error(error);
       toast.error("Failed to sync move to API.");
-      // Rollback logic could be added here
+      // Rollback
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === itemId ? { ...item, progress: itemObj.progress } : item,
+        ),
+      );
     }
   };
 
@@ -246,6 +274,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
     itemToSave: Omit<BucketListItem, "id"> & { id?: string },
   ) => {
     if (itemToSave.id) {
+      // ── EDIT ──────────────────────────────────────────────────────────────
       setItems((prev) =>
         prev.map((item) =>
           item.id === itemToSave.id
@@ -254,22 +283,19 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
         ),
       );
 
-      try {
-        const apiStatus =
-          itemToSave.progress === "Dreaming & Ideas"
-            ? "dreaming"
-            : itemToSave.progress === "Planning & Research"
-              ? "planning"
-              : itemToSave.progress === "In Progress"
-                ? "in_progress"
-                : "achieved";
+      // 💡 Early return for sample items
+      if (itemToSave.id.startsWith("s")) {
+        toast.success("Dream updated successfully!");
+        return;
+      }
 
+      try {
         const response = await fetch(
           `https://life-api.lockated.com/dreams/${itemToSave.id}/change_status`,
           {
             method: "PATCH",
             headers: getAuthHeaders(),
-            body: JSON.stringify({ status: apiStatus }),
+            body: JSON.stringify({ status: toApiStatus(itemToSave.progress) }),
           },
         );
 
@@ -280,21 +306,15 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
         toast.error("Failed to sync status update to API.");
       }
     } else {
+      // ── CREATE ─────────────────────────────────────────────────────────────
       try {
-        const apiStatus =
-          itemToSave.progress === "Dreaming & Ideas"
-            ? "dreaming"
-            : itemToSave.progress === "Planning & Research"
-              ? "planning"
-              : itemToSave.progress === "In Progress"
-                ? "in_progress"
-                : "achieved";
-
         const payload = {
           title: itemToSave.title,
           description: itemToSave.description || "",
           category: itemToSave.category,
-          status: apiStatus,
+          status: toApiStatus(itemToSave.progress),
+          core_value_ids: itemToSave.core_value_ids || [],
+          goal_ids: itemToSave.goal_ids || [],
         };
 
         const response = await fetch("https://life-api.lockated.com/dreams", {
@@ -303,31 +323,22 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
           body: JSON.stringify(payload),
         });
 
-        if (!response.ok) {
-          throw new Error("Failed to create dream");
-        }
+        if (!response.ok) throw new Error("Failed to create dream");
 
         const data = await response.json();
-
-        const frontendStatus =
-          data.status === "dreaming"
-            ? "Dreaming & Ideas"
-            : data.status === "planning"
-              ? "Planning & Research"
-              : data.status === "in_progress" || data.status === "in progress"
-                ? "In Progress"
-                : "Achieved";
 
         const newItem: BucketListItem = {
           id: data.id?.toString() || Math.random().toString(36).substring(2, 9),
           title: data.title || itemToSave.title,
           category: data.category || itemToSave.category,
-          progress: frontendStatus as Progress,
+          progress: fromApiStatus(data.status) || itemToSave.progress,
           description: data.description || itemToSave.description,
+          core_value_ids: data.core_value_ids || itemToSave.core_value_ids || [],
+          goal_ids: data.goal_ids || itemToSave.goal_ids || [],
         };
 
         setItems((prev) => [...prev, newItem]);
-        toast.success("Dream created successfully via API!");
+        toast.success("Dream created successfully!");
       } catch (error) {
         console.error(error);
         toast.error("Failed to create Dream via API. Please try again.");
@@ -336,9 +347,14 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
   };
 
   const handleDelete = async (id: string) => {
-    // Optimistic UI update - remove from state immediately
     const deletedItem = items.find((item) => item.id === id);
     setItems((prev) => prev.filter((item) => item.id !== id));
+
+    // Sample items only exist locally — skip the API call
+    if (id.startsWith("s")) {
+      toast.success("Sample removed!");
+      return;
+    }
 
     try {
       const response = await fetch(
@@ -349,19 +365,12 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
         },
       );
 
-      if (!response.ok) {
-        throw new Error(`Failed to delete dream: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`Failed to delete dream: ${response.status}`);
       toast.success("Dream deleted successfully!");
     } catch (error) {
       console.error("Error deleting dream:", error);
       toast.error("Failed to delete dream. Please try again.");
-      
-      // Rollback: restore the deleted item if API call failed
-      if (deletedItem) {
-        setItems((prev) => [...prev, deletedItem]);
-      }
+      if (deletedItem) setItems((prev) => [...prev, deletedItem]);
     }
   };
 
@@ -371,15 +380,14 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
   );
 
   return (
-    <div className="w-full mx-auto flex flex-col h-full font-sans max-w-[1400px] p-3 sm:p-4"
+    <div
+      className="w-full mx-auto flex flex-col h-full font-sans max-w-[1400px] p-3 sm:p-4"
       style={{ background: "#F6F4EE" }}
     >
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-3 sm:mb-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            Bucket List
-          </h1>
+          <h1 className="text-3xl font-bold text-foreground">Bucket List</h1>
           <p className="text-sm text-muted-foreground">
             Dreams, plans, and achievements
           </p>
@@ -450,6 +458,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
             <option value="Personal">Personal</option>
             <option value="Adventure">Adventure</option>
             <option value="Learning">Learning</option>
+            <option value="Other">Other</option>
           </select>
           <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500">
             <svg
@@ -457,14 +466,13 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
             >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
                 d="M19 9l-7 7-7-7"
-              ></path>
+              />
             </svg>
           </div>
         </div>
@@ -497,9 +505,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
                   <h3 className="font-semibold text-foreground text-sm sm:text-base">
                     {col.title}
                   </h3>
-                  <span
-                    className="rounded-full bg-gray-200 px-2 py-0.5 text-xs sm:text-sm font-medium text-gray-700"
-                  >
+                  <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs sm:text-sm font-medium text-gray-700">
                     {colItems.length}
                   </span>
                 </div>
@@ -517,11 +523,26 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
                           <div
                             draggable
                             onDragStart={(e) => handleDragStart(e, item.id)}
-                            className="bg-white p-2 sm:p-3 rounded-lg shadow-sm border flex flex-col select-none touch-none cursor-pointer transition-all duration-150 hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5"
+                            className="relative group bg-white p-2 sm:p-3 rounded-lg shadow-sm border flex flex-col select-none touch-none cursor-pointer transition-all duration-150 hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5"
                           >
+                            {/* Quick-delete X button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(item.id);
+                              }}
+                              title="Delete dream"
+                              className="absolute top-2 right-2 z-10 p-1 rounded-full bg-white border border-gray-200 text-gray-400 opacity-0 group-hover:opacity-100 hover:!bg-red-50 hover:!border-red-300 hover:!text-red-500 transition-all duration-150 shadow-sm"
+                            >
+                              <X className="w-3 h-3" strokeWidth={2.5} />
+                            </button>
+
                             <div
                               className="w-10 h-10 rounded-lg flex items-center justify-center text-white mb-3 shadow-sm"
-                              style={{ background: CATEGORY_COLORS[item.category] || "#DA7756" }}
+                              style={{
+                                background:
+                                  CATEGORY_COLORS[item.category] || "#DA7756",
+                              }}
                             >
                               <Star className="w-5 h-5 fill-current" />
                             </div>
@@ -544,12 +565,20 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
                     </div>
                   ) : (
                     <div className="flex h-full min-h-48 sm:min-h-56 flex-col items-center justify-center">
-                      <svg className="mb-3 h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground/30 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <svg
+                        className="mb-3 h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground/30 mx-auto"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      >
                         <circle cx="12" cy="12" r="2" fill="currentColor" />
                         <circle cx="12" cy="12" r="6" fill="none" />
                         <circle cx="12" cy="12" r="10" fill="none" />
                       </svg>
-                      <p className="text-center text-xs sm:text-sm text-muted-foreground">No items</p>
+                      <p className="text-center text-xs sm:text-sm text-muted-foreground">
+                        No items
+                      </p>
                     </div>
                   )}
                 </div>
@@ -559,7 +588,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
         </div>
       )}
 
-      {/* List View placeholder if needed */}
+      {/* List View */}
       {viewMode === "list" && (
         <div className="flex-1 flex flex-col">
           {filteredItems.length > 0 ? (
@@ -593,7 +622,8 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-9 h-9 rounded-lg flex items-center justify-center text-white shadow-sm ${CATEGORY_COLORS[item.category] || "bg-[#BBA48B]"}`}
+                            className="w-9 h-9 rounded-lg flex items-center justify-center text-white shadow-sm"
+                            style={{ background: CATEGORY_COLORS[item.category] || "#6b7280" }}
                           >
                             <Star className="w-4.5 h-4.5 fill-current" />
                           </div>
@@ -603,8 +633,7 @@ export default function BucketList({ data = [] }: { data?: BucketListItem[] }) {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-block px-2.5 py-0.5 text-[11px] font-bold text-[#777777] rounded border border-[#E8E4D9] bg-[#FAF9F6] uppercase tracking-wider"
-                        >
+                        <span className="inline-block px-2.5 py-0.5 text-[11px] font-bold text-[#777777] rounded border border-[#E8E4D9] bg-[#FAF9F6] uppercase tracking-wider">
                           {item.category}
                         </span>
                       </td>

@@ -7,6 +7,8 @@ import {
   ChevronDown,
   Loader2,
   ExternalLink,
+  X,
+  GripVertical,
 } from "lucide-react";
 import { startOfWeek, addDays, format } from "date-fns";
 
@@ -57,9 +59,28 @@ const dayTheme: Record<string, any> = {
   },
 };
 
+const CATEGORY_OPTIONS = [
+  { value: "Career", label: "💼 Career" },
+  { value: "Health", label: "💪 Health" },
+  { value: "Relationships", label: "💗 Relationships" },
+  { value: "Personal Growth", label: "🌱 Personal Growth" },
+  { value: "Finance", label: "💰 Finance" },
+];
+
+const QUADRANT_OPTIONS = [
+  { value: "Q1: Urgent & Important", label: "🔴 Q1 - Urgent & Important" },
+  { value: "Q2: Important, Not Urgent", label: "🟢 Q2 - Important, Not Urgent" },
+  { value: "Q3: Urgent, Not Important", label: "🟡 Q3 - Urgent, Not Important" },
+  { value: "Q4: Not Urgent or Important", label: "🔵 Q4 - Not Urgent or Important" },
+];
+
+const isInteractiveDragTarget = (target: EventTarget | null) =>
+  target instanceof HTMLElement &&
+  Boolean(target.closest("input, select, textarea, button, a"));
+
 // --- DYNAMIC WEEK GENERATOR ---
 export const generateEmptyWeekData = (baseDate = new Date()) => {
-  const start = startOfWeek(baseDate, { weekStartsOn: 0 });
+  const start = addDays(startOfWeek(baseDate, { weekStartsOn: 0 }), 7);
   const end = addDays(start, 6);
 
   const title = `Plan for ${format(start, "MMM d")} - ${format(end, "MMM d")}`;
@@ -231,6 +252,11 @@ export default function WeeklyPlanComponent({
   data,
   setData,
 }: WeeklyPlanComponentProps) {
+  const [draggedPriority, setDraggedPriority] = useState<{
+    dayId: string;
+    priorityId: number;
+  } | null>(null);
+
   const handleThemeChange = (dayId: string, newTheme: string) => {
     setData((prev: any) => ({
       ...prev,
@@ -261,6 +287,99 @@ export default function WeeklyPlanComponent({
     }));
   };
 
+  const handlePriorityFieldChange = (
+    dayId: string,
+    priorityId: number,
+    field: "category" | "quadrant",
+    value: string,
+  ) => {
+    setData((prev: any) => ({
+      ...prev,
+      days: prev.days.map((d: any) => {
+        if (d.id !== dayId) return d;
+
+        return {
+          ...d,
+          priorities: d.priorities.map((p: any) =>
+            p.id === priorityId ? { ...p, [field]: value } : p,
+          ),
+        };
+      }),
+    }));
+  };
+
+  const removePriority = (dayId: string, priorityId: number) => {
+    setData((prev: any) => ({
+      ...prev,
+      days: prev.days.map((d: any) =>
+        d.id === dayId
+          ? {
+              ...d,
+              priorities: d.priorities.filter((p: any) => p.id !== priorityId),
+            }
+          : d,
+      ),
+    }));
+  };
+
+  const handlePriorityDragStart = (
+    event: React.DragEvent<HTMLDivElement>,
+    dayId: string,
+    priorityId: number,
+  ) => {
+    if (isInteractiveDragTarget(event.target)) {
+      event.preventDefault();
+      return;
+    }
+
+    setDraggedPriority({ dayId, priorityId });
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", `${dayId}:${priorityId}`);
+  };
+
+  const movePriority = (targetDayId: string, targetIndex?: number) => {
+    if (!draggedPriority) return;
+
+    setData((prev: any) => {
+      const sourceDay = prev.days.find((d: any) => d.id === draggedPriority.dayId);
+      const movingPriority = sourceDay?.priorities.find(
+        (p: any) => p.id === draggedPriority.priorityId,
+      );
+
+      if (!movingPriority) return prev;
+
+      const targetDay = prev.days.find((d: any) => d.id === targetDayId);
+      const nextDayAssign = targetDay?.day ?? movingPriority.dayAssign;
+
+      return {
+        ...prev,
+        days: prev.days.map((d: any) => {
+          const withoutDragged = d.priorities.filter(
+            (p: any) => p.id !== draggedPriority.priorityId,
+          );
+
+          if (d.id !== targetDayId) {
+            return { ...d, priorities: withoutDragged };
+          }
+
+          const insertAt =
+            typeof targetIndex === "number"
+              ? Math.min(Math.max(targetIndex, 0), withoutDragged.length)
+              : withoutDragged.length;
+          const nextPriorities = [...withoutDragged];
+          nextPriorities.splice(insertAt, 0, {
+            ...movingPriority,
+            dayAssign: nextDayAssign,
+          });
+
+          return { ...d, priorities: nextPriorities };
+        }),
+      };
+    });
+
+    setDraggedPriority(null);
+  };
+
   const addPriority = (dayId: string) => {
     setData((prev: any) => ({
       ...prev,
@@ -273,7 +392,7 @@ export default function WeeklyPlanComponent({
               {
                 id: Date.now(),
                 dayAssign: d.day,
-                category: "📌 New Category",
+                category: "Career",
                 quadrant: "Q2: Important, Not Urgent",
                 text: "",
               },
@@ -345,33 +464,107 @@ export default function WeeklyPlanComponent({
                 <div className="flex justify-center">
                   {!hasPriorities ? (
                     <div
-                      className={`w-full border-2 border-dashed rounded-xl py-4 text-center text-[13px] font-medium ${themeColor.dashed} ${themeColor.text} ${themeColor.bg}`}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        movePriority(dayObj.id);
+                      }}
+                      className={`w-full border-2 border-dashed rounded-xl py-4 text-center text-[13px] font-medium transition-colors ${themeColor.dashed} ${themeColor.text} ${themeColor.bg}`}
                     >
                       No priorities for this day yet. Click + above to add one.
                     </div>
                   ) : (
-                    <div className={`w-full border rounded-xl p-4 ${themeColor.border} ${themeColor.bg}`}>
-                      {dayObj.priorities.map((priority: any) => (
-                        <div key={priority.id} className="flex flex-col gap-3 mt-2">
-                          <div className="flex items-center gap-2">
+                    <div
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        movePriority(dayObj.id);
+                      }}
+                      className={`w-full border rounded-xl p-4 ${themeColor.border} ${themeColor.bg}`}
+                    >
+                      {dayObj.priorities.map((priority: any, priorityIndex: number) => (
+                        <div
+                          key={priority.id}
+                          draggable
+                          onDragStart={(e) =>
+                            handlePriorityDragStart(e, dayObj.id, priority.id)
+                          }
+                          onDragEnd={() => setDraggedPriority(null)}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            movePriority(dayObj.id, priorityIndex);
+                          }}
+                          className="flex flex-col gap-3 mt-2 rounded-xl border bg-white/70 p-3 shadow-sm cursor-grab active:cursor-grabbing"
+                          style={{ borderColor: "rgba(214,185,157,0.55)" }}
+                        >
+                          <div className="flex items-center gap-2 flex-wrap">
                             <div
-                              className={`flex items-center gap-1 bg-white border rounded-lg px-3 py-1.5 text-[13px] font-medium ${themeColor.border} ${themeColor.text} cursor-pointer`}
+                              className="flex h-8 w-8 items-center justify-center rounded-lg border bg-white cursor-grab active:cursor-grabbing transition-colors"
+                              style={{ borderColor: "#D6B99D", color: "#888780" }}
+                              title="Drag priority"
+                            >
+                              <GripVertical className="w-4 h-4" />
+                            </div>
+
+                            <div
+                              className={`flex items-center gap-1 bg-white border rounded-lg px-3 py-1.5 text-[13px] font-medium ${themeColor.border} ${themeColor.text}`}
                             >
                               {priority.dayAssign}
-                              <ChevronDown className="w-3.5 h-3.5 opacity-70" />
                             </div>
-                            <div
-                              className={`flex items-center gap-2 bg-white border rounded-lg px-3 py-1.5 text-[13px] font-medium ${themeColor.border} text-[#2C2C2A] cursor-pointer`}
+
+                            <div className="relative">
+                              <select
+                                value={
+                                  CATEGORY_OPTIONS.some((option) => option.value === priority.category)
+                                    ? priority.category
+                                    : "Career"
+                                }
+                                onChange={(e) =>
+                                  handlePriorityFieldChange(dayObj.id, priority.id, "category", e.target.value)
+                                }
+                                className={`appearance-none min-w-[170px] bg-white border rounded-lg pl-3 pr-8 py-1.5 text-[13px] font-medium ${themeColor.border} text-[#2C2C2A] cursor-pointer outline-none focus:ring-1 focus:ring-[#DA7756]/30`}
+                              >
+                                {CATEGORY_OPTIONS.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#888780]" />
+                            </div>
+
+                            <div className="relative">
+                              <select
+                                value={
+                                  QUADRANT_OPTIONS.some((option) => option.value === priority.quadrant)
+                                    ? priority.quadrant
+                                    : "Q2: Important, Not Urgent"
+                                }
+                                onChange={(e) =>
+                                  handlePriorityFieldChange(dayObj.id, priority.id, "quadrant", e.target.value)
+                                }
+                                className={`appearance-none min-w-[230px] bg-white border rounded-lg pl-3 pr-8 py-1.5 text-[13px] font-bold ${themeColor.border} text-[#DA7756] cursor-pointer outline-none focus:ring-1 focus:ring-[#DA7756]/30`}
+                              >
+                                {QUADRANT_OPTIONS.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#DA7756]" />
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => removePriority(dayObj.id, priority.id)}
+                              className="ml-auto flex h-8 w-8 items-center justify-center rounded-lg border bg-white transition-colors hover:bg-[#FEF4EE]"
+                              style={{ borderColor: "#D6B99D", color: "#A32D2D" }}
+                              aria-label="Remove priority"
                             >
-                              {priority.category}
-                              <ChevronDown className="w-3.5 h-3.5 text-[#888780]" />
-                            </div>
-                            <div
-                              className={`flex items-center gap-1 bg-white border rounded-lg px-3 py-1.5 text-[13px] font-bold ${themeColor.border} text-[#DA7756] cursor-pointer`}
-                            >
-                              {priority.quadrant}
-                              <ChevronDown className="w-3.5 h-3.5 opacity-70" />
-                            </div>
+                              <X className="w-4 h-4" />
+                            </button>
                           </div>
                           <input
                             type="text"
