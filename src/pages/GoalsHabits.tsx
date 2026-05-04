@@ -12,6 +12,11 @@ import {
   LayoutGrid,
   Link as LinkIcon,
   Loader2,
+  CalendarDays,
+  Check,
+  ChevronDown,
+  Trash2,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -124,6 +129,9 @@ interface Habit {
   custom_interval?: number | string;
   custom_unit?: string;
   repeat_unit?: string;
+  completed?: boolean;
+  week_history?: boolean[];
+  weekly_completion?: boolean[];
 }
 interface CoreValue {
   id: number;
@@ -145,6 +153,35 @@ const WEEKDAY_OPTIONS = [
 ];
 
 const CUSTOM_UNITS = ["days", "weeks", "months"];
+
+const CATEGORY_OPTIONS = [
+  { value: "career", icon: "\uD83D\uDCBC", label: "Career" },
+  { value: "health", icon: "\uD83D\uDCAA", label: "Health" },
+  { value: "relationships", icon: "\uD83D\uDC96", label: "Relationships" },
+  { value: "personal", icon: "\uD83C\uDF31", label: "Personal Growth" },
+  { value: "finance", icon: "\uD83D\uDCB0", label: "Finance" },
+];
+
+const HABIT_CATEGORY_OPTIONS = [
+  { value: "Personal", icon: "\u2728", label: "Personal" },
+  { value: "Travel", icon: "\u2708\uFE0F", label: "Travel" },
+  { value: "Career", icon: "\uD83D\uDCBC", label: "Career" },
+  { value: "Adventure", icon: "\uD83E\uDDD7", label: "Adventure" },
+  { value: "Learning", icon: "\uD83D\uDCDA", label: "Learning" },
+];
+
+const getHabitCategoryValue = (category?: string) =>
+  HABIT_CATEGORY_OPTIONS.find((option) => option.value === category)?.value ??
+  HABIT_CATEGORY_OPTIONS.find(
+    (option) => option.value.toLowerCase() === category?.toLowerCase(),
+  )?.value ??
+  "Personal";
+
+const getHabitCategoryLabel = (category?: string) => {
+  const value = getHabitCategoryValue(category);
+  const option = HABIT_CATEGORY_OPTIONS.find((item) => item.value === value);
+  return option ? `${option.icon} ${option.label}` : "✨ Personal";
+};
 
 const normalizeWeekday = (day: string) => day.toLowerCase();
 
@@ -207,7 +244,7 @@ const buildGoalPayload = (p: {
   goal: {
     title: p.title,
     description: p.description || "",
-    category: p.category && p.category.trim() !== "" ? p.category : "other",
+    category: p.category && p.category.trim() !== "" ? p.category : "career",
     status: toApiStatus(p.status),
     priority: "high",
     progress: p.progress || 0,
@@ -381,7 +418,7 @@ const GoalsHabits = () => {
   const [habitDescription, setHabitDescription] = useState("");
   const [habitFrequency, setHabitFrequency] =
     useState<Habit["frequency"]>("daily");
-  const [habitCategory, setHabitCategory] = useState("");
+  const [habitCategory, setHabitCategory] = useState("Personal");
   const [habitTime, setHabitTime] = useState("");
   const [habitPlace, setHabitPlace] = useState("");
   const [habitStartDate, setHabitStartDate] = useState("");
@@ -390,6 +427,9 @@ const GoalsHabits = () => {
   const [habitMonthDay, setHabitMonthDay] = useState("");
   const [habitCustomEvery, setHabitCustomEvery] = useState("1");
   const [habitCustomUnit, setHabitCustomUnit] = useState("days");
+  const [expandedHabitId, setExpandedHabitId] = useState<string | number | null>(
+    null,
+  );
   const [editingHabitId, setEditingHabitId] = useState<string | number | null>(
     null,
   );
@@ -594,7 +634,7 @@ const GoalsHabits = () => {
     setHabitName("");
     setHabitDescription("");
     setHabitFrequency("daily");
-    setHabitCategory("");
+    setHabitCategory("Personal");
     setHabitTime("");
     setHabitPlace("");
     setHabitStartDate("");
@@ -1371,7 +1411,7 @@ const GoalsHabits = () => {
           name: habitName,
           frequency: habitFrequency || "daily",
           description: habitDescription,
-          category: habitCategory,
+          category: getHabitCategoryValue(habitCategory),
           time: habitTime,
           place: habitPlace,
           start_date: habitStartDate,
@@ -1451,7 +1491,7 @@ const GoalsHabits = () => {
           name: habitName,
           frequency: habitFrequency,
           description: habitDescription,
-          category: habitCategory,
+          category: getHabitCategoryValue(habitCategory),
           time: habitTime,
           place: habitPlace,
           start_date: habitStartDate,
@@ -1510,7 +1550,7 @@ const GoalsHabits = () => {
     setHabitName(habit.name);
     setHabitDescription(habit.description || "");
     setHabitFrequency(habit.frequency || "daily");
-    setHabitCategory(habit.category || "");
+    setHabitCategory(getHabitCategoryValue(habit.category));
     setHabitTime(habit.time || "");
     setHabitPlace(habit.place || "");
     setHabitStartDate(habit.start_date || habit.startDate || "");
@@ -1606,13 +1646,107 @@ const GoalsHabits = () => {
         g.status === s &&
         (selectedArea === "all-areas" || g.area === selectedArea),
     );
+
+  const today = new Date();
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - today.getDay());
+  const weekDates = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(weekStart);
+    date.setDate(weekStart.getDate() + index);
+    return date;
+  });
+  const currentMonthDates = Array.from(
+    { length: monthEnd.getDate() },
+    (_, index) => new Date(today.getFullYear(), today.getMonth(), index + 1),
+  );
+  const monthGridDates = [
+    ...Array.from({ length: monthStart.getDay() }, () => null),
+    ...currentMonthDates,
+  ];
+
+  const isSameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  const parseDateOnly = (value?: string) => {
+    if (!value) return null;
+    const [year, month, day] = value.split("-").map(Number);
+    if (!year || !month || !day) return null;
+    return new Date(year, month - 1, day);
+  };
+
+  const isHabitScheduledOnDate = (habit: Habit, date: Date) => {
+    const startDate = parseDateOnly(habit.start_date || habit.startDate);
+    if (startDate && date < startDate) return false;
+
+    const frequency = habit.frequency || "daily";
+    if (frequency === "daily") return true;
+
+    if (frequency === "weekly") {
+      const weekdays = getHabitWeekdays(habit);
+      return weekdays.includes(WEEKDAY_OPTIONS[date.getDay()].value);
+    }
+
+    if (frequency === "monthly") {
+      return Number(habit.day_of_month || habit.monthly_day) === date.getDate();
+    }
+
+    const interval = Number(habit.custom_every || habit.custom_interval || 1);
+    const unit = habit.custom_unit || habit.repeat_unit || "days";
+    const anchor = startDate || monthStart;
+    const dayDiff = Math.floor(
+      (date.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    if (dayDiff < 0) return false;
+    if (unit === "weeks") return dayDiff % (interval * 7) === 0;
+    if (unit === "months") {
+      const monthDiff =
+        (date.getFullYear() - anchor.getFullYear()) * 12 +
+        date.getMonth() -
+        anchor.getMonth();
+      return monthDiff % interval === 0 && date.getDate() === anchor.getDate();
+    }
+    return dayDiff % interval === 0;
+  };
+
+  const getHabitCompletedForDate = (habit: Habit, date: Date) => {
+    const history = habit.week_history || habit.weekly_completion || [];
+    const weekIndex = weekDates.findIndex((weekDate) => isSameDay(weekDate, date));
+    if (weekIndex >= 0) return Boolean(history[weekIndex]);
+    if (isSameDay(date, today)) return Boolean(habit.completed);
+    return false;
+  };
+
+  const getHabitTrackerStats = (habit: Habit) => {
+    const scheduledToToday = currentMonthDates.filter(
+      (date) => date <= today && isHabitScheduledOnDate(habit, date),
+    );
+    const completed = scheduledToToday.filter((date) =>
+      getHabitCompletedForDate(habit, date),
+    ).length;
+    const missed = scheduledToToday.length - completed;
+    const percent = scheduledToToday.length
+      ? Math.round((completed / scheduledToToday.length) * 100)
+      : 0;
+    return { completed, missed, total: scheduledToToday.length, percent };
+  };
+
+  const getHabitEncouragement = (percent: number) => {
+    if (percent >= 70) return "Good work!";
+    if (percent > 0) return "Keep going!";
+    return "Start with one small win.";
+  };
+
   const areaLabels: Record<string, string> = {
     "all-areas": "Create Your First Goal",
-    health: "Create Your Health & Fitness Goal",
     career: "Create Your Career Goal",
-    personal: "Create Your Personal Growth Goal",
+    health: "Create Your Health Goal",
     relationships: "Create Your Relationships Goal",
-    financial: "Create Your Financial Goal",
+    personal: "Create Your Personal Growth Goal",
+    finance: "Create Your Finance Goal",
   };
   const footerConfig = {
     goals: {
@@ -1721,11 +1855,11 @@ const GoalsHabits = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all-areas">All Areas</SelectItem>
-                <SelectItem value="health">💪 Health &amp; Fitness</SelectItem>
-                <SelectItem value="career">💼 Career</SelectItem>
-                <SelectItem value="personal">🌱 Personal Growth</SelectItem>
-                <SelectItem value="relationships">❤️ Relationships</SelectItem>
-                <SelectItem value="financial">💰 Financial</SelectItem>
+                {CATEGORY_OPTIONS.map((category) => (
+                  <SelectItem key={category.value} value={category.value}>
+                    {category.icon} {category.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <div className="flex items-center gap-1 sm:gap-2">
@@ -2099,10 +2233,10 @@ const GoalsHabits = () => {
 
         {/* ── HABITS TAB ── */}
         <TabsContent value="habits" className="space-y-4">
-          <Card className="border-l-4 border-teal-400 bg-teal-50 p-3 sm:p-4">
-            <p className="text-xs sm:text-sm text-foreground">
-              <strong>Building Lasting Habits:</strong> Start small and be
-              consistent. Track completion to build streaks.
+          <Card className="rounded-lg border border-[#D6B99D] bg-[#FEF4EE] p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-[#2C2C2A]">
+              <strong>Tip:</strong> Track your habits in Daily Journal and
+              Weekly Journal. This page shows your monthly progress.
             </p>
           </Card>
           <div className="space-y-3">
@@ -2123,7 +2257,11 @@ const GoalsHabits = () => {
               </Button>
             </div>
             <div
-              className={`rounded-lg border-2 border-dashed border-gray-300 p-4 ${habits.length === 0 ? "flex flex-col items-center justify-center py-16" : ""}`}
+              className={
+                habits.length === 0
+                  ? "flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-4 py-16"
+                  : ""
+              }
             >
               {habitsLoading ? (
                 <div className="flex justify-center py-8">
@@ -2137,28 +2275,226 @@ const GoalsHabits = () => {
                   </p>
                 </>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="space-y-5">
                   {habits.map((h) => (
                     <Card
                       key={h.id}
-                      className="p-3 sm:p-4 relative group bg-teal-50 border-teal-200"
+                      className="overflow-hidden rounded-xl border border-[#D6B99D] bg-white p-4 shadow-sm"
                     >
-                      <p className="font-semibold text-sm text-foreground pr-16">
-                        {h.name}
-                      </p>
-                      <p className="text-xs text-teal-600 mt-1 capitalize">
-                        ⚡ {h.frequency}
-                      </p>
-                      <p className="text-xs text-gray-600 mt-1">
-                        {getHabitScheduleLabel(h)}
-                      </p>
-                      {h.time && (
-                        <p className="text-xs text-gray-600 mt-1">
-                          🕐 {h.time}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="truncate text-lg font-bold text-[#2C2C2A]">
+                              {h.name}
+                            </h3>
+                            <span className="rounded-md border border-[#DA7756]/40 bg-[#DA7756]/10 px-2.5 py-0.5 text-xs font-semibold text-[#C96B4D]">
+                              {getHabitCategoryLabel(h.category)}
+                            </span>
+                          </div>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <span className="inline-flex items-center gap-1 rounded-md border border-[#D6B99D] bg-[#FEF4EE] px-2.5 py-1 text-xs font-semibold text-[#2C2C2A]">
+                              <CalendarDays className="h-3.5 w-3.5 text-[#DA7756]" />
+                              {getHabitScheduleLabel(h)}
+                            </span>
+                            {h.time && (
+                              <span className="inline-flex items-center gap-1 rounded-md border border-[#D6B99D] bg-white px-2.5 py-1 text-xs font-semibold text-[#2C2C2A]">
+                                <Clock className="h-3.5 w-3.5 text-[#DA7756]" />
+                                {h.time}
+                              </span>
+                            )}
+                            {h.place && (
+                              <span className="inline-flex items-center gap-1 rounded-md border border-[#D6B99D] bg-white px-2.5 py-1 text-xs font-semibold text-[#2C2C2A]">
+                                <MapPin className="h-3.5 w-3.5 text-[#DA7756]" />
+                                {h.place}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedHabitId(
+                                String(expandedHabitId) === String(h.id) ? null : h.id,
+                              )
+                            }
+                            className="rounded-md bg-[#FEF4EE] p-2 text-[#2C2C2A] transition-colors hover:bg-[#DA7756]/10"
+                            aria-label="Toggle habit calendar"
+                          >
+                            <ChevronDown
+                              className={`h-4 w-4 transition-transform ${
+                                String(expandedHabitId) === String(h.id)
+                                  ? "rotate-180"
+                                  : ""
+                              }`}
+                            />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openEditHabit(h)}
+                            className="rounded-md p-2 text-[#2C2C2A] transition-colors hover:bg-[#DA7756]/10 hover:text-[#C96B4D]"
+                            aria-label="Edit habit"
+                          >
+                            <svg
+                              className="h-4 w-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteHabit(h.id)}
+                            className="rounded-md p-2 text-[#A32D2D] transition-colors hover:bg-[#A32D2D]/10"
+                            aria-label="Delete habit"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mt-4">
+                        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-[#2C2C2A]">
+                            This Month
+                          </p>
+                          <div className="flex flex-wrap items-center gap-3 text-sm font-semibold">
+                            <span className="inline-flex items-center gap-1 text-[#0B5D41]">
+                              <Check className="h-4 w-4" />
+                              {getHabitTrackerStats(h).completed}/
+                              {getHabitTrackerStats(h).total}
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-[#A32D2D]">
+                              <X className="h-4 w-4" />
+                              {getHabitTrackerStats(h).missed} missed
+                            </span>
+                            <span className="rounded-full bg-[#DA7756]/15 px-2.5 py-1 text-xs font-bold text-[#C96B4D]">
+                              {getHabitTrackerStats(h).percent}%
+                            </span>
+                          </div>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-[#D6B99D]/45">
+                          <div
+                            className="h-full rounded-full bg-[#DA7756] transition-all"
+                            style={{
+                              width: `${getHabitTrackerStats(h).percent}%`,
+                            }}
+                          />
+                        </div>
+                        <p className="mt-2 text-xs italic text-[#2C2C2A]">
+                          {getHabitEncouragement(getHabitTrackerStats(h).percent)}
                         </p>
+                      </div>
+
+                      <div className="mt-4 border-t border-[#D6B99D]/60 pt-3">
+                        <p className="mb-2 text-sm font-semibold text-[#2C2C2A]">
+                          This Week
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {weekDates.map((date, index) => {
+                            const scheduled = isHabitScheduledOnDate(h, date);
+                            const completed = getHabitCompletedForDate(h, date);
+                            const missed =
+                              scheduled && date < today && !completed;
+                            const isToday = isSameDay(date, today);
+                            const label = WEEKDAY_OPTIONS[index].label;
+
+                            return (
+                              <div key={date.toISOString()} className="text-center">
+                                <p className="mb-1 text-[10px] font-bold text-[#888780]">
+                                  {label[0]}
+                                </p>
+                                <div
+                                  className={`flex h-8 w-8 items-center justify-center rounded-md border text-xs font-bold ${
+                                    completed
+                                      ? "border-[#DA7756] bg-[#DA7756] text-white"
+                                      : missed
+                                        ? "border-[#A32D2D]/40 bg-[#A32D2D]/10 text-[#A32D2D]"
+                                        : isToday
+                                          ? "border-[#DA7756] bg-white text-[#C96B4D]"
+                                          : scheduled
+                                            ? "border-[#D6B99D] bg-[#FEF4EE] text-[#2C2C2A]"
+                                            : "border-gray-200 bg-gray-50 text-gray-300"
+                                  }`}
+                                >
+                                  {completed ? <Check className="h-4 w-4" /> : date.getDate()}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {String(expandedHabitId) === String(h.id) && (
+                        <div className="mt-4 rounded-lg bg-[#FEF4EE]/60 p-3">
+                          <div className="mb-4 flex items-center justify-center">
+                            <p className="text-sm font-bold text-[#2C2C2A]">
+                              {today.toLocaleString("default", {
+                                month: "long",
+                                year: "numeric",
+                              })}
+                            </p>
+                          </div>
+                          <div className="grid grid-cols-7 gap-1.5 text-center">
+                            {WEEKDAY_OPTIONS.map((day) => (
+                              <p
+                                key={day.value}
+                                className="py-1 text-xs font-bold text-[#888780]"
+                              >
+                                {day.label[0]}
+                              </p>
+                            ))}
+                            {monthGridDates.map((date, index) => {
+                              if (!date) return <div key={`blank-${index}`} />;
+                              const scheduled = isHabitScheduledOnDate(h, date);
+                              const completed = getHabitCompletedForDate(h, date);
+                              const missed =
+                                scheduled && date < today && !completed;
+                              const isToday = isSameDay(date, today);
+
+                              return (
+                                <div
+                                  key={date.toISOString()}
+                                  className={`flex aspect-square min-h-10 items-center justify-center rounded-md border text-xs font-bold ${
+                                    completed
+                                      ? "border-[#DA7756] bg-[#DA7756] text-white"
+                                      : missed
+                                        ? "border-[#A32D2D]/35 bg-white text-[#A32D2D]"
+                                        : isToday
+                                          ? "border-[#DA7756] bg-white text-[#C96B4D]"
+                                          : scheduled
+                                            ? "border-[#D6B99D] bg-white text-[#2C2C2A]"
+                                            : "border-transparent bg-white/40 text-[#888780]/45"
+                                  }`}
+                                >
+                                  {completed ? <Check className="h-4 w-4" /> : date.getDate()}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="mt-4 flex justify-center gap-4 text-xs text-[#2C2C2A]">
+                            <span className="inline-flex items-center gap-1">
+                              <span className="h-3 w-3 rounded-sm bg-[#DA7756]" />
+                              Done
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <span className="h-3 w-3 rounded-sm border border-[#A32D2D]/50 bg-white" />
+                              Missed
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <span className="h-3 w-3 rounded-sm border border-[#DA7756] bg-white" />
+                              Today
+                            </span>
+                          </div>
+                        </div>
                       )}
-                      <EditBtn onClick={() => openEditHabit(h)} />
-                      <DelBtn onClick={() => handleDeleteHabit(h.id)} />
+
                     </Card>
                   ))}
                 </div>
@@ -2223,12 +2559,11 @@ const GoalsHabits = () => {
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="health">Health & Fitness</SelectItem>
-                    <SelectItem value="career">Career</SelectItem>
-                    <SelectItem value="personal">Personal Growth</SelectItem>
-                    <SelectItem value="relationships">Relationships</SelectItem>
-                    <SelectItem value="financial">Financial</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                {CATEGORY_OPTIONS.map((category) => (
+                  <SelectItem key={category.value} value={category.value}>
+                    {category.icon} {category.label}
+                  </SelectItem>
+                ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -2834,13 +3169,14 @@ const GoalsHabits = () => {
                 <Label>Category</Label>
                 <Select value={habitCategory} onValueChange={setHabitCategory}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Other" />
+                    <SelectValue placeholder="Personal" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="health">🏃 Health</SelectItem>
-                    <SelectItem value="career">💼 Career</SelectItem>
-                    <SelectItem value="personal">🌱 Growth</SelectItem>
-                    <SelectItem value="other">📌 Other</SelectItem>
+                    {HABIT_CATEGORY_OPTIONS.map((category) => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.icon} {category.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

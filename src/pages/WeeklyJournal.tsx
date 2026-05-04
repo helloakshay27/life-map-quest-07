@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   HelpCircle,
   Loader2,
@@ -50,6 +50,8 @@ const C = {
   muted:    "#AAAAAA",
   pageBg:   "#F7F4EE", // Matched Values background
 };
+
+const WEEKLY_JOURNAL_DRAFT_PREFIX = "weekly_journal_draft_v1";
 
 // ── WeeklyStrip ───────────────────────────────────────────────────────────────
 const getWeekStartW = (date: Date) => {
@@ -556,11 +558,41 @@ const WeeklyJournal = () => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [isLoadingPast, setIsLoadingPast] = useState(false);
   const [isLoadingGoals, setIsLoadingGoals] = useState(false);
+  const weeklyDraftReadyRef = useRef(false);
 
   const filledWeekStarts = useMemo(
     () => pastJournals.map((j) => j.start_date),
     [pastJournals],
   );
+
+  const getWeeklyDraftKey = (date: Date) =>
+    `${WEEKLY_JOURNAL_DRAFT_PREFIX}_${user?.id ?? "guest"}_${format(startOfWeek(date, { weekStartsOn: 0 }), "yyyy-MM-dd")}`;
+
+  const applyWeeklyDraft = (date: Date) => {
+    try {
+      const rawDraft = localStorage.getItem(getWeeklyDraftKey(date));
+      if (!rawDraft) return;
+      const draft = JSON.parse(rawDraft);
+
+      if (typeof draft.gratitude === "string") setGratitude(draft.gratitude);
+      if (typeof draft.challenge === "string") setChallenge(draft.challenge);
+      if (typeof draft.challengeCause === "string") setChallengeCause(draft.challengeCause);
+      if (typeof draft.insight === "string") setInsight(draft.insight);
+      if (typeof draft.balanceRating === "number") setBalanceRating(draft.balanceRating);
+      if (Array.isArray(draft.wins)) setWins(draft.wins);
+      if (typeof draft.habitsText === "string") setHabitsText(draft.habitsText);
+      if (typeof draft.coreValue === "string") setCoreValue(draft.coreValue);
+      if (typeof draft.missionText === "string") setMissionText(draft.missionText);
+      if (draft.weeklyPlanData) setWeeklyPlanData(draft.weeklyPlanData);
+      if (draft.focusData) setFocusData(draft.focusData);
+    } catch (error) {
+      console.error("Failed to restore weekly journal draft:", error);
+    }
+  };
+
+  useEffect(() => {
+    weeklyDraftReadyRef.current = false;
+  }, [currentDate, user?.id]);
 
   const isFutureWeek =
     startOfWeek(currentDate, { weekStartsOn: 0 }) >
@@ -620,6 +652,7 @@ const WeeklyJournal = () => {
       setIsEditingFromPast(false);
 
       localStorage.setItem(`weekly_wins_${startDate}`, JSON.stringify(wins));
+      localStorage.removeItem(getWeeklyDraftKey(currentDate));
 
       if (isUpdate) {
         setPastJournals((prev) =>
@@ -648,7 +681,8 @@ const WeeklyJournal = () => {
 
       showToast(`Plan for week ${format(currentDate, "MMMM d")} ${isUpdate ? "updated" : "saved"} successfully.`, "success");
 
-      fetchPastJournals();
+      await fetchPastJournals();
+      setActiveTab("past");
     } catch (error) {
       console.error("Save weekly journal error:", error);
       showToast("Error saving journal. Please check your connection and try again.", "error");
@@ -681,6 +715,8 @@ const WeeklyJournal = () => {
               setHabitsText(data.data?.weekly_story || "");
               setWeeklyPlanData(data.data?.weekly_plan || generateEmptyWeekData(currentDate));
               setFocusData(data.data?.focus_and_boundaries || defaultFocusData);
+              applyWeeklyDraft(currentDate);
+              weeklyDraftReadyRef.current = true;
               return;
             }
           }
@@ -692,13 +728,54 @@ const WeeklyJournal = () => {
           setInsight(""); setWins([]); setMissionText(""); setHabitsText("");
           setWeeklyPlanData(generateEmptyWeekData(currentDate));
           setFocusData(defaultFocusData);
+          applyWeeklyDraft(currentDate);
+          weeklyDraftReadyRef.current = true;
         } catch (error) {
           console.error("Failed to fetch journal for date:", error);
         }
       };
       fetchJournalForDate();
     }
-  }, [currentDate, activeTab, token]);
+  }, [currentDate, activeTab, token, user?.id]);
+
+  useEffect(() => {
+    if (!weeklyDraftReadyRef.current || activeTab !== "new") return;
+
+    const draft = {
+      gratitude,
+      challenge,
+      challengeCause,
+      insight,
+      balanceRating,
+      wins,
+      habitsText,
+      coreValue,
+      missionText,
+      weeklyPlanData,
+      focusData,
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      localStorage.setItem(getWeeklyDraftKey(currentDate), JSON.stringify(draft));
+    } catch (error) {
+      console.error("Failed to save weekly journal draft:", error);
+    }
+  }, [
+    activeTab,
+    currentDate,
+    gratitude,
+    challenge,
+    challengeCause,
+    insight,
+    balanceRating,
+    wins,
+    habitsText,
+    coreValue,
+    missionText,
+    weeklyPlanData,
+    focusData,
+  ]);
   
   const fetchPastJournals = async () => {
     setIsLoadingPast(true);

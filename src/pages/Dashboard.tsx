@@ -61,14 +61,27 @@ const weeklyPlanPrioritiesForDate = (weeklyJournals: any[], selectedDate: Date) 
     if (!journal?.start_date || !Array.isArray(planDays)) continue;
 
     const journalWeekStart = startOfWeek(new Date(`${journal.start_date}T00:00:00`), { weekStartsOn: 0 });
-    const planWeekStart = addDays(journalWeekStart, 7);
-    const dayIndex = Math.round((selected.getTime() - planWeekStart.getTime()) / (1000 * 60 * 60 * 24));
+    const candidateWeekStarts = [journalWeekStart, addDays(journalWeekStart, 7)];
+    const selectedDay = format(selected, "EEE").toLowerCase();
+    const selectedMonthDay = format(selected, "d MMM").toLowerCase();
+    const dateMatchedIndex = planDays.findIndex((day: any) => {
+      const planDate = String(day?.date || "").trim().toLowerCase();
+      const planDay = String(day?.day || day?.id || "").slice(0, 3).toLowerCase();
+      return planDate === selectedMonthDay && planDay === selectedDay;
+    });
+    const calculatedIndex = candidateWeekStarts
+      .map((weekStart) => Math.round((selected.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24)))
+      .find((index) => index >= 0 && index <= 6);
+    const dayIndex = dateMatchedIndex >= 0 ? dateMatchedIndex : calculatedIndex;
 
-    if (dayIndex < 0 || dayIndex > 6) continue;
+    if (typeof dayIndex !== "number") continue;
 
     const planDay = planDays[dayIndex];
+    const planDayDate = String(planDay?.date || "").trim().toLowerCase();
+    if (dateMatchedIndex < 0 && planDayDate && planDayDate !== selectedMonthDay) continue;
+
     const priorities = Array.isArray(planDay?.priorities) ? planDay.priorities : [];
-    return priorities
+    const dashboardPriorities = priorities
       .map((priority: any, index: number) => ({
         id: Number(priority?.id) || Number(`${format(selected, "yyyyMMdd")}${index + 1}`),
         title: String(priority?.text || priority?.title || "").trim(),
@@ -77,6 +90,7 @@ const weeklyPlanPrioritiesForDate = (weeklyJournals: any[], selectedDate: Date) 
         quadrant: priority?.quadrant,
       }))
       .filter((priority: any) => priority.title);
+    if (dashboardPriorities.length > 0 || dateMatchedIndex >= 0) return dashboardPriorities;
   }
 
   return [];

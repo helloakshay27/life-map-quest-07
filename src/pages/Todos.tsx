@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Plus, Eye, Trash2, GripVertical, Pencil, CalendarIcon, Briefcase, Activity, Heart, Sprout, Wallet } from "lucide-react";
+import { Plus, Eye, Trash2, GripVertical, Pencil, CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -32,15 +32,25 @@ const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
   return response;
 };
 
-const LIFE_AREAS = ["Career", "Health", "Relationships", "Personal Growth", "Finance"];
-const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
-const AREA_ICONS: Record<string, JSX.Element> = {
-  Career: <Briefcase className="h-3.5 w-3.5 text-amber-700" />,
-  Health: <Activity className="h-3.5 w-3.5 text-rose-600" />,
-  Relationships: <Heart className="h-3.5 w-3.5 text-pink-600" />,
-  "Personal Growth": <Sprout className="h-3.5 w-3.5 text-emerald-600" />,
-  Finance: <Wallet className="h-3.5 w-3.5 text-yellow-700" />,
+const LIFE_AREA_OPTIONS = [
+  { name: "Personal", icon: "\u2728", id: 1 },
+  { name: "Travel", icon: "\u2708\uFE0F", id: 2 },
+  { name: "Career", icon: "\uD83D\uDCBC", id: 3 },
+  { name: "Adventure", icon: "\uD83E\uDDD7", id: 4 },
+  { name: "Learning", icon: "\uD83D\uDCDA", id: 5 },
+];
+const LIFE_AREAS = LIFE_AREA_OPTIONS.map((area) => area.name);
+const LIFE_AREA_ID_BY_NAME: Record<string, number> = {
+  ...Object.fromEntries(LIFE_AREA_OPTIONS.map((area) => [area.name, area.id])),
 };
+const LIFE_AREA_NAME_BY_ID = Object.fromEntries(
+  Object.entries(LIFE_AREA_ID_BY_NAME).map(([name, id]) => [id, name]),
+) as Record<number, string>;
+const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
+const getLifeAreaIcon = (lifeArea: string) =>
+  LIFE_AREA_OPTIONS.find((area) => area.name === lifeArea)?.icon ?? "\u2728";
+const getLifeAreaDisplay = (lifeArea: string) =>
+  `${getLifeAreaIcon(lifeArea)} ${lifeArea}`;
 
 const toApiStatus = (ui: string) => {
   const map: Record<string, string> = {
@@ -53,6 +63,78 @@ const toApiStatus = (ui: string) => {
 };
 
 const toApiPriority = (ui: string) => ui.toLowerCase();
+
+const formatTodoFromApi = (item: any): TodoItem => {
+  const statusMap: Record<string, string> = {
+    not_started: "Not Started",
+    in_progress: "In Progress",
+    completed: "Completed",
+    someday: "Someday",
+  };
+  const priorityMap: Record<string, string> = {
+    low: "Low",
+    medium: "Medium",
+    high: "High",
+    urgent: "Urgent",
+  };
+
+  return {
+    ...item,
+    id: String(item.id),
+    lifeArea: getLifeAreaName(item),
+    status: statusMap[item.status] || "Not Started",
+    priority: priorityMap[item.priority] || "Medium",
+    targetDate: item.target_date ? new Date(item.target_date) : undefined,
+    goalId: item.goal_id ? String(item.goal_id) : undefined,
+    recurring: Boolean(item.recurring),
+    recurrencePattern: item.recurrence_pattern || item.recurrencePattern,
+    recurringDays: item.recurring_days || item.recurringDays || [],
+    repeatInterval: item.repeat_interval || item.repeatInterval || "",
+  };
+};
+
+const buildRecurrencePayload = (todo: TodoItem) => ({
+  recurring: todo.recurring,
+  recurrence_pattern: todo.recurring ? todo.recurrencePattern : null,
+  recurring_days: todo.recurring ? todo.recurringDays ?? [] : [],
+  repeat_interval:
+    todo.recurring && todo.recurrencePattern === "Custom"
+      ? todo.repeatInterval || null
+      : null,
+});
+
+const getLifeAreaId = (lifeArea: string) =>
+  LIFE_AREA_ID_BY_NAME[lifeArea] ?? null;
+
+const getLifeAreaName = (item: any) => {
+  if (typeof item.life_area === "string" && item.life_area.trim()) {
+    return item.life_area;
+  }
+
+  if (item.life_area?.name) {
+    return item.life_area.name;
+  }
+
+  const areaId = Number(item.life_area_id);
+  return LIFE_AREA_NAME_BY_ID[areaId] ?? "General";
+};
+
+const buildTodoApiPayload = (todo: TodoItem, overrides: Partial<TodoItem> = {}) => {
+  const merged = { ...todo, ...overrides };
+
+  return {
+    title: merged.title,
+    description: merged.description,
+    life_area_id: getLifeAreaId(merged.lifeArea),
+    priority: toApiPriority(merged.priority),
+    status: toApiStatus(merged.status),
+    target_date: merged.targetDate
+      ? new Date(merged.targetDate).toISOString().split("T")[0]
+      : null,
+    goal_id: merged.goalId ? Number(merged.goalId) : null,
+    ...buildRecurrencePayload(merged),
+  };
+};
 
 interface DragState {
   todoId: string;
@@ -68,10 +150,17 @@ interface DragState {
   isDragging: boolean;
 }
 
+interface GoalOption {
+  id: number | string;
+  title?: string;
+  name?: string;
+}
+
 const Todos = () => {
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [todos, setTodos] = useState<TodoItem[]>([]);
+  const [availableGoals, setAvailableGoals] = useState<GoalOption[]>([]);
   const [editingTodo, setEditingTodo] = useState<TodoItem | null>(null);
   const [selectedArea, setSelectedArea] = useState("all-areas");
   const [selectedPriority, setSelectedPriority] = useState("all-priorities");
@@ -90,94 +179,53 @@ const Todos = () => {
   useEffect(() => {
     const loadTodos = async () => {
       try {
-        const savedTodosRaw = localStorage.getItem("user_todos");
-        let savedTodos: TodoItem[] | null = savedTodosRaw ? JSON.parse(savedTodosRaw) : null;
-        // Normalize targetDate to Date object if present
-        if (savedTodos) {
-          savedTodos = savedTodos.map((t) => ({
-            ...t,
-            targetDate: t.targetDate ? new Date(t.targetDate) : undefined,
-          }));
-          setTodos(savedTodos);
-        }
-
         const response = await fetchWithAuth("/todos", { method: "GET" });
         if (response.ok) {
-          const rawData = await response.json();
-          const formattedData = rawData.map((item: any) => {
-            const statusMap: Record<string, string> = {
-              "not_started": "Not Started",
-              "in_progress": "In Progress",
-              "completed": "Completed",
-              "someday": "Someday"
-            };
-            const priorityMap: Record<string, string> = {
-              "low": "Low",
-              "medium": "Medium",
-              "high": "High",
-              "urgent": "Urgent"
-            };
-            return {
-              ...item,
-              id: String(item.id),
-              lifeArea: item.life_area || "General",
-              status: statusMap[item.status] || "Not Started",
-              priority: priorityMap[item.priority] || "Medium",
-              targetDate: item.target_date ? new Date(item.target_date) : undefined,
-            };
-          });
+          const data = await response.json();
+          const rawData = Array.isArray(data)
+            ? data
+            : Array.isArray(data.todos)
+              ? data.todos
+              : Array.isArray(data.data)
+                ? data.data
+                : [];
+          const formattedData = rawData.map(formatTodoFromApi);
 
-          const localById = new Map<string, TodoItem>(
-            (savedTodos ?? []).map((t) => [String(t.id), t]),
-          );
-
-          const merged: TodoItem[] = formattedData.map((t: TodoItem) => {
-            const local = localById.get(String(t.id));
-            return local
-              ? {
-                  ...t,
-                  title: local.title ?? t.title,
-                  description: local.description ?? t.description,
-                  lifeArea: local.lifeArea ?? t.lifeArea,
-                  priority: local.priority ?? t.priority,
-                  status: t.status,
-                  targetDate: local.targetDate ?? t.targetDate,
-                }
-              : t;
-          });
-
-          for (const lt of savedTodos ?? []) {
-            if (!formattedData.some((t: TodoItem) => String(t.id) === String(lt.id))) {
-              merged.push(lt);
-            }
-          }
-
-          setTodos(merged);
-          // Serialize targetDate as ISO string for storage
-          localStorage.setItem("user_todos", JSON.stringify(merged.map(t => ({
-            ...t,
-            targetDate: t.targetDate ? new Date(t.targetDate).toISOString() : undefined,
-          }))));
+          setTodos(formattedData);
           return;
         }
         throw new Error("Failed to fetch from API");
       } catch (error) {
-        console.log("API unavailable, falling back to local storage", error);
-        try {
-          const savedTodos = localStorage.getItem("user_todos");
-          if (savedTodos) {
-            const todosParsed = JSON.parse(savedTodos).map((t: any) => ({
-              ...t,
-              targetDate: t.targetDate ? new Date(t.targetDate) : undefined,
-            }));
-            setTodos(todosParsed);
-          }
-        } catch (parseError) {
-          console.error("Failed to parse local storage todos");
-        }
+        console.error("Failed to load todos from API", error);
+        setTodos([]);
       }
     };
     loadTodos();
+  }, []);
+
+  useEffect(() => {
+    const loadGoals = async () => {
+      try {
+        const response = await fetchWithAuth("/goals", { method: "GET" });
+        if (!response.ok) throw new Error("Failed to fetch goals");
+
+        const data = await response.json();
+        const goals = Array.isArray(data)
+          ? data
+          : Array.isArray(data.goals)
+            ? data.goals
+            : Array.isArray(data.data)
+              ? data.data
+              : [];
+
+        setAvailableGoals(goals);
+      } catch (error) {
+        console.error("Failed to fetch goals:", error);
+        setAvailableGoals([]);
+      }
+    };
+
+    loadGoals();
   }, []);
 
   const statuses = [
@@ -202,15 +250,13 @@ const Todos = () => {
       const finalTodo = { ...newTodo };
       try {
         const apiPayload = {
-          ...newTodo,
-          status: toApiStatus(newTodo.status),
-          priority: toApiPriority(newTodo.priority),
-          life_area: newTodo.lifeArea,
+          todo: buildTodoApiPayload(newTodo),
         };
         const response = await fetchWithAuth("/todos", { method: "POST", body: JSON.stringify(apiPayload) });
         if (response.ok) {
           const data = await response.json();
           finalTodo.id = data.id || newTodo.id;
+          finalTodo.lifeArea = getLifeAreaName({ ...data, life_area_id: data.life_area_id ?? apiPayload.todo.life_area_id });
           finalTodo.status = newTodo.status;
         }
       } catch {
@@ -218,10 +264,6 @@ const Todos = () => {
       }
       setTodos((prev) => {
         const updated = [...prev, finalTodo];
-        localStorage.setItem("user_todos", JSON.stringify(updated.map(t => ({
-          ...t,
-          targetDate: t.targetDate ? new Date(t.targetDate).toISOString() : undefined,
-        }))));
         return updated;
       });
       toast({
@@ -239,27 +281,12 @@ const Todos = () => {
     const previous = [...todos];
     setTodos((prev) => {
       const next = prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t));
-      localStorage.setItem("user_todos", JSON.stringify(next.map(t => ({
-        ...t,
-        targetDate: t.targetDate ? new Date(t.targetDate).toISOString() : undefined,
-      }))));
       return next;
     });
 
     try {
       const payloadWrapped = {
-        todo: {
-          title: updated.title,
-          description: updated.description,
-          life_area: updated.lifeArea,
-          priority: toApiPriority(updated.priority),
-          status: toApiStatus(updated.status),
-          recurring: updated.recurring,
-          target_date: updated.targetDate
-            ? new Date(updated.targetDate).toISOString().split("T")[0]
-            : null,
-          goal_id: updated.goalId ? Number(updated.goalId) : null,
-        },
+        todo: buildTodoApiPayload(updated),
       };
 
       let res = await fetchWithAuth(`/todos/${updated.id}`, {
@@ -275,9 +302,7 @@ const Todos = () => {
 
       if (!res.ok) {
         const payloadFlat: any = {
-          ...updated,
-          status: toApiStatus(updated.status),
-          priority: toApiPriority(updated.priority),
+          ...buildTodoApiPayload(updated),
         };
         res = await fetchWithAuth(`/todos/${updated.id}`, {
           method: "PUT",
@@ -300,7 +325,6 @@ const Todos = () => {
     } catch (e) {
       console.error("Failed to update todo:", e);
       setTodos(previous);
-      localStorage.setItem("user_todos", JSON.stringify(previous));
       toast({ title: "Error", description: "Failed to update to do", variant: "destructive" });
     }
   };
@@ -310,10 +334,6 @@ const Todos = () => {
       try { await fetchWithAuth(`/todos/${id}`, { method: "DELETE" }); } catch { console.log("API unavailable, deleting locally"); }
       setTodos((prev) => {
         const updated = prev.filter((t) => t.id !== id);
-        localStorage.setItem("user_todos", JSON.stringify(updated.map(t => ({
-          ...t,
-          targetDate: t.targetDate ? new Date(t.targetDate).toISOString() : undefined,
-        }))));
         return updated;
       });
       toast({
@@ -338,21 +358,13 @@ const Todos = () => {
     // Optimistic UI update
     setTodos((prev) => {
       const newTodos = prev.map((t) => t.id === id ? { ...t, status: newStatus } : t);
-      localStorage.setItem("user_todos", JSON.stringify(newTodos.map(t => ({
-        ...t,
-        targetDate: t.targetDate ? new Date(t.targetDate).toISOString() : undefined,
-      }))));
       return newTodos;
     });
 
     try {
       const payloadWrapped = {
         todo: {
-          status: toApiStatus(newStatus),
-          priority: toApiPriority(updatedTodo.priority),
-          life_area: updatedTodo.lifeArea,
-          title: updatedTodo.title,
-          description: updatedTodo.description,
+          ...buildTodoApiPayload(updatedTodo, { status: newStatus }),
         },
       };
 
@@ -367,7 +379,7 @@ const Todos = () => {
         });
       }
       if (!res.ok) {
-        const payloadFlat = { ...updatedTodo, status: toApiStatus(newStatus) };
+        const payloadFlat = buildTodoApiPayload(updatedTodo, { status: newStatus });
         res = await fetchWithAuth(`/todos/${id}`, {
           method: "PUT",
           body: JSON.stringify(payloadFlat),
@@ -390,17 +402,12 @@ const Todos = () => {
       } else {
         // ✅ FIX 2: Non-ok response — rollback UI + show error toast
         setTodos(previous);
-        localStorage.setItem("user_todos", JSON.stringify(previous.map(t => ({
-          ...t,
-          targetDate: t.targetDate ? new Date(t.targetDate).toISOString() : undefined,
-        }))));
         toast({ title: "Error", description: "Failed to move to do", variant: "destructive" });
       }
     } catch (error) {
       // ✅ FIX 3: Network/exception — rollback UI + show error toast (not success)
       console.error("Failed to update todo status:", error);
       setTodos(previous);
-      localStorage.setItem("user_todos", JSON.stringify(previous));
       toast({ title: "Error", description: "Failed to move to do. Please try again.", variant: "destructive" });
     }
   };
@@ -568,8 +575,10 @@ const Todos = () => {
               <SelectTrigger className="w-full text-sm"><SelectValue placeholder="All Areas" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all-areas">All Areas</SelectItem>
-                {LIFE_AREAS.map((a) => (
-                  <SelectItem key={a} value={a} startIcon={AREA_ICONS[a]}>{a}</SelectItem>
+                {LIFE_AREA_OPTIONS.map((area) => (
+                  <SelectItem key={area.name} value={area.name}>
+                    {area.icon} {area.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -686,7 +695,7 @@ const Todos = () => {
                                   </div>
                                   <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1">{todo.description}</p>
                                   <div className="flex flex-wrap gap-1 sm:gap-2 mt-2 items-center">
-                                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{todo.lifeArea}</span>
+                                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{getLifeAreaDisplay(todo.lifeArea)}</span>
                                     <span className={`text-xs font-medium px-2 py-1 rounded ${getPriorityColor(todo.priority)}`}>{todo.priority}</span>
                                     <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">{todo.status}</span>
                                     {todo.targetDate && (
@@ -725,7 +734,7 @@ const Todos = () => {
                           <h3 className="font-medium text-foreground text-sm sm:text-base line-clamp-1">{todo.title}</h3>
                           <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mt-1">{todo.description}</p>
                           <div className="flex flex-wrap gap-1 sm:gap-2 mt-2 items-center">
-                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{todo.lifeArea}</span>
+                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{getLifeAreaDisplay(todo.lifeArea)}</span>
                             <span className={`text-xs font-medium px-2 py-1 rounded ${getPriorityColor(todo.priority)}`}>{todo.priority}</span>
                             <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">{todo.status}</span>
                             {todo.targetDate && (
@@ -779,7 +788,7 @@ const Todos = () => {
                 <p className="text-sm font-medium text-foreground flex-1 line-clamp-2">{draggingTodo.title}</p>
               </div>
               <div className="flex flex-wrap gap-1 mt-1">
-                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{draggingTodo.lifeArea}</span>
+                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{getLifeAreaDisplay(draggingTodo.lifeArea)}</span>
                 <span className={`text-xs font-medium px-2 py-1 rounded ${getPriorityColor(draggingTodo.priority)}`}>{draggingTodo.priority}</span>
               </div>
             </div>
@@ -794,6 +803,7 @@ const Todos = () => {
           if (!open) setEditingTodo(null);
         }}
         initialData={editingTodo}
+        availableGoals={availableGoals}
         onSubmit={(todo) => {
           if (editingTodo) {
             handleUpdateTodo(todo);

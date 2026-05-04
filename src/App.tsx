@@ -27,6 +27,7 @@ import BucketList from "@/components/BucketList";
 import SignUp from "./pages/SignUp";
 import KraSelfEvaluation from "./pages/KRA";
 import WeeklyJournal from "./pages/WeeklyJournal";
+import MonthlyReview from "./pages/MonthlyReview";
 import KRA from "./pages/KRA";
 import ForFamily from "./pages/ForFamily";
 import UpdatePassword from "./pages/UpdatePass";
@@ -79,6 +80,7 @@ const App = () => {
               <Route path="/setup" element={<Setup />} />
               <Route path="/daily-journal" element={<DailyJournal />} />
               <Route path="/weekly-journal" element={<WeeklyJournal />} />
+              <Route path="/monthly-review" element={<MonthlyReview />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/vision-values" element={<VisionAndValues />} />
               <Route path="/bucket-list" element={<BucketList />} />

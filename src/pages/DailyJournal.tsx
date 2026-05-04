@@ -3,10 +3,9 @@ import {
   ArrowLeft, HelpCircle, Calendar, Trash2, Pencil, ChevronDown, ChevronUp,
   Plus, X, Info, Calendar as CalendarIcon, AlertCircle, Loader2, Target,
   Heart, Sparkles, ListTodo, BookOpen, Lightbulb, Zap, Edit2, CheckCircle,
-  ListOrdered,
-  ArrowRight
+  ListOrdered
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, startOfWeek, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -49,11 +48,26 @@ const LIFE_API     = "https://life-api.lockated.com";
 const API_BASE_URL = "https://life-api.lockated.com";
 const API_BASE     = "https://life-api.lockated.com";
 const getToken = (t?: string) => t || "";
+const DAILY_JOURNAL_DRAFT_PREFIX = "daily_journal_draft_v1";
 
 const LIFE_AREAS       = ["Career", "Health", "Relationships", "Personal Growth", "Finance"];
+const LIFE_AREA_OPTIONS = [
+  { value: "Career", label: "💼 Career" },
+  { value: "Health", label: "💪 Health" },
+  { value: "Relationships", label: "💖 Relationships" },
+  { value: "Personal Growth", label: "🌱 Personal Growth" },
+  { value: "Finance", label: "💰 Finance" },
+];
 const MOODS            = ["Peaceful", "Energized", "Grateful", "Anxious", "Tired", "Stressed", "Focused", "Content", "Joyful", "Inspired", "Calm", "Excited"];
 const PROGRESS_OPTIONS = ["Dreaming", "Planning", "In Progress", "Achieved"];
 const CATEGORY_OPTIONS = ["Personal", "Career", "Travel", "Adventure", "Learning", "Health", "Relationships", "Finance", "Other"];
+const PRIORITY_QUADRANTS = [
+  { value: "Q1", label: "Q1 - Urgent, Important", color: C.crimson },
+  { value: "Q2", label: "Q2 - Important, Not Urgent", color: C.forest },
+  { value: "Q3", label: "Q3 - Urgent, Not Important", color: C.warning },
+  { value: "Q4", label: "Q4 - Not Urgent, Not Important", color: C.stone },
+];
+const PRIORITY_HOURS = Array.from({ length: 19 }, (_, i) => `${String(i + 4).padStart(2, "0")}:00`);
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 interface PastLetter {
@@ -130,20 +144,34 @@ const weeklyPlanPrioritiesForDate = (weeklyJournals: any[], selectedDate: Date) 
     if (!journal?.start_date || !Array.isArray(planDays)) continue;
 
     const journalWeekStart = startOfWeek(new Date(`${journal.start_date}T00:00:00`), { weekStartsOn: 0 });
-    const planWeekStart = addDays(journalWeekStart, 7);
-    const dayIndex = Math.round((selected.getTime() - planWeekStart.getTime()) / (1000 * 60 * 60 * 24));
+    const candidateWeekStarts = [journalWeekStart, addDays(journalWeekStart, 7)];
+    const selectedDay = format(selected, "EEE").toLowerCase();
+    const selectedMonthDay = format(selected, "d MMM").toLowerCase();
+    const dateMatchedIndex = planDays.findIndex((day: any) => {
+      const planDate = String(day?.date || "").trim().toLowerCase();
+      const planDay = String(day?.day || day?.id || "").slice(0, 3).toLowerCase();
+      return planDate === selectedMonthDay && planDay === selectedDay;
+    });
+    const calculatedIndex = candidateWeekStarts
+      .map((weekStart) => Math.round((selected.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24)))
+      .find((index) => index >= 0 && index <= 6);
+    const dayIndex = dateMatchedIndex >= 0 ? dateMatchedIndex : calculatedIndex;
 
-    if (dayIndex < 0 || dayIndex > 6) continue;
+    if (typeof dayIndex !== "number") continue;
 
     const planDay = planDays[dayIndex];
+    const planDayDate = String(planDay?.date || "").trim().toLowerCase();
+    if (dateMatchedIndex < 0 && planDayDate && planDayDate !== selectedMonthDay) continue;
+
     const priorities = Array.isArray(planDay?.priorities) ? planDay.priorities : [];
-    return priorities
+    const achievements = priorities
       .map((priority: any, index: number) => ({
         id: Number(priority?.id) || Number(`${format(selected, "yyyyMMdd")}${index + 1}`),
         title: String(priority?.text || priority?.title || "").trim(),
         checked: false,
       }))
       .filter((priority: any) => priority.title);
+    if (achievements.length > 0 || dateMatchedIndex >= 0) return achievements;
   }
 
   return [];
@@ -684,7 +712,7 @@ const TodaysReflection = ({
 };
 
 // ─── ShapingTomorrow ──────────────────────────────────────────────────────────
-const ShapingTomorrow = ({ priorities, setPriorities, token, showToast }: { priorities: string[]; setPriorities: any; token?: string; showToast: (msg: string, type?: "success" | "error") => void }) => {
+const ShapingTomorrow = ({ priorities, setPriorities, token, showToast, selectedDate }: { priorities: string[]; setPriorities: any; token?: string; showToast: (msg: string, type?: "success" | "error") => void; selectedDate: Date }) => {
   const [calendars, setCalendars] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -693,6 +721,185 @@ const ShapingTomorrow = ({ priorities, setPriorities, token, showToast }: { prio
   const [isLoadingTodos, setIsLoadingTodos] = useState(true);
   const [isTodoDialogOpen, setIsTodoDialogOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState<any>(null);
+  const [quickDescription, setQuickDescription] = useState("");
+  const [quickCategory, setQuickCategory] = useState("Career");
+  const [quickQuadrant, setQuickQuadrant] = useState("Q2");
+  const [quickStart, setQuickStart] = useState("09:00");
+  const [quickEnd, setQuickEnd] = useState("10:00");
+  const [priorityMeta, setPriorityMeta] = useState<Record<number, { category: string; quadrant: string; start: string; end: string }>>({});
+  const [editingPriorityIndex, setEditingPriorityIndex] = useState<number | null>(null);
+  const [editingPriorityDraft, setEditingPriorityDraft] = useState({ title: "", category: "Career", quadrant: "Q2", start: "09:00", end: "10:00" });
+  const scheduleRef = useRef<HTMLDivElement | null>(null);
+
+  const tomorrowDate = addDays(selectedDate, 1);
+  const tomorrowLabel = format(tomorrowDate, "d MMM (EEE)");
+  const scheduledPriorities = priorities.filter((priority: string) => priority.trim());
+
+  const getTodoTitle = (todo: any) => todo.title || todo.name || "Untitled Task";
+  const getTodoArea = (todo: any) => todo.life_area || todo.lifeArea || "Career";
+  const getQuadrant = (index: number) => PRIORITY_QUADRANTS[index % PRIORITY_QUADRANTS.length];
+  const getDefaultTime = (index: number) => {
+    const hour = Math.min(9 + index, 21);
+    return {
+      start: `${String(hour).padStart(2, "0")}:00`,
+      end: `${String(Math.min(hour + 1, 22)).padStart(2, "0")}:00`,
+    };
+  };
+  const timeToTop = (time: string) => {
+    const [hours, minutes] = time.split(":").map(Number);
+    return Math.max(0, Math.min(((hours + minutes / 60) - 4) * 56, 1008));
+  };
+  const timeToHeight = (start: string, end: string) => {
+    const height = timeToTop(end) - timeToTop(start);
+    return Math.max(56, Math.min(height, 160));
+  };
+  const getHourFromDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    const rect = scheduleRef.current?.getBoundingClientRect();
+    if (!rect) return 9;
+    const y = Math.max(0, event.clientY - rect.top);
+    return Math.max(4, Math.min(22, 4 + Math.floor(y / 56)));
+  };
+  const getDropTime = (event: React.DragEvent<HTMLDivElement>, durationHours = 1) => {
+    const hour = getHourFromDrop(event);
+    return {
+      start: `${String(hour).padStart(2, "0")}:00`,
+      end: `${String(Math.min(hour + durationHours, 23)).padStart(2, "0")}:00`,
+    };
+  };
+  const getDurationHours = (meta: { start: string; end: string }) => {
+    const [startHour] = meta.start.split(":").map(Number);
+    const [endHour] = meta.end.split(":").map(Number);
+    return Math.max(1, endHour - startHour);
+  };
+  const getNextQuickAddTime = () => {
+    if (scheduledPriorities.length === 0) return { start: quickStart, end: quickEnd };
+
+    const previousIndex = scheduledPriorities.length - 1;
+    const previousTime = priorityMeta[previousIndex] || getDefaultTime(previousIndex);
+    const durationHours = getDurationHours({ start: quickStart, end: quickEnd });
+    const [previousEndHour] = previousTime.end.split(":").map(Number);
+    const nextStartHour = Math.min(previousEndHour, 22);
+    const nextEndHour = Math.min(nextStartHour + durationHours, 23);
+
+    return {
+      start: `${String(nextStartHour).padStart(2, "0")}:00`,
+      end: `${String(nextEndHour).padStart(2, "0")}:00`,
+    };
+  };
+
+  const addPriorityBlock = (title: string, meta?: { category: string; quadrant: string; start: string; end: string }) => {
+    const cleanTitle = title.trim();
+    if (!cleanTitle) return;
+    setPriorities((current: string[]) => {
+      const filled = current.filter((priority) => priority.trim());
+      const nextIndex = filled.length;
+      setPriorityMeta((currentMeta) => ({
+        ...currentMeta,
+        [nextIndex]: meta || { category: quickCategory, quadrant: quickQuadrant, start: quickStart, end: quickEnd },
+      }));
+      return [...filled, cleanTitle];
+    });
+  };
+
+  const removePriority = (index: number) => {
+    setPriorities((current: string[]) => current.filter((priority, i) => priority.trim() && i !== index));
+    setPriorityMeta((currentMeta) => {
+      const nextMeta: Record<number, { category: string; quadrant: string; start: string; end: string }> = {};
+      Object.entries(currentMeta).forEach(([key, value]) => {
+        const oldIndex = Number(key);
+        if (oldIndex < index) nextMeta[oldIndex] = value;
+        if (oldIndex > index) nextMeta[oldIndex - 1] = value;
+      });
+      return nextMeta;
+    });
+  };
+
+  const updatePriority = (index: number, value: string) => {
+    setPriorities((current: string[]) => current.map((priority, i) => (i === index ? value : priority)));
+  };
+
+  const handleQuickAddPriority = () => {
+    const nextTime = getNextQuickAddTime();
+    addPriorityBlock(quickDescription, {
+      category: quickCategory,
+      quadrant: quickQuadrant,
+      ...nextTime,
+    });
+    setQuickStart(nextTime.end);
+    const [nextEndHour] = nextTime.end.split(":").map(Number);
+    setQuickEnd(`${String(Math.min(nextEndHour + 1, 23)).padStart(2, "0")}:00`);
+    setQuickDescription("");
+  };
+
+  const addTodoToGrid = (todo: any) => {
+    const nextIndex = scheduledPriorities.length;
+    addPriorityBlock(getTodoTitle(todo), {
+      category: getTodoArea(todo),
+      quadrant: "Q2",
+      ...getDefaultTime(nextIndex),
+    });
+  };
+
+  const handleTodoDragStart = (event: React.DragEvent<HTMLDivElement>, todo: any) => {
+    event.dataTransfer.setData("application/json", JSON.stringify({
+      type: "todo",
+      title: getTodoTitle(todo),
+      category: getTodoArea(todo),
+    }));
+    event.dataTransfer.effectAllowed = "copy";
+  };
+
+  const handlePriorityDragStart = (event: React.DragEvent<HTMLDivElement>, index: number) => {
+    event.dataTransfer.setData("application/json", JSON.stringify({ type: "priority", index }));
+    event.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleScheduleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    try {
+      const payload = JSON.parse(event.dataTransfer.getData("application/json"));
+      if (payload.type === "todo") {
+        addPriorityBlock(payload.title, {
+          category: payload.category || "Career",
+          quadrant: "Q2",
+          ...getDropTime(event),
+        });
+      }
+      if (payload.type === "priority" && typeof payload.index === "number") {
+        const currentMeta = priorityMeta[payload.index] || { category: quickCategory, quadrant: quickQuadrant, ...getDefaultTime(payload.index) };
+        setPriorityMeta((current) => ({
+          ...current,
+          [payload.index]: {
+            ...currentMeta,
+            ...getDropTime(event, getDurationHours(currentMeta)),
+          },
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to drop priority:", error);
+    }
+  };
+
+  const openPriorityEdit = (index: number, title: string) => {
+    const meta = priorityMeta[index] || { category: quickCategory, quadrant: quickQuadrant, ...getDefaultTime(index) };
+    setEditingPriorityIndex(index);
+    setEditingPriorityDraft({ title, ...meta });
+  };
+
+  const savePriorityEdit = () => {
+    if (editingPriorityIndex === null) return;
+    updatePriority(editingPriorityIndex, editingPriorityDraft.title);
+    setPriorityMeta((current) => ({
+      ...current,
+      [editingPriorityIndex]: {
+        category: editingPriorityDraft.category,
+        quadrant: editingPriorityDraft.quadrant,
+        start: editingPriorityDraft.start,
+        end: editingPriorityDraft.end,
+      },
+    }));
+    setEditingPriorityIndex(null);
+  };
 
   // Fetch Calendars
   useEffect(() => {
@@ -768,10 +975,6 @@ const ShapingTomorrow = ({ priorities, setPriorities, token, showToast }: { prio
     }
   };
 
-  const addPriority    = () => setPriorities([...priorities, ""]);
-  const removePriority = (index: number) => setPriorities(priorities.filter((_, i) => i !== index));
-  const updatePriority = (index: number, value: string) => { const u = [...priorities]; u[index] = value; setPriorities(u); };
-
   return (
     <div className="w-full border rounded-xl p-6 font-sans shadow-sm" style={{ background: C.pageBg, borderColor: C.cream }}>
       <div className="flex items-center gap-3 mb-6">
@@ -822,130 +1025,152 @@ const ShapingTomorrow = ({ priorities, setPriorities, token, showToast }: { prio
         )}
       </div>
 
-      {/* ── Tomorrow's Headstart Alert ── */}
-      <div className="bg-[#FFFDE7] border border-[#FDE047] rounded-md px-4 py-3 mb-6 flex items-start gap-2 shadow-sm">
-        <span className="text-[15px] leading-none mt-0.5">💡</span>
-        <p className="text-[13.5px] text-[#854D0E]">
-          <span className="font-bold">Tomorrow's Headstart:</span> Write down your top 3 priorities for tomorrow tonight.
+      <div className="border rounded-md px-4 py-3 mb-6 flex items-start gap-2 shadow-sm"
+        style={{ background: "#FFFDE7", borderColor: "#E8D95A" }}>
+        <Lightbulb className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: C.warning }} />
+        <p className="text-[13.5px]" style={{ color: C.charcoal }}>
+          <span className="font-bold">Time Boxing:</span> Give every task a start and end time. No open loops.
         </p>
       </div>
 
-      {/* ── To Do's Card ── */}
-      <div className="border border-[#D5DDFA] rounded-xl overflow-hidden bg-white mb-6 shadow-sm">
-        <div className="px-4 py-3 bg-[#F8FAFC] border-b border-[#D5DDFA] flex justify-between items-center">
-          <h3 className="font-bold text-[#5034BB] text-[15px] flex items-center gap-1.5">
-            <ListOrdered className="w-4 h-4" /> Top To-Do's ({todos.length})
-          </h3>
-          <Link to="/todos" className="text-[13px] font-bold flex items-center gap-1 hover:underline" style={{ color: "#5034BB" }}>
-            See All <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-        <div className="p-4 flex flex-col gap-3">
-          {isLoadingTodos ? (
-             <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-[#5034BB]" /></div>
-          ) : todos.length > 0 ? (
-            todos.slice(0, 3).map((todo, idx) => {
-              const p = (todo.priority || "Medium").toLowerCase();
-              return (
-                <div key={todo.id || idx} className="flex items-center justify-between border border-[#E2E8F0] rounded-lg p-3">
-                  <div className="flex items-start gap-3">
-                    <input 
-                      type="checkbox" 
-                      title="Mark as Completed"
-                      className="mt-1 w-4 h-4 rounded border-gray-300 text-[#5034BB] focus:ring-[#5034BB] cursor-pointer"
-                      onChange={() => {
-                        const updatedTodo = {
-                          ...todo,
-                          status: "Completed"
-                        };
-                        handleUpdateTodo(updatedTodo);
-                      }}
-                    />
-                    <div>
-                      <p className="text-[14px] font-medium text-[#2C2C2A]">{todo.title || todo.name || "Untitled Task"}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[11px] font-medium text-gray-500">{todo.life_area || todo.lifeArea || "General"}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold capitalize ${
-                          p === 'high' ? 'bg-[#FEE2E2] text-[#991B1B]' :
-                          p === 'low' ? 'bg-[#DCFCE7] text-[#166534]' :
-                          'bg-[#FEF08A] text-[#854D0E]'
-                        }`}>
-                          {todo.priority || "Medium"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 text-gray-400">
-                     <Edit2 
-                       className="w-4 h-4 cursor-pointer hover:text-[#5034BB] transition-colors" 
-                       onClick={() => {
-                         setEditingTodo({
-                           ...todo,
-                           id: String(todo.id),
-                           title: todo.title || todo.name,
-                           description: todo.description || "",
-                           lifeArea: todo.life_area || todo.lifeArea || "General",
-                           priority: fromApiPriority(todo.priority),
-                           status: fromApiStatus(todo.status),
-                           recurring: todo.recurring || "None",
-                           targetDate: todo.target_date || null,
-                           goalId: todo.goal_id || null
-                         });
-                         setIsTodoDialogOpen(true);
-                       }} 
-                     />
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <p className="text-sm text-gray-500 text-center py-4">No active to-do's found.</p>
-          )}
-        </div>
-      </div>
-
-      <div className="bg-white border rounded-md px-4 py-3 mb-6 flex items-center gap-2 shadow-sm" style={{ borderColor: C.cream }}>
-        <span className="text-[15px] leading-none">💡</span>
-        <p className="text-[13.5px]" style={{ color: C.stone }}>
-          <span className="font-bold" style={{ color: C.charcoal }}>Review Your 'Why':</span> Does your schedule reflect your long-term goals?
+      <div className="mb-4">
+        <h3 className="text-[16px] font-bold mb-1" style={{ color: C.charcoal }}>
+          Priorities for Tomorrow - {tomorrowLabel}
+        </h3>
+        <p className="text-[13.5px] flex items-center gap-1.5" style={{ color: C.stone }}>
+          <Lightbulb className="w-3.5 h-3.5" style={{ color: C.warning }} />
+          Drag cards to reschedule (preserves duration). Resize top/bottom edges to adjust duration. Colors by life area.
         </p>
       </div>
 
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[15px] font-bold" style={{ color: C.charcoal }}>Priorities for Tomorrow?</h3>
-          <button onClick={addPriority}
-            className="flex items-center gap-1.5 text-white text-[13px] font-semibold px-4 py-2 rounded-md transition-all shadow-sm"
-            style={{ background: C.coral }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")} onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
-            <Plus className="w-4 h-4" strokeWidth={2.5}/> Add Priority
-          </button>
+      <div className="border rounded-xl overflow-hidden shadow-sm" style={{ borderColor: "#BFD7F3", background: "#EEF6FF" }}>
+        <div className="p-4 border-b" style={{ borderColor: "#CFE1F6", background: "#EEF6FF" }}>
+          <p className="text-[14px] font-bold mb-3" style={{ color: C.charcoal }}>+ Quick Add Priority</p>
+          <input value={quickDescription} onChange={(e) => setQuickDescription(e.target.value)} placeholder="Priority description..."
+            className="w-full h-10 rounded border bg-white px-3 text-[14px] outline-none mb-3" style={{ borderColor: "#C8DBF0", color: C.charcoal }} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+            <select value={quickCategory} onChange={(e) => setQuickCategory(e.target.value)}
+              className="h-10 rounded border bg-white px-3 text-[14px] outline-none" style={{ borderColor: "#C8DBF0", color: C.charcoal }}>
+              {LIFE_AREA_OPTIONS.map((area) => <option key={area.value} value={area.value}>{area.label}</option>)}
+            </select>
+            <select value={quickQuadrant} onChange={(e) => setQuickQuadrant(e.target.value)}
+              className="h-10 rounded border bg-white px-3 text-[14px] outline-none" style={{ borderColor: "#C8DBF0", color: C.charcoal }}>
+              {PRIORITY_QUADRANTS.map((quadrant) => <option key={quadrant.value} value={quadrant.value}>{quadrant.label}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+            <label className="grid grid-cols-[auto_1fr] items-center gap-2 text-[13px]" style={{ color: C.stone }}>
+              Start
+              <input type="time" value={quickStart} onChange={(e) => setQuickStart(e.target.value)}
+                className="h-10 rounded border bg-white px-3 text-[14px] outline-none" style={{ borderColor: "#C8DBF0", color: C.charcoal }} />
+            </label>
+            <label className="grid grid-cols-[auto_1fr] items-center gap-2 text-[13px]" style={{ color: C.stone }}>
+              End
+              <input type="time" value={quickEnd} onChange={(e) => setQuickEnd(e.target.value)}
+                className="h-10 rounded border bg-white px-3 text-[14px] outline-none" style={{ borderColor: "#C8DBF0", color: C.charcoal }} />
+            </label>
+            <button type="button" onClick={handleQuickAddPriority}
+              className="h-10 px-5 rounded-md text-white text-[14px] font-bold flex items-center justify-center gap-2 shadow-sm" style={{ background: C.coral }}>
+              <Plus className="w-4 h-4" /> Add Priority
+            </button>
+          </div>
         </div>
-        <div className="space-y-3">
-          {priorities.map((priority: string, index: number) => (
-            <div key={index} className="flex items-center gap-3 bg-white border rounded-md px-4 py-3 shadow-sm transition-all" style={{ borderColor: C.cream }}>
-              <input type="text" placeholder={`Priority #${index+1}`} value={priority} onChange={e => updatePriority(index, e.target.value)}
-                className="flex-1 bg-transparent text-[14px] outline-none"
-                style={{ color: C.charcoal }}
-                onFocus={e => {
-                  const wrapper = e.currentTarget.parentElement;
-                  if (!wrapper) return;
-                  wrapper.style.borderColor = C.coral;
-                  wrapper.style.boxShadow = `0 0 0 3px ${C.coral15}`;
-                }}
-                onBlur={e => {
-                  const wrapper = e.currentTarget.parentElement;
-                  if (!wrapper) return;
-                  wrapper.style.borderColor = C.cream;
-                  wrapper.style.boxShadow = "none";
-                }}/>
-              <button type="button" onClick={() => removePriority(index)} className="transition-colors flex-shrink-0" style={{ color: C.muted }}
-                onMouseEnter={e => (e.currentTarget.style.color = C.crimson)} onMouseLeave={e => (e.currentTarget.style.color = C.muted)}
-                aria-label={`Remove priority ${index + 1}`}>
-                <X className="w-4 h-4"/>
-              </button>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[200px_64px_1fr] bg-white">
+          <div className="border-r" style={{ background: "#F4EDFF", borderColor: "#D8C9F4" }}>
+            <div className="h-12 px-3 flex items-center border-b font-bold text-[14px]" style={{ color: C.violet, borderColor: "#D8C9F4" }}>
+              <ListOrdered className="w-4 h-4 mr-1.5" /> To-Do's
             </div>
-          ))}
+            <p className="text-[11px] text-center py-2" style={{ color: C.stone }}>Drag to schedule</p>
+            <div className="px-2 pb-3 space-y-2 max-h-[520px] overflow-y-auto">
+              {isLoadingTodos ? (
+                <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin" style={{ color: C.violet }} /></div>
+              ) : todos.length > 0 ? (
+                todos.map((todo, idx) => (
+                  <div
+                    key={todo.id || idx}
+                    draggable
+                    onDragStart={(event) => handleTodoDragStart(event, todo)}
+                    className="bg-white rounded-lg border p-2 shadow-sm cursor-grab active:cursor-grabbing"
+                    style={{ borderColor: "#E5D8FA" }}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-[13px] font-bold leading-snug" style={{ color: C.charcoal }}>{getTodoTitle(todo)}</p>
+                    </div>
+                    <p className="mt-2 text-[11px] font-semibold" style={{ color: C.coral }}>{getTodoArea(todo)}</p>
+                    <button type="button" onClick={() => addTodoToGrid(todo)} className="mt-2 w-full h-7 rounded text-[11px] font-bold" style={{ background: C.violet8, color: C.violet }}>
+                      + Add to grid
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-center py-6" style={{ color: C.stone }}>No active to-do's found.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="hidden lg:block border-r" style={{ borderColor: "#D8E4F2" }}>
+            <div className="h-12 px-3 flex items-center border-b font-bold text-[14px]" style={{ color: C.violet, borderColor: "#D8E4F2", background: "#EFF6FF" }}>Time</div>
+            {PRIORITY_HOURS.map((hour) => (
+              <div key={hour} className="h-14 px-3 flex items-start pt-3 border-b text-[14px] font-semibold" style={{ color: C.stone, borderColor: "#E8EEF7" }}>
+                {hour}
+              </div>
+            ))}
+          </div>
+
+          <div className="min-w-0">
+            <div className="h-12 px-4 flex items-center border-b font-bold text-[14px]" style={{ color: C.violet, borderColor: "#D8E4F2", background: "#EFF6FF" }}>
+              Schedule for {tomorrowLabel}
+            </div>
+            <div
+              ref={scheduleRef}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={handleScheduleDrop}
+              className="relative min-h-[520px]"
+            >
+              {PRIORITY_HOURS.map((hour) => (
+                <div key={hour} className="h-14 border-b" style={{ background: Number(hour.slice(0, 2)) % 2 === 0 ? "#F8FBFF" : "#FFFFFF", borderColor: "#E8EEF7" }} />
+              ))}
+              <div className="absolute inset-x-0 top-0">
+                {scheduledPriorities.length > 0 ? (
+                  scheduledPriorities.map((priority: string, index: number) => {
+                    const time = priorityMeta[index] || { category: quickCategory, quadrant: quickQuadrant, ...getDefaultTime(index) };
+                    const quadrant = PRIORITY_QUADRANTS.find((item) => item.value === time.quadrant) || getQuadrant(index);
+                    const top = timeToTop(time.start);
+                    const height = timeToHeight(time.start, time.end);
+                    return (
+                      <div
+                        key={`${priority}-${index}`}
+                        draggable
+                        onDragStart={(event) => handlePriorityDragStart(event, index)}
+                        className="absolute left-0 right-0 rounded-md shadow-sm flex items-center justify-between px-3 cursor-grab active:cursor-grabbing"
+                        style={{ top, height, background: "#3F7EE8", color: "white" }}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-[14px] font-bold min-w-0 flex-1 truncate">
+                            {priority}
+                          </span>
+                          <span className="text-[12px] font-bold opacity-90 flex-shrink-0">({time.category} / {quadrant.value})</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <button type="button" onClick={() => openPriorityEdit(index, priority)} aria-label={`Edit ${priority}`}>
+                            <Edit2 className="w-4 h-4 opacity-80" />
+                          </button>
+                          <button type="button" onClick={() => removePriority(index)} aria-label={`Remove ${priority}`}>
+                            <X className="w-4 h-4 opacity-90" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="absolute inset-x-0 top-16 text-center text-sm" style={{ color: C.stone }}>
+                    Add priorities or send To-Do's to the grid.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -961,6 +1186,84 @@ const ShapingTomorrow = ({ priorities, setPriorities, token, showToast }: { prio
           await handleUpdateTodo(todo);
         }}
       />
+
+      {editingPriorityIndex !== null && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-lg rounded-xl bg-white shadow-2xl border" style={{ borderColor: C.cream }}>
+            <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: C.cream, background: C.pageBg }}>
+              <h3 className="text-lg font-bold" style={{ color: C.charcoal }}>Edit Priority</h3>
+              <button type="button" onClick={() => setEditingPriorityIndex(null)} aria-label="Close edit priority">
+                <X className="w-5 h-5" style={{ color: C.stone }} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <label className="block text-sm font-semibold" style={{ color: C.charcoal }}>
+                Priority
+                <input
+                  value={editingPriorityDraft.title}
+                  onChange={(event) => setEditingPriorityDraft((current) => ({ ...current, title: event.target.value }))}
+                  className="mt-1 w-full h-10 rounded border px-3 text-sm outline-none"
+                  style={{ borderColor: C.cream, color: C.charcoal }}
+                />
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="block text-sm font-semibold" style={{ color: C.charcoal }}>
+                  Category
+                  <select
+                    value={editingPriorityDraft.category}
+                    onChange={(event) => setEditingPriorityDraft((current) => ({ ...current, category: event.target.value }))}
+                    className="mt-1 w-full h-10 rounded border px-3 text-sm outline-none bg-white"
+                    style={{ borderColor: C.cream, color: C.charcoal }}
+                  >
+                    {LIFE_AREA_OPTIONS.map((area) => <option key={area.value} value={area.value}>{area.label}</option>)}
+                  </select>
+                </label>
+                <label className="block text-sm font-semibold" style={{ color: C.charcoal }}>
+                  Priority Matrix
+                  <select
+                    value={editingPriorityDraft.quadrant}
+                    onChange={(event) => setEditingPriorityDraft((current) => ({ ...current, quadrant: event.target.value }))}
+                    className="mt-1 w-full h-10 rounded border px-3 text-sm outline-none bg-white"
+                    style={{ borderColor: C.cream, color: C.charcoal }}
+                  >
+                    {PRIORITY_QUADRANTS.map((quadrant) => <option key={quadrant.value} value={quadrant.value}>{quadrant.label}</option>)}
+                  </select>
+                </label>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="block text-sm font-semibold" style={{ color: C.charcoal }}>
+                  Start
+                  <input
+                    type="time"
+                    value={editingPriorityDraft.start}
+                    onChange={(event) => setEditingPriorityDraft((current) => ({ ...current, start: event.target.value }))}
+                    className="mt-1 w-full h-10 rounded border px-3 text-sm outline-none"
+                    style={{ borderColor: C.cream, color: C.charcoal }}
+                  />
+                </label>
+                <label className="block text-sm font-semibold" style={{ color: C.charcoal }}>
+                  End
+                  <input
+                    type="time"
+                    value={editingPriorityDraft.end}
+                    onChange={(event) => setEditingPriorityDraft((current) => ({ ...current, end: event.target.value }))}
+                    className="mt-1 w-full h-10 rounded border px-3 text-sm outline-none"
+                    style={{ borderColor: C.cream, color: C.charcoal }}
+                  />
+                </label>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 px-5 py-4 border-t" style={{ borderColor: C.cream, background: C.pageBg }}>
+              <button type="button" onClick={() => setEditingPriorityIndex(null)} className="h-10 px-4 rounded-md border text-sm font-bold" style={{ borderColor: C.cream, color: C.stone }}>
+                Cancel
+              </button>
+              <button type="button" onClick={savePriorityEdit} className="h-10 px-5 rounded-md text-sm font-bold text-white" style={{ background: C.coral }}>
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1800,7 +2103,7 @@ const ReviewToDos = ({ goals }: { goals: Goal[] }) => (
 // ─── Main DailyJournal Component ──────────────────────────────────────────────
 const DailyJournal = () => {
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   // ─── CUSTOM TOAST STATE ─────────────────────────────────────────────────────
   const [customToast, setCustomToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -1846,8 +2149,39 @@ const DailyJournal = () => {
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   const [pastJournals, setPastJournals]     = useState<PastJournal[]>([]);
   const [isLoadingPast, setIsLoadingPast]   = useState(false);
+  const dailyDraftReadyRef = useRef(false);
+
+  const getDailyDraftKey = (date: Date) =>
+    `${DAILY_JOURNAL_DRAFT_PREFIX}_${user?.id ?? "guest"}_${format(date, "yyyy-MM-dd")}`;
+
+  const applyDailyDraft = (date: Date, achievementFallback: { id: number; title: string; checked: boolean }[] = []) => {
+    try {
+      const rawDraft = localStorage.getItem(getDailyDraftKey(date));
+      if (!rawDraft) return;
+      const draft = JSON.parse(rawDraft);
+
+      if (Array.isArray(draft.selectedMoods)) setSelectedMoods(draft.selectedMoods);
+      if (Array.isArray(draft.selectedAreas)) setSelectedAreas(draft.selectedAreas);
+      if (Array.isArray(draft.selectedValues)) setSelectedValues(draft.selectedValues);
+      if (typeof draft.energy === "number") setEnergy(draft.energy);
+      if (typeof draft.alignment === "number") setAlignment(draft.alignment);
+      if (typeof draft.gratitude === "string") setGratitude(draft.gratitude);
+      if (typeof draft.challenges === "string") setChallenges(draft.challenges);
+      if (typeof draft.affirmation === "string") setAffirmation(draft.affirmation);
+      if (typeof draft.description === "string") setDescription(draft.description);
+      if (Array.isArray(draft.priorities)) setPriorities(draft.priorities.length ? draft.priorities : [""]);
+      if (Array.isArray(draft.achievements)) setAchievements(mergeSuggestedAchievements(draft.achievements, achievementFallback));
+      if (Array.isArray(draft.habitsSnapshot)) setHabitsSnapshot(draft.habitsSnapshot);
+    } catch (error) {
+      console.error("Failed to restore daily journal draft:", error);
+    }
+  };
 
   const filledDates = useMemo(() => pastJournals.map(j => new Date(j.start_date + "T00:00:00")), [pastJournals]);
+
+  useEffect(() => {
+    dailyDraftReadyRef.current = false;
+  }, [selectedDate, user?.id]);
 
   useEffect(() => {
     if (!token) return;
@@ -1918,6 +2252,25 @@ const DailyJournal = () => {
           const completedHistory = weekHabitHistory[habitKey(habit)] || [];
           return Array.from({ length: 7 }, (_, i) => Boolean(fetchedHistory[i] || completedHistory[i]));
         };
+        let weeklyPlanAchievements: { id: number; title: string; checked: boolean }[] = [];
+        let previousDayPriorityAchievements: { id: number; title: string; checked: boolean }[] = [];
+        try {
+          const weeklyRes = await fetch(`${LIFE_API}/user_journals?journal_type=weekly`, { headers: { Authorization: `Bearer ${getToken(token)}` } });
+          if (weeklyRes.ok) {
+            const weeklyData = await weeklyRes.json();
+            const weeklyJournals = Array.isArray(weeklyData) ? weeklyData : (weeklyData?.user_journals ?? weeklyData?.data ?? []);
+            weeklyPlanAchievements = weeklyPlanPrioritiesForDate(weeklyJournals, selectedDate);
+          }
+        } catch {}
+        try {
+          const previousDate = format(addDays(selectedDate, -1), "yyyy-MM-dd");
+          const previousRes = await fetch(`${LIFE_API}/user_journals/0?date=${previousDate}&journal_type=daily`, { headers: { Authorization: `Bearer ${getToken(token)}` } });
+          if (previousRes.ok) {
+            const previousData = await previousRes.json();
+            const previousJournal = Array.isArray(previousData) ? (previousData.length > 0 ? previousData[0] : null) : (previousData?.user_journal ?? previousData);
+            previousDayPriorityAchievements = tomorrowPrioritiesToAchievements(previousJournal);
+          }
+        } catch {}
         if (!isMounted) return;
         if (existingJournal) {
           setJournalId(existingJournal.id); 
@@ -1928,7 +2281,9 @@ const DailyJournal = () => {
           setEnergy(existingJournal.energy_score ?? 5); setAlignment(existingJournal.alignment_score ?? 5);
           setPriorities(existingJournal.priorities?.length ? existingJournal.priorities : [""]);
           setSelectedMoods(existingJournal.mood_tags || []);
-          setAchievements(existingJournal.accomplishments?.map((a: any, i: number) => ({ id: i, title: a.title, checked: true })) || []);
+          const savedAchievements = existingJournal.accomplishments?.map((a: any, i: number) => ({ id: i, title: a.title, checked: true })) || [];
+          const existingSuggestedAchievements = mergeSuggestedAchievements(savedAchievements, previousDayPriorityAchievements, weeklyPlanAchievements);
+          setAchievements(existingSuggestedAchievements);
           setSelectedValues(existingJournal.core_values_snapshot || []);
           setSelectedAreas(existingJournal.data?.selected_life_areas || []);
           const savedHabits = existingJournal.habits_snapshot || [];
@@ -1936,26 +2291,8 @@ const DailyJournal = () => {
             const match = fetchedHabits.find(ah => habitKey(ah) === habitKey(sh));
             return { ...sh, frequency: match?.frequency || match?.repeat_type || "Daily", category: match?.category || match?.habit_category || "Other", week_history: mergeWeekHistory({ ...match, ...sh }) };
           }));
+          applyDailyDraft(selectedDate, existingSuggestedAchievements);
         } else {
-          let weeklyPlanAchievements: { id: number; title: string; checked: boolean }[] = [];
-          let previousDayPriorityAchievements: { id: number; title: string; checked: boolean }[] = [];
-          try {
-            const weeklyRes = await fetch(`${LIFE_API}/user_journals?journal_type=weekly`, { headers: { Authorization: `Bearer ${getToken(token)}` } });
-            if (weeklyRes.ok) {
-              const weeklyData = await weeklyRes.json();
-              const weeklyJournals = Array.isArray(weeklyData) ? weeklyData : (weeklyData?.user_journals ?? weeklyData?.data ?? []);
-              weeklyPlanAchievements = weeklyPlanPrioritiesForDate(weeklyJournals, selectedDate);
-            }
-          } catch {}
-          try {
-            const previousDate = format(addDays(selectedDate, -1), "yyyy-MM-dd");
-            const previousRes = await fetch(`${LIFE_API}/user_journals/0?date=${previousDate}&journal_type=daily`, { headers: { Authorization: `Bearer ${getToken(token)}` } });
-            if (previousRes.ok) {
-              const previousData = await previousRes.json();
-              const previousJournal = Array.isArray(previousData) ? (previousData.length > 0 ? previousData[0] : null) : (previousData?.user_journal ?? previousData);
-              previousDayPriorityAchievements = tomorrowPrioritiesToAchievements(previousJournal);
-            }
-          } catch {}
           const suggestedAchievements = mergeSuggestedAchievements(
             previousDayPriorityAchievements,
             weeklyPlanAchievements,
@@ -1968,12 +2305,55 @@ const DailyJournal = () => {
           setEnergy(5); setAlignment(5); setPriorities([""]); setSelectedMoods([]); setAchievements(suggestedAchievements);
           setSelectedAreas([]); setSelectedValues([]); setAffirmation("");
           setHabitsSnapshot(fetchedHabits.map((h: any) => ({ habit_id: h.id || h.habit_id, name: h.name || h.title || "Habit", completed: false, frequency: h.frequency || h.repeat_type || "Daily", category: h.category || h.habit_category || "Other", week_history: mergeWeekHistory(h) })));
+          applyDailyDraft(selectedDate, suggestedAchievements);
         }
+        dailyDraftReadyRef.current = true;
       } catch (err) { console.error(err); } finally { if (isMounted) setIsLoadingDaily(false); }
     };
     fetchDateData();
     return () => { isMounted = false; };
-  }, [selectedDate, token]);
+  }, [selectedDate, token, user?.id]);
+
+  useEffect(() => {
+    if (!dailyDraftReadyRef.current || activeTab !== "new") return;
+
+    const draft = {
+      selectedMoods,
+      selectedAreas,
+      selectedValues,
+      energy,
+      alignment,
+      gratitude,
+      challenges,
+      affirmation,
+      description,
+      priorities,
+      achievements,
+      habitsSnapshot,
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      localStorage.setItem(getDailyDraftKey(selectedDate), JSON.stringify(draft));
+    } catch (error) {
+      console.error("Failed to save daily journal draft:", error);
+    }
+  }, [
+    activeTab,
+    selectedDate,
+    selectedMoods,
+    selectedAreas,
+    selectedValues,
+    energy,
+    alignment,
+    gratitude,
+    challenges,
+    affirmation,
+    description,
+    priorities,
+    achievements,
+    habitsSnapshot,
+  ]);
 
   const loadJournalIntoForm = async (id: number) => {
     try {
@@ -2037,6 +2417,7 @@ const DailyJournal = () => {
       showToast(isUpdate ? "Journal Updated ✅" : "Journal Entry Saved ✅", "success");
       const dateKey = format(selectedDate, "yyyy-MM-dd");
       localStorage.setItem(`daily_journal_${dateKey}`, JSON.stringify({ accomplishments: achievements.filter(a => a.title?.trim()).map(a => ({ title: a.title, checked: a.checked })) }));
+      localStorage.removeItem(getDailyDraftKey(selectedDate));
       if (!isUpdate) setShowFortuneModal(true);
       await fetchPastJournals();
       setActiveTab("past");
@@ -2139,7 +2520,7 @@ const DailyJournal = () => {
                   <Dailystrip selectedDateExternal={selectedDate} onSelectDate={(date: any) => setSelectedDate(date)} filledDates={filledDates}/>
                   <GuidingPrinciples coreValues={allCoreValues} selectedValues={selectedValues} setSelectedValues={setSelectedValues} selectedAreas={selectedAreas} setSelectedAreas={setSelectedAreas} token={token}/>
                   <TodaysReflection accomplishments={achievements} setAccomplishments={setAchievements} gratitude={gratitude} setGratitude={setGratitude} challenges={challenges} setChallenges={setChallenges} selectedMoods={selectedMoods} setSelectedMoods={setSelectedMoods} energy={energy} setEnergy={setEnergy} alignment={alignment} setAlignment={setAlignment} habits={habitsSnapshot} setHabits={setHabitsSnapshot} selectedDate={selectedDate}/>
-                  <ShapingTomorrow priorities={priorities} setPriorities={setPriorities} token={token} showToast={showToast} />
+                  <ShapingTomorrow priorities={priorities} setPriorities={setPriorities} token={token} showToast={showToast} selectedDate={selectedDate} />
                   <DailyAffirmation affirmation={affirmation} setAffirmation={setAffirmation} token={token}/>
                   <ReviewToDos goals={goalsList}/>
                   <BucketListProgress token={token} showToast={showToast} />

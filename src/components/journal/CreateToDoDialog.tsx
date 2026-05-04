@@ -19,12 +19,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const LIFE_AREAS = [
-  "Career",
-  "Health",
-  "Relationships",
-  "Personal Growth",
-  "Finance",
+const LIFE_AREA_OPTIONS = [
+  { value: "Personal", label: "\u2728 Personal" },
+  { value: "Travel", label: "\u2708\uFE0F Travel" },
+  { value: "Career", label: "\uD83D\uDCBC Career" },
+  { value: "Adventure", label: "\uD83E\uDDD7 Adventure" },
+  { value: "Learning", label: "\uD83D\uDCDA Learning" },
 ];
 const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
 const STATUSES = ["Not Started", "In Progress", "Completed"];
@@ -51,12 +51,18 @@ const fromInputDate = (s: string): Date | undefined => {
   return new Date(y, m - 1, d);
 };
 
+interface GoalOption {
+  id: number | string;
+  title?: string;
+  name?: string;
+}
+
 interface CreateToDoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (todo: TodoItem) => void;
   initialData?: TodoItem | null;
-  availableGoals?: any[];
+  availableGoals?: GoalOption[];
 }
 
 export interface TodoItem {
@@ -83,7 +89,7 @@ const CreateToDoDialog = ({
 }: CreateToDoDialogProps) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [lifeArea, setLifeArea] = useState("Career");
+  const [lifeArea, setLifeArea] = useState("Personal");
   const [priority, setPriority] = useState("Medium");
   const [status, setStatus] = useState("Not Started");
   const [targetDateStr, setTargetDateStr] = useState<string>("");
@@ -102,7 +108,7 @@ const CreateToDoDialog = ({
     if (!initialData) {
       setTitle("");
       setDescription("");
-      setLifeArea("Career");
+      setLifeArea("Personal");
       setPriority("Medium");
       setStatus("Not Started");
       setTargetDateStr("");
@@ -116,7 +122,7 @@ const CreateToDoDialog = ({
 
     setTitle(initialData.title ?? "");
     setDescription(initialData.description ?? "");
-    setLifeArea(initialData.lifeArea ?? "Career");
+    setLifeArea(initialData.lifeArea ?? "Personal");
     setPriority(initialData.priority ?? "Medium");
     setStatus(initialData.status ?? "Not Started");
     setTargetDateStr(toInputDate(initialData.targetDate));
@@ -153,7 +159,7 @@ const CreateToDoDialog = ({
 
     setTitle("");
     setDescription("");
-    setLifeArea("Career");
+    setLifeArea("Personal");
     setPriority("Medium");
     setStatus("Not Started");
     setTargetDateStr("");
@@ -215,7 +221,7 @@ const CreateToDoDialog = ({
               </label>
               <div className="mt-1">
                 <SearchableSelect
-                  options={toOptions(LIFE_AREAS)}
+                  options={LIFE_AREA_OPTIONS}
                   value={lifeArea}
                   onValueChange={setLifeArea}
                   placeholder="Select area"
@@ -292,26 +298,26 @@ const CreateToDoDialog = ({
             )}
           </div>
 
-          <div className="border-t pt-3">
+          <div className="border-t border-[#D6B99D] pt-3">
             <div className="flex items-center gap-2">
               <Checkbox
                 id="recurring"
                 checked={recurring}
+                className="border-[#D6B99D] data-[state=checked]:bg-[#DA7756] data-[state=checked]:border-[#DA7756]"
                 onCheckedChange={(v) => setRecurring(v === true)}
               />
               <label
                 htmlFor="recurring"
-                className="text-body-4 font-medium text-foreground cursor-pointer"
+                className="text-body-4 font-medium text-[#2C2C2A] cursor-pointer"
               >
                 Recurring To Do
               </label>
             </div>
 
-            {/* Video waala UI Logic idhar add kiya hai */}
             {recurring && (
-              <div className="mt-4 space-y-4 rounded-md border border-gray-100 bg-gray-50 p-4">
+              <div className="mt-4 space-y-4 rounded-md border border-[#D6B99D] bg-[#FEF4EE] p-4">
                 <div>
-                  <label className="text-body-5 font-medium text-[#222]">
+                  <label className="text-body-5 font-medium text-[#2C2C2A]">
                     Recurrence Pattern
                   </label>
                   <div className="mt-1">
@@ -319,7 +325,7 @@ const CreateToDoDialog = ({
                       value={recurrencePattern}
                       onValueChange={setRecurrencePattern}
                     >
-                      <SelectTrigger className="w-full bg-white">
+                      <SelectTrigger className="w-full border-[#D6B99D] bg-white focus:ring-[#DA7756]">
                         <SelectValue placeholder="Select pattern" />
                       </SelectTrigger>
                       <SelectContent>
@@ -336,7 +342,7 @@ const CreateToDoDialog = ({
                 {(recurrencePattern === "Weekly" ||
                   recurrencePattern === "Custom") && (
                   <div>
-                    <label className="text-body-5 font-medium text-[#222]">
+                    <label className="text-body-5 font-medium text-[#2C2C2A]">
                       Repeat on
                     </label>
                     <div className="flex flex-wrap gap-2 mt-2">
@@ -347,8 +353,8 @@ const CreateToDoDialog = ({
                           onClick={() => toggleDay(day)}
                           className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 border ${
                             selectedDays.includes(day)
-                              ? "bg-[#7C3AED] text-white border-[#7C3AED] shadow-sm"
-                              : "bg-white text-[#7C3AED] border-[#7C3AED]/30 hover:bg-[#7C3AED]/10"
+                              ? "bg-[#DA7756] text-white border-[#DA7756] shadow-sm"
+                              : "bg-white text-[#C96B4D] border-[#DA7756]/30 hover:bg-[#DA7756]/10"
                           }`}
                         >
                           {day}
@@ -360,7 +366,7 @@ const CreateToDoDialog = ({
 
                 {recurrencePattern === "Custom" && (
                   <div>
-                    <label className="text-body-5 font-medium text-[#222]">
+                    <label className="text-body-5 font-medium text-[#2C2C2A]">
                       Repeat every (days)
                     </label>
                     <Input
@@ -368,7 +374,7 @@ const CreateToDoDialog = ({
                       min="1"
                       value={repeatInterval}
                       onChange={(e) => setRepeatInterval(e.target.value)}
-                      className="mt-1 bg-white"
+                      className="mt-1 border-[#D6B99D] bg-white focus-visible:ring-[#DA7756]"
                       placeholder="e.g. 3"
                     />
                   </div>
@@ -377,7 +383,7 @@ const CreateToDoDialog = ({
             )}
           </div>
 
-          <div className="flex justify-end gap-3 border-t pt-3">
+          <div className="flex justify-end gap-3 border-t border-[#D6B99D] pt-3">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
@@ -385,7 +391,7 @@ const CreateToDoDialog = ({
               variant="secondary"
               onClick={handleSubmit}
               disabled={!title.trim()}
-              className="gap-1 bg-[#7C3AED] hover:bg-[#6D28D9] text-white"
+              className="gap-1 bg-[#DA7756] hover:bg-[#C96B4D] text-white"
             >
               <Save className="h-4 w-4" />{" "}
               {isEditMode ? "Update To Do" : "Create To Do"}
