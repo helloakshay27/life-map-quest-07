@@ -22,8 +22,8 @@ function Vision() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const showToast = (message, type = "success") => {
-    setToast({ message, type });
+  const showToast = (message, type = "success", title) => {
+    setToast({ message, type, title });
   };
 
   const fetchVisionData = React.useCallback(async () => {
@@ -180,12 +180,24 @@ function Vision() {
   };
 
   const handleCopyPrompt = () => {
-    if (visionStatement.length < 20) {
-      showToast("Please write a more detailed vision first", "error");
+    const trimmedVision = visionStatement.trim();
+
+    if (trimmedVision.length < 50) {
+      showToast(
+        "Please write a more detailed vision statement (at least 50 characters). Describe your ideal future in vivid detail.",
+        "error",
+        "Vision Too Short",
+      );
       return;
     }
-    navigator.clipboard.writeText(visionStatement);
-    showToast("Prompt copied to clipboard!", "success");
+
+    const imagePrompt = `Create an infographic in landscape mode that visually represents this vision statement: "${trimmedVision}".`;
+    navigator.clipboard.writeText(imagePrompt);
+    showToast(
+      "Paste this into an AI image generator like DALL-E, Midjourney, or Stable Diffusion to create your vision image.",
+      "success",
+      "Prompt Copied!",
+    );
   };
 
   const handleSave = async () => {
@@ -446,7 +458,7 @@ function Vision() {
           } text-white px-4 py-3 rounded-xl shadow-lg min-w-[250px] z-50 transition-opacity duration-300 font-sans`}
         >
           <span className="font-bold text-sm block">
-            {toast.type === "error" ? "Error" : "Success"}
+            {toast.title || (toast.type === "error" ? "Error" : "Success")}
           </span>
           <span className="text-sm">{toast.message}</span>
         </div>

@@ -2277,14 +2277,11 @@ const GoalsHabits = () => {
                 step="5"
                 value={goalProgress}
                 onChange={(e) => setGoalProgress(Number(e.target.value))}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-teal-500"
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-teal-500"
+                style={{
+                  background: `linear-gradient(to right, #3b82f6 0%, #14b8a6 ${goalProgress}%, #e5e7eb ${goalProgress}%, #e5e7eb 100%)`,
+                }}
               />
-              <div className="w-full bg-gray-200 rounded-full h-3">
-                <div
-                  className="bg-gradient-to-r from-blue-500 to-teal-500 h-3 rounded-full"
-                  style={{ width: `${goalProgress}%` }}
-                />
-              </div>
             </div>
 
             {/* ── Linked Bucket List Item ── */}
@@ -2738,14 +2735,13 @@ const GoalsHabits = () => {
                 step="1"
                 value={affirmationPriority}
                 onChange={(e) => setAffirmationPriority(Number(e.target.value))}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                style={{
+                  background: `linear-gradient(to right, #a855f7 0%, #ec4899 ${
+                    ((affirmationPriority - 1) / 9) * 100
+                  }%, #e5e7eb ${((affirmationPriority - 1) / 9) * 100}%, #e5e7eb 100%)`,
+                }}
               />
-              <div className="w-full bg-gray-200 rounded-full h-3">
-                <div
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all"
-                  style={{ width: `${((affirmationPriority - 1) / 9) * 100}%` }}
-                />
-              </div>
             </div>
             <div className="flex justify-end gap-2 pt-4">
               <Button
