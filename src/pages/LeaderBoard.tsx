@@ -23,7 +23,7 @@ const C = {
   warning:  "#F4A94C",   // Alerts, Caution
   crimson:  "#C72540",   // Failed, Critical
   sky:      "#2B6CC5",   // Information
-  pageBg:   "#FAF7F3",
+  pageBg:   "#F6F4EE",
 };
 
 const BASE_URL = "https://life-api.lockated.com";

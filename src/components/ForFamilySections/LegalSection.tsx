@@ -36,7 +36,7 @@ interface LegalDetails {
 interface LegalSectionProps {
   legalDetails: LegalDetails;
   onUpdateLegalDetails: (field: keyof LegalDetails, value: string | boolean) => void;
-  onHandleWillDocumentUpload: () => void;
+  onHandleWillDocumentUpload: (file: File) => void;
 }
 
 export default function LegalSection({
@@ -44,6 +44,12 @@ export default function LegalSection({
   onUpdateLegalDetails,
   onHandleWillDocumentUpload,
 }: LegalSectionProps) {
+  const handleWillFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) onHandleWillDocumentUpload(file);
+    e.target.value = "";
+  };
+  
   
   const inputClassName =
     "w-full bg-white border border-[#D6B99D] rounded-xl px-4 py-2.5 text-sm text-[#2C2C2A] placeholder:text-[#888780] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#DA7756] focus-visible:border-[#DA7756] shadow-sm";
@@ -127,9 +133,16 @@ export default function LegalSection({
               </div>
               
               <div className="pt-2">
+                <input
+                  type="file"
+                  id="will-document-upload"
+                  className="hidden"
+                  onChange={handleWillFileChange}
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                />
                 <Button 
                   variant="outline"
-                  onClick={onHandleWillDocumentUpload}
+                  onClick={() => document.getElementById("will-document-upload")?.click()}
                   className={cn(
                     "w-full font-bold transition-all shadow-sm rounded-xl py-6",
                     legalDetails.willDocumentUploaded
@@ -138,7 +151,7 @@ export default function LegalSection({
                   )}
                 >
                   {legalDetails.willDocumentUploaded ? (
-                    <><CheckCircle2 className="w-5 h-5 mr-2" /> Document Uploaded</>
+                    <><CheckCircle2 className="w-5 h-5 mr-2" /> {legalDetails.willDocumentUploaded}</>
                   ) : (
                     <><Upload className="w-4 h-4 mr-2" strokeWidth={2.5}/> Upload Will Document</>
                   )}

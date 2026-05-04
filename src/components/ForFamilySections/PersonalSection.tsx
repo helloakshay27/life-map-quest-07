@@ -69,12 +69,14 @@ interface PersonalSectionProps {
   spouseDocuments: UploadedDocument[];
   expandedSections: Record<string, boolean>;
   onUpdatePersonalInfo: (field: keyof PersonalInfo, value: string) => void;
-  onAddPersonalDocument: () => void;
+  onAddPersonalDocument: (file: File) => void;
   onRemovePersonalDocument: (id: string) => void;
-  onAddSpouseDocument: () => void;
+  onAddSpouseDocument: (file: File) => void;
   onRemoveSpouseDocument: (id: string) => void;
   onToggleSection: (section: string) => void;
 }
+
+const MAX_DOCUMENTS_PER_FIELD = 5;
 
 export default function PersonalSection({
   personalInfo,
@@ -88,6 +90,20 @@ export default function PersonalSection({
   onRemoveSpouseDocument,
   onToggleSection,
 }: PersonalSectionProps) {
+  const handlePersonalDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const remainingSlots = Math.max(0, MAX_DOCUMENTS_PER_FIELD - personalDocuments.length);
+    const files = Array.from(e.target.files || []).slice(0, remainingSlots);
+    files.forEach(onAddPersonalDocument);
+    e.target.value = "";
+  };
+
+  const handleSpouseDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const remainingSlots = Math.max(0, MAX_DOCUMENTS_PER_FIELD - spouseDocuments.length);
+    const files = Array.from(e.target.files || []).slice(0, remainingSlots);
+    files.forEach(onAddSpouseDocument);
+    e.target.value = "";
+  };
+
   return (
     <div className="space-y-6">
       <div className={ffSectionShell}>
@@ -279,12 +295,21 @@ export default function PersonalSection({
                     </div>
                   ))}
                 </div>
+                <input
+                  type="file"
+                  id="personal-document-upload"
+                  className="hidden"
+                  onChange={handlePersonalDocumentUpload}
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  multiple
+                />
                 <Button 
                   variant="outline"
-                  onClick={onAddPersonalDocument}
+                  onClick={() => document.getElementById("personal-document-upload")?.click()}
                   className={ffAddDashed}
+                  disabled={personalDocuments.length >= MAX_DOCUMENTS_PER_FIELD}
                 >
-                  + Attach Document
+                  {personalDocuments.length >= MAX_DOCUMENTS_PER_FIELD ? "Maximum 5 Documents" : "+ Attach Document"}
                 </Button>
               </div>
             )}
@@ -405,12 +430,21 @@ export default function PersonalSection({
                       </div>
                     ))}
                   </div>
+                  <input
+                    type="file"
+                    id="spouse-document-upload"
+                    className="hidden"
+                    onChange={handleSpouseDocumentUpload}
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    multiple
+                  />
                   <Button 
                     variant="outline"
-                    onClick={onAddSpouseDocument}
+                    onClick={() => document.getElementById("spouse-document-upload")?.click()}
                     className={ffAddDashed}
+                    disabled={spouseDocuments.length >= MAX_DOCUMENTS_PER_FIELD}
                   >
-                    + Attach Document
+                    {spouseDocuments.length >= MAX_DOCUMENTS_PER_FIELD ? "Maximum 5 Documents" : "+ Attach Document"}
                   </Button>
                 </div>
               </div>

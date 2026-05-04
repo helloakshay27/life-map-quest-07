@@ -29,10 +29,12 @@ interface OtherInfoSectionProps {
   attachedDocuments: UploadedDocument[];
   expandedSections: Record<string, boolean>;
   onUpdateOtherInfo: (field: string, value: string) => void;
-  onAddAttachedDocument: () => void;
+  onAddAttachedDocument: (file: File) => void;
   onRemoveAttachedDocument: (id: string) => void;
   onToggleSection: (section: string) => void;
 }
+
+const MAX_DOCUMENTS_PER_FIELD = 5;
 
 export default function OtherInfoSection({
   otherInfo,
@@ -43,6 +45,13 @@ export default function OtherInfoSection({
   onRemoveAttachedDocument,
   onToggleSection,
 }: OtherInfoSectionProps) {
+  const handleAttachedDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const remainingSlots = Math.max(0, MAX_DOCUMENTS_PER_FIELD - attachedDocuments.length);
+    const files = Array.from(e.target.files || []).slice(0, remainingSlots);
+    files.forEach(onAddAttachedDocument);
+    e.target.value = "";
+  };
+
   return (
     <div className="space-y-6">
       <div className={ffSectionShell}>
@@ -126,13 +135,22 @@ export default function OtherInfoSection({
                       </Button>
                     </div>
                   ))}
+                  <input
+                    type="file"
+                    id="attached-document-upload"
+                    className="hidden"
+                    onChange={handleAttachedDocumentUpload}
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    multiple
+                  />
                   <Button 
                     variant="outline"
-                    onClick={onAddAttachedDocument}
+                    onClick={() => document.getElementById("attached-document-upload")?.click()}
                     className={ffAddDashed}
+                    disabled={attachedDocuments.length >= MAX_DOCUMENTS_PER_FIELD}
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Document
+                    {attachedDocuments.length >= MAX_DOCUMENTS_PER_FIELD ? "Maximum 5 Documents" : "Add Document"}
                   </Button>
                 </div>
               </div>

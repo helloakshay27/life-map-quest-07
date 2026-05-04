@@ -59,7 +59,7 @@ const metrics = [
 
 const MonthlyReview = () => {
   return (
-    <div className="min-h-screen animate-fade-in bg-background px-4 py-5 text-foreground sm:px-6">
+    <div className="min-h-screen animate-fade-in bg-[#F6F4EE] px-4 py-5 text-foreground sm:px-6">
       <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-5">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-2">

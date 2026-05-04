@@ -78,6 +78,7 @@ interface FinanceSectionProps {
 }
 
 const fieldLabelClass = cn(ffLabelUpper, "mb-1 block");
+const MAX_DOCUMENTS_PER_FIELD = 5;
 
 export default function FinanceSection({
   bankAccounts,
@@ -104,8 +105,14 @@ export default function FinanceSection({
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (investmentsDocuments.uploadedDocuments.length >= MAX_DOCUMENTS_PER_FIELD) {
+      e.target.value = "";
+      return;
+    }
+
     const file = e.target.files?.[0];
     if (file) onAddInvestmentDocument(file);
+    e.target.value = "";
   };
 
   const innerCard = "bg-card border border-border rounded-xl p-6 shadow-sm";
@@ -290,7 +297,7 @@ export default function FinanceSection({
 
               <div className="mt-6 pt-6 border-t border-border">
                 <Label className="text-sm font-semibold text-foreground">
-                  Uploaded Investment Documents <span className="text-[#888780] font-normal">(up to 15)</span>
+                  Uploaded Investment Documents <span className="text-[#888780] font-normal">(up to 5)</span>
                 </Label>
 
                 {investmentsDocuments.uploadedDocuments.length > 0 && (
@@ -314,9 +321,14 @@ export default function FinanceSection({
                     onChange={handleFileUpload}
                     accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                   />
-                  <Button variant="outline" className={ffBtnSecondary} onClick={() => document.getElementById("investment-document-upload")?.click()}>
+                  <Button
+                    variant="outline"
+                    className={ffBtnSecondary}
+                    onClick={() => document.getElementById("investment-document-upload")?.click()}
+                    disabled={investmentsDocuments.uploadedDocuments.length >= MAX_DOCUMENTS_PER_FIELD}
+                  >
                     <Upload className="h-4 w-4 mr-2" />
-                    Attach Document
+                    {investmentsDocuments.uploadedDocuments.length >= MAX_DOCUMENTS_PER_FIELD ? "Maximum 5 Documents" : "Attach Document"}
                   </Button>
                 </div>
               </div>
