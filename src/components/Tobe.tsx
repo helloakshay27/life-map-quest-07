@@ -23,6 +23,12 @@ interface AnalysisResult {
   do: string;
 }
 
+interface SavedExercise {
+  be: string;
+  do: string;
+  goalIds: Array<string | number>;
+}
+
 interface ApiError extends Error {
   status?: number;
   body?: unknown;
@@ -86,8 +92,41 @@ const apiFetch = async (path: string, options: RequestInit = {}): Promise<unknow
   return json;
 };
 
+const toRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+
+const normalizeSavedExercise = (data: unknown): SavedExercise | null => {
+  const root = toRecord(data);
+  const source =
+    (Array.isArray(data) ? data[0] : null) ||
+    root?.be_do_have_exercise ||
+    (Array.isArray(root?.be_do_have_exercises) ? root.be_do_have_exercises[0] : null) ||
+    (Array.isArray(root?.data) ? root.data[0] : root?.data) ||
+    data;
+
+  const exercise = toRecord(source);
+  if (!exercise) return null;
+
+  const goals = Array.isArray(exercise.have_goals)
+    ? exercise.have_goals
+    : Array.isArray(exercise.goals)
+      ? exercise.goals
+      : [];
+  const goalIds = Array.isArray(exercise.goal_ids)
+    ? exercise.goal_ids as Array<string | number>
+    : goals
+        .map((goal) => toRecord(goal)?.id)
+        .filter((id): id is string | number => typeof id === "string" || typeof id === "number");
+
+  return {
+    be: (exercise.be_identity || exercise.be || exercise.identity || "") as string,
+    do: (exercise.do_actions || exercise.do || exercise.actions || "") as string,
+    goalIds,
+  };
+};
+
 function Tobe() {
-  const [bucketList, setBucketList] = useState<Goal[]>([]);
+  const [goalList, setGoalList] = useState<Goal[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [customGoal, setCustomGoal] = useState<string>("");
   const [toast, setToast] = useState<Toast | null>(null);
@@ -98,6 +137,8 @@ function Tobe() {
   const [deletingId, setDeletingId] = useState<string | number | null>(null);
   const [selectedGoalForDelete, setSelectedGoalForDelete] = useState<Goal | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [savedExerciseGoalIds, setSavedExerciseGoalIds] = useState<Array<string | number>>([]);
+  const [hasFetchedGoals, setHasFetchedGoals] = useState<boolean>(false);
 
   useEffect(() => {
     if (!toast) return;
@@ -108,27 +149,22 @@ function Tobe() {
   const showError = (msg: string) => setToast({ type: "error", message: msg });
   const showSuccess = (msg: string) => setToast({ type: "success", message: msg });
 
-  const fetchBucketList = useCallback(async () => {
+  const fetchGoals = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await apiFetch("/dreams") as Record<string, unknown>;
+      const data = await apiFetch("/goals") as Record<string, unknown>;
 
       let allGoals: Record<string, unknown>[] = [];
       if (data && typeof data === "object" && !Array.isArray(data)) {
-        ["dreaming", "planning", "in_progress", "achieved"].forEach((cat) => {
-          if (Array.isArray(data[cat])) {
-            allGoals = [...allGoals, ...(data[cat] as Record<string, unknown>[])];
-          }
-        });
-        if (!allGoals.length && Array.isArray(data.dreams)) allGoals = data.dreams as Record<string, unknown>[];
+        if (Array.isArray(data.goals)) allGoals = data.goals as Record<string, unknown>[];
         if (!allGoals.length && Array.isArray(data.data))   allGoals = data.data as Record<string, unknown>[];
       } else if (Array.isArray(data)) {
         allGoals = data as Record<string, unknown>[];
       }
 
-      setBucketList(
+      setGoalList(
         allGoals.map((item, i) => ({
-          id:      (item.id as string | number) || `dream_${i}`,
+          id:      (item.id as string | number) || `goal_${i}`,
           title:   (item.title || item.name || item.goal || "Untitled Goal") as string,
           desc:    (item.desc  || item.description || "") as string,
           status:  (item.status || "") as string,
@@ -136,44 +172,84 @@ function Tobe() {
         }))
       );
     } catch (err) {
-      console.error("[fetchBucketList] failed:", err);
-      showError("Could not load your dreams. Check console for details.");
+      console.error("[fetchGoals] failed:", err);
+      showError("Could not load your goals. Check console for details.");
     } finally {
+      setHasFetchedGoals(true);
       setIsLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchBucketList();
+  const fetchSavedExercise = useCallback(async () => {
+    try {
+      const data = await apiFetch("/be_do_have_exercise");
+      const savedExercise = normalizeSavedExercise(data);
+
+      if (!savedExercise) return;
+
+      if (savedExercise.be || savedExercise.do) {
+        setAnalysisResult({ be: savedExercise.be, do: savedExercise.do });
+      }
+
+      if (savedExercise.goalIds.length) {
+        setSavedExerciseGoalIds(savedExercise.goalIds);
+      }
+    } catch (err) {
+      console.warn("[fetchSavedExercise] failed:", err);
+    }
   }, []);
+
+  useEffect(() => {
+    if (!hasFetchedGoals || !savedExerciseGoalIds.length) return;
+
+    setGoalList((prev) =>
+      prev.map((goal) => ({
+        ...goal,
+        checked: savedExerciseGoalIds.some((id) => String(id) === String(goal.id)),
+      }))
+    );
+  }, [hasFetchedGoals, savedExerciseGoalIds]);
+
+  useEffect(() => {
+    fetchGoals();
+    fetchSavedExercise();
+  }, [fetchGoals, fetchSavedExercise]);
 
   const handleAddCustomGoal = async () => {
     if (!customGoal.trim()) { showError("Please enter a goal"); return; }
 
     setIsAdding(true);
     try {
-      const data = await apiFetch("/dreams", {
+      const year = new Date().getFullYear();
+      const data = await apiFetch("/goals", {
         method: "POST",
         body: JSON.stringify({
-          dream: {
-            title:       customGoal.trim(),
+          goal: {
+            title: customGoal.trim(),
             description: "",
-            status:      "dreaming",
+            category: "career",
+            status: "planning",
+            priority: "high",
+            progress: 0,
+            target_date: `${year}-12-31`,
+            core_value_ids: [],
+            start_date: `${year}-01-01`,
+            end_date: `${year}-12-31`,
           },
         }),
       }) as Record<string, unknown>;
 
-      const created = (data?.dream || data?.data || data) as Record<string, unknown>;
+      const created = (data?.goal || data?.data || data) as Record<string, unknown>;
 
       const newGoal: Goal = {
         id:      (created?.id as string | number) || Date.now(),
         title:   (created?.title as string)       || customGoal.trim(),
         desc:    (created?.description || created?.desc || "") as string,
-        status:  (created?.status as string)      || "dreaming",
+        status:  (created?.status as string)      || "planning",
         checked: true,
       };
 
-      setBucketList((prev) => [...prev, newGoal]);
+      setGoalList((prev) => [...prev, newGoal]);
       setCustomGoal("");
       showSuccess("Goal added successfully!");
     } catch (err) {
@@ -187,8 +263,8 @@ function Tobe() {
   const deleteGoalFromBackend = async (goal: Goal): Promise<boolean> => {
     setDeletingId(goal.id);
     try {
-      await apiFetch(`/dreams/${goal.id}`, { method: "DELETE" });
-      setBucketList((prev) => prev.filter((g) => g.id !== goal.id));
+      await apiFetch(`/goals/${goal.id}`, { method: "DELETE" });
+      setGoalList((prev) => prev.filter((g) => g.id !== goal.id));
       showSuccess("Goal deleted successfully!");
       return true;
     } catch (err) {
@@ -201,7 +277,7 @@ function Tobe() {
   };
 
   const saveExerciseToBackend = async () => {
-    const selected = bucketList.filter((g) => g.checked);
+    const selected = goalList.filter((g) => g.checked);
     if (!selected.length) { showError("Please select at least one goal"); return; }
 
     setIsSaving(true);
@@ -226,7 +302,7 @@ function Tobe() {
   };
 
   const handleAnalyzeAI = async () => {
-    const selected = bucketList.filter((g) => g.checked);
+    const selected = goalList.filter((g) => g.checked);
     if (!selected.length) { showError("Please select at least one goal to analyze"); return; }
 
     setIsAnalyzing(true);
@@ -275,7 +351,7 @@ function Tobe() {
   };
 
   const handleToggleCheck = (id: string | number) =>
-    setBucketList((prev) =>
+    setGoalList((prev) =>
       prev.map((g) => (g.id === id ? { ...g, checked: !g.checked } : g))
     );
 
@@ -300,7 +376,7 @@ function Tobe() {
   if (isLoading) {
     return (
       <div className="min-h-[300px] bg-[#FEF4EE] flex items-center justify-center font-sans">
-        <p className="text-[#888780] font-medium animate-pulse">Loading your Dreams...</p>
+        <p className="text-[#888780] font-medium animate-pulse">Loading your goals...</p>
       </div>
     );
   }
@@ -347,20 +423,20 @@ function Tobe() {
             <div className="w-10 h-10 rounded-xl bg-[#0B5D41]/[0.08] text-[#0B5D41] flex items-center justify-center font-bold text-lg">H</div>
             <div>
               <h3 className="font-bold text-[#2C2C2A] text-[18px]">What I want to HAVE</h3>
-              <p className="text-sm text-[#888780] font-medium">Select from bucket list or add custom goals</p>
+              <p className="text-sm text-[#888780] font-medium">Select from your goals or add custom goals</p>
             </div>
           </div>
 
-          {/* BUCKET LIST */}
+          {/* GOALS */}
           <div className="mb-4">
-            <p className="text-sm font-semibold text-[#2C2C2A] mb-3">From Your Bucket List:</p>
-            {bucketList.length === 0 ? (
+            <p className="text-sm font-semibold text-[#2C2C2A] mb-3">From Your Goals:</p>
+            {goalList.length === 0 ? (
               <div className="p-4 border border-dashed border-[#D6B99D] rounded-xl text-center text-[#888780] font-medium text-sm bg-[#FEF4EE]">
                 No items yet. Add a custom goal below!
               </div>
             ) : (
               <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
-                {bucketList.map((goal) => (
+                {goalList.map((goal) => (
                   <div
                     key={goal.id}
                     className={`flex items-start gap-3 p-3 border rounded-xl transition-colors ${
