@@ -90,6 +90,14 @@ interface HabitItem {
   habit_id?: number; name: string; completed: boolean;
   frequency?: string; category?: string; week_history?: boolean[];
 }
+interface ApiHabitDay {
+  date?: string;
+  scheduled?: boolean;
+  completed?: boolean;
+  missed?: boolean;
+  today?: boolean;
+  future?: boolean;
+}
 
 // ─── Mapping Helpers for To-Do API ────────────────────────────────────────────
 const toApiStatus = (ui: string) => {
@@ -2171,7 +2179,7 @@ const DailyJournal = () => {
       if (typeof draft.description === "string") setDescription(draft.description);
       if (Array.isArray(draft.priorities)) setPriorities(draft.priorities.length ? draft.priorities : [""]);
       if (Array.isArray(draft.achievements)) setAchievements(mergeSuggestedAchievements(draft.achievements, achievementFallback));
-      if (Array.isArray(draft.habitsSnapshot)) setHabitsSnapshot(draft.habitsSnapshot);
+      // Habits come from /habits so stale local drafts do not override API completion.
     } catch (error) {
       console.error("Failed to restore daily journal draft:", error);
     }
@@ -2222,8 +2230,8 @@ const DailyJournal = () => {
         }
         let fetchedHabits: any[] = [];
         try {
-          const hRes = await fetch(`${API_BASE_URL}/habits?date=${d}`, { headers: { Authorization: `Bearer ${getToken(token)}` } });
-          if (hRes.ok) { const hData = await hRes.json(); fetchedHabits = Array.isArray(hData) ? hData : (hData.data ?? []); }
+          const hRes = await fetch(`${API_BASE_URL}/habits`, { headers: { Authorization: `Bearer ${getToken(token)}` } });
+          if (hRes.ok) { const hData = await hRes.json(); fetchedHabits = Array.isArray(hData) ? hData : (hData.habits ?? hData.data ?? []); }
         } catch {}
         const weekHabitHistory: Record<string, boolean[]> = {};
         try {
@@ -2247,11 +2255,35 @@ const DailyJournal = () => {
             });
           }));
         } catch {}
+        const getHabitApiDay = (habit: any, dateKey: string) =>
+          (habit.this_week || []).find(
+            (day: ApiHabitDay) => String(day.date || "").slice(0, 10) === dateKey,
+          );
+        const getHabitCompletedForSelectedDate = (habit: any) => {
+          const apiDay = getHabitApiDay(habit, d);
+          return apiDay ? Boolean(apiDay.completed) : Boolean(habit.completed);
+        };
         const mergeWeekHistory = (habit: any) => {
-          const fetchedHistory = habit.week_history || habit.weekly_completion || [];
+          const apiWeek = Array.isArray(habit.this_week)
+            ? Array.from({ length: 7 }, (_, i) => {
+                const dateKey = format(addDays(startOfWeek(selectedDate, { weekStartsOn: 0 }), i), "yyyy-MM-dd");
+                const apiDay = getHabitApiDay(habit, dateKey);
+                return Boolean(apiDay?.completed);
+              })
+            : [];
+          if (apiWeek.length) return apiWeek;
+          const fetchedHistory = apiWeek.length ? apiWeek : (habit.week_history || habit.weekly_completion || []);
           const completedHistory = weekHabitHistory[habitKey(habit)] || [];
           return Array.from({ length: 7 }, (_, i) => Boolean(fetchedHistory[i] || completedHistory[i]));
         };
+        const mapApiHabitToSnapshot = (h: any): HabitItem => ({
+          habit_id: h.id || h.habit_id,
+          name: h.name || h.title || "Habit",
+          completed: getHabitCompletedForSelectedDate(h),
+          frequency: h.frequency || h.repeat_type || "Daily",
+          category: h.category || h.habit_category || "Other",
+          week_history: mergeWeekHistory(h),
+        });
         let weeklyPlanAchievements: { id: number; title: string; checked: boolean }[] = [];
         let previousDayPriorityAchievements: { id: number; title: string; checked: boolean }[] = [];
         try {
@@ -2289,7 +2321,14 @@ const DailyJournal = () => {
           const savedHabits = existingJournal.habits_snapshot || [];
           setHabitsSnapshot(savedHabits.map((sh: any) => {
             const match = fetchedHabits.find(ah => habitKey(ah) === habitKey(sh));
-            return { ...sh, frequency: match?.frequency || match?.repeat_type || "Daily", category: match?.category || match?.habit_category || "Other", week_history: mergeWeekHistory({ ...match, ...sh }) };
+            const apiHabit = match || sh;
+            return {
+              ...sh,
+              completed: match ? getHabitCompletedForSelectedDate(match) : Boolean(sh.completed),
+              frequency: match?.frequency || match?.repeat_type || sh.frequency || "Daily",
+              category: match?.category || match?.habit_category || sh.category || "Other",
+              week_history: mergeWeekHistory(apiHabit),
+            };
           }));
           applyDailyDraft(selectedDate, existingSuggestedAchievements);
         } else {
@@ -2304,7 +2343,7 @@ const DailyJournal = () => {
           setGratitude(""); setChallenges(""); setDescription("");
           setEnergy(5); setAlignment(5); setPriorities([""]); setSelectedMoods([]); setAchievements(suggestedAchievements);
           setSelectedAreas([]); setSelectedValues([]); setAffirmation("");
-          setHabitsSnapshot(fetchedHabits.map((h: any) => ({ habit_id: h.id || h.habit_id, name: h.name || h.title || "Habit", completed: false, frequency: h.frequency || h.repeat_type || "Daily", category: h.category || h.habit_category || "Other", week_history: mergeWeekHistory(h) })));
+          setHabitsSnapshot(fetchedHabits.map(mapApiHabitToSnapshot));
           applyDailyDraft(selectedDate, suggestedAchievements);
         }
         dailyDraftReadyRef.current = true;

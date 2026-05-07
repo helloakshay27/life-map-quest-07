@@ -15,6 +15,8 @@ import {
   CalendarDays,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Trash2,
   X,
 } from "lucide-react";
@@ -110,6 +112,14 @@ interface Affirmation {
   statement?: string;
   priority?: number;
 }
+interface HabitCalendarDay {
+  date: string;
+  scheduled?: boolean;
+  completed?: boolean;
+  missed?: boolean;
+  today?: boolean;
+  future?: boolean;
+}
 interface Habit {
   id: string | number;
   name: string;
@@ -122,7 +132,7 @@ interface Habit {
   startDate?: string;
   days_of_week?: string[];
   repeat_days?: string[];
-  target_days?: string[];
+  target_days?: Array<string | number>;
   day_of_month?: number | string;
   monthly_day?: number | string;
   custom_every?: number | string;
@@ -130,8 +140,26 @@ interface Habit {
   custom_unit?: string;
   repeat_unit?: string;
   completed?: boolean;
+  habit_log_id?: number | string | null;
+  completed_at?: string | null;
+  current_month?: string;
+  monthly_stats?: {
+    scheduled_count?: number;
+    completed_count?: number;
+    missed_count?: number;
+    percentage?: number;
+  };
+  this_week?: HabitCalendarDay[];
+  calendar_days?: HabitCalendarDay[];
   week_history?: boolean[];
   weekly_completion?: boolean[];
+  month_history?: boolean[];
+  monthly_completion?: boolean[];
+  completed_dates?: string[];
+  completion_dates?: string[];
+  completions?: Array<string | { date?: string; completed?: boolean; status?: string }>;
+  habit_logs?: Array<{ date?: string; completed?: boolean; status?: string }>;
+  logs?: Array<{ date?: string; completed?: boolean; status?: string }>;
 }
 interface CoreValue {
   id: number;
@@ -186,7 +214,9 @@ const getHabitCategoryLabel = (category?: string) => {
 const normalizeWeekday = (day: string) => day.toLowerCase();
 
 const getHabitWeekdays = (habit: Habit) =>
-  (habit.days_of_week || habit.repeat_days || habit.target_days || []).map(normalizeWeekday);
+  (habit.days_of_week || habit.repeat_days || habit.target_days || [])
+    .map((day) => String(day))
+    .map(normalizeWeekday);
 
 const getHabitScheduleLabel = (habit: Habit) => {
   const frequency = habit.frequency || "daily";
@@ -198,12 +228,33 @@ const getHabitScheduleLabel = (habit: Habit) => {
       : "Weekly";
   }
   if (frequency === "monthly") {
-    const day = habit.day_of_month || habit.monthly_day;
+    const day = habit.day_of_month || habit.monthly_day || habit.target_days?.[0];
     return day ? `Day ${day} each month` : "Monthly";
   }
   const interval = habit.custom_every || habit.custom_interval || 1;
   const unit = habit.custom_unit || habit.repeat_unit || "days";
   return `Every ${interval} ${unit}`;
+};
+
+const getMonthKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+
+const getDateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate(),
+  ).padStart(2, "0")}`;
+
+const getMonthLabel = (monthKey: string) => {
+  const [year, month] = monthKey.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleString("default", {
+    month: "long",
+    year: "numeric",
+  });
+};
+
+const shiftMonthKey = (monthKey: string, offset: number) => {
+  const [year, month] = monthKey.split("-").map(Number);
+  return getMonthKey(new Date(year, month - 1 + offset, 1));
 };
 
 // ─── STATUS MAPPING ───────────────────────────────────────────────────────────
@@ -430,6 +481,15 @@ const GoalsHabits = () => {
   const [expandedHabitId, setExpandedHabitId] = useState<string | number | null>(
     null,
   );
+  const [habitMonthById, setHabitMonthById] = useState<Record<string, string>>(
+    {},
+  );
+  const [habitDetailsByKey, setHabitDetailsByKey] = useState<Record<string, Habit>>(
+    {},
+  );
+  const [habitDetailsLoading, setHabitDetailsLoading] = useState<
+    Record<string, boolean>
+  >({});
   const [editingHabitId, setEditingHabitId] = useState<string | number | null>(
     null,
   );
@@ -1370,6 +1430,32 @@ const GoalsHabits = () => {
   };
 
   // ─── HABIT HANDLERS ───────────────────────────────────────────────────────
+  const getHabitTargetDaysPayload = () => {
+    if (habitFrequency === "weekly") return habitWeekdays;
+    if (habitFrequency === "monthly" && habitMonthDay) return [Number(habitMonthDay)];
+    return [];
+  };
+
+  const buildHabitPayload = () => ({
+    habit: {
+      name: habitName,
+      description: habitDescription,
+      frequency: habitFrequency || "daily",
+      category: getHabitCategoryValue(habitCategory),
+      time: habitTime,
+      place: habitPlace,
+      day_of_month:
+        habitFrequency === "monthly" && habitMonthDay
+          ? Number(habitMonthDay)
+          : null,
+      start_date: habitStartDate,
+      target_days: getHabitTargetDaysPayload(),
+      custom_every:
+        habitFrequency === "custom" ? Number(habitCustomEvery || 1) : null,
+      custom_unit: habitFrequency === "custom" ? habitCustomUnit : null,
+    },
+  });
+
   const handleCreateHabit = async () => {
     if (!habitName.trim()) return;
     if (!habitStartDate.trim()) {
@@ -1398,40 +1484,27 @@ const GoalsHabits = () => {
     }
     setHabitSaving(true);
     try {
-      const schedulePayload = {
-        days_of_week: habitFrequency === "weekly" ? habitWeekdays : [],
-        repeat_days: habitFrequency === "weekly" ? habitWeekdays : [],
-        day_of_month: habitFrequency === "monthly" && habitMonthDay ? Number(habitMonthDay) : null,
-        custom_every: habitFrequency === "custom" ? Number(habitCustomEvery || 1) : null,
-        custom_unit: habitFrequency === "custom" ? habitCustomUnit : null,
-      };
       const res = await fetchWithAuth("/habits", {
         method: "POST",
-        body: JSON.stringify({
-          name: habitName,
-          frequency: habitFrequency || "daily",
-          description: habitDescription,
-          category: getHabitCategoryValue(habitCategory),
-          time: habitTime,
-          place: habitPlace,
-          start_date: habitStartDate,
-          linked_goals: habitLinkedGoals,
-          ...schedulePayload,
-        }),
+        body: JSON.stringify(buildHabitPayload()),
       });
       if (!res.ok) throw new Error("Failed");
       const created = await res.json();
       const createdHabit = created?.habit ?? created?.data ?? created;
+      const targetDays = getHabitTargetDaysPayload();
       setHabits((prev) => [
         ...prev,
         {
           ...createdHabit,
           frequency: habitFrequency,
-          days_of_week: schedulePayload.days_of_week,
-          repeat_days: schedulePayload.repeat_days,
-          day_of_month: schedulePayload.day_of_month,
-          custom_every: schedulePayload.custom_every,
-          custom_unit: schedulePayload.custom_unit,
+          target_days: targetDays,
+          day_of_month:
+            habitFrequency === "monthly" && habitMonthDay
+              ? Number(habitMonthDay)
+              : null,
+          custom_every:
+            habitFrequency === "custom" ? Number(habitCustomEvery || 1) : null,
+          custom_unit: habitFrequency === "custom" ? habitCustomUnit : null,
           id: String(createdHabit.id ?? created?.id ?? created?.habit?.id),
         },
       ]);
@@ -1479,38 +1552,15 @@ const GoalsHabits = () => {
     }
     setHabitSaving(true);
     try {
-      const schedulePayload = {
-        days_of_week: habitFrequency === "weekly" ? habitWeekdays : [],
-        repeat_days: habitFrequency === "weekly" ? habitWeekdays : [],
-        day_of_month: habitFrequency === "monthly" && habitMonthDay ? Number(habitMonthDay) : null,
-        custom_every: habitFrequency === "custom" ? Number(habitCustomEvery || 1) : null,
-        custom_unit: habitFrequency === "custom" ? habitCustomUnit : null,
-      };
-      const payload = {
-        habit: {
-          name: habitName,
-          frequency: habitFrequency,
-          description: habitDescription,
-          category: getHabitCategoryValue(habitCategory),
-          time: habitTime,
-          place: habitPlace,
-          start_date: habitStartDate,
-          linked_goals: habitLinkedGoals,
-          ...schedulePayload,
-        },
-      };
-      let res = await fetchWithAuth(`/habits/${editingHabitId}`, {
+      const payload = buildHabitPayload();
+      const res = await fetchWithAuth(`/habits/${editingHabitId}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       });
-      if (!res.ok)
-        res = await fetchWithAuth(`/habits/${editingHabitId}`, {
-          method: "PATCH",
-          body: JSON.stringify(payload),
-        });
       if (!res.ok) throw new Error(`Failed (${res.status})`);
       const updated = await res.json().catch(() => ({}));
       const h = updated?.habit ?? updated?.data ?? updated;
+      const targetDays = getHabitTargetDaysPayload();
       setHabits((prev) =>
         prev.map((habit) =>
           String(habit.id) === String(editingHabitId)
@@ -1518,11 +1568,16 @@ const GoalsHabits = () => {
                 ...habit,
                 ...h,
                 frequency: habitFrequency,
-                days_of_week: schedulePayload.days_of_week,
-                repeat_days: schedulePayload.repeat_days,
-                day_of_month: schedulePayload.day_of_month,
-                custom_every: schedulePayload.custom_every,
-                custom_unit: schedulePayload.custom_unit,
+                target_days: targetDays,
+                day_of_month:
+                  habitFrequency === "monthly" && habitMonthDay
+                    ? Number(habitMonthDay)
+                    : null,
+                custom_every:
+                  habitFrequency === "custom"
+                    ? Number(habitCustomEvery || 1)
+                    : null,
+                custom_unit: habitFrequency === "custom" ? habitCustomUnit : null,
                 id: String(h?.id ?? editingHabitId),
               }
             : habit,
@@ -1556,7 +1611,9 @@ const GoalsHabits = () => {
     setHabitStartDate(habit.start_date || habit.startDate || "");
     setHabitLinkedGoals([]);
     setHabitWeekdays(getHabitWeekdays(habit));
-    setHabitMonthDay(String(habit.day_of_month || habit.monthly_day || ""));
+    setHabitMonthDay(
+      String(habit.day_of_month || habit.monthly_day || habit.target_days?.[0] || ""),
+    );
     setHabitCustomEvery(String(habit.custom_every || habit.custom_interval || 1));
     setHabitCustomUnit(habit.custom_unit || habit.repeat_unit || "days");
     setIsHabitDialogOpen(true);
@@ -1584,6 +1641,59 @@ const GoalsHabits = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const normalizeHabitResponse = (data: any, fallbackId: string): Habit => {
+    const habit = Array.isArray(data)
+      ? data.find((item) => String(item?.id) === fallbackId) ?? data[0]
+      : data?.habit ?? data?.data?.habit ?? data?.data ?? data;
+    return { ...habit, id: String(habit?.id ?? fallbackId) };
+  };
+
+  const fetchHabitForMonth = useCallback(
+    async (habitId: string | number, monthKey: string) => {
+      const idStr = String(habitId);
+      const cacheKey = `${idStr}:${monthKey}`;
+      setHabitDetailsLoading((prev) => ({ ...prev, [cacheKey]: true }));
+      try {
+        const res = await fetchWithAuth(
+          `/habits/${idStr}?month=${encodeURIComponent(monthKey)}`,
+        );
+        if (!res.ok) throw new Error(`Failed (${res.status})`);
+        const data = await res.json();
+        const habit = normalizeHabitResponse(data, idStr);
+        setHabitDetailsByKey((prev) => ({ ...prev, [cacheKey]: habit }));
+      } catch (err) {
+        console.error("habit month fetch error", err);
+        toast({
+          title: "Error",
+          description: `Failed to load habit month: ${(err as Error).message}`,
+          variant: "destructive",
+        });
+      } finally {
+        setHabitDetailsLoading((prev) => ({ ...prev, [cacheKey]: false }));
+      }
+    },
+    [toast],
+  );
+
+  const toggleHabitExpanded = (habit: Habit) => {
+    const idStr = String(habit.id);
+    const nextExpanded = String(expandedHabitId) === idStr ? null : idStr;
+    setExpandedHabitId(nextExpanded);
+    if (!nextExpanded) return;
+
+    const monthKey = habitMonthById[idStr] ?? getMonthKey(new Date());
+    setHabitMonthById((prev) => ({ ...prev, [idStr]: monthKey }));
+    fetchHabitForMonth(idStr, monthKey);
+  };
+
+  const changeHabitMonth = (habitId: string | number, offset: number) => {
+    const idStr = String(habitId);
+    const currentMonthKey = habitMonthById[idStr] ?? getMonthKey(new Date());
+    const nextMonthKey = shiftMonthKey(currentMonthKey, offset);
+    setHabitMonthById((prev) => ({ ...prev, [idStr]: nextMonthKey }));
+    fetchHabitForMonth(idStr, nextMonthKey);
   };
 
   // ─── DRAG & DROP ──────────────────────────────────────────────────────────
@@ -1661,10 +1771,22 @@ const GoalsHabits = () => {
     { length: monthEnd.getDate() },
     (_, index) => new Date(today.getFullYear(), today.getMonth(), index + 1),
   );
-  const monthGridDates = [
-    ...Array.from({ length: monthStart.getDay() }, () => null),
-    ...currentMonthDates,
-  ];
+  const getMonthDates = (monthKey: string) => {
+    const [year, month] = monthKey.split("-").map(Number);
+    const end = new Date(year, month, 0);
+    return Array.from(
+      { length: end.getDate() },
+      (_, index) => new Date(year, month - 1, index + 1),
+    );
+  };
+  const getMonthGridDates = (monthKey: string) => {
+    const [year, month] = monthKey.split("-").map(Number);
+    const start = new Date(year, month - 1, 1);
+    return [
+      ...Array.from({ length: start.getDay() }, () => null),
+      ...getMonthDates(monthKey),
+    ];
+  };
 
   const isSameDay = (a: Date, b: Date) =>
     a.getFullYear() === b.getFullYear() &&
@@ -1691,12 +1813,15 @@ const GoalsHabits = () => {
     }
 
     if (frequency === "monthly") {
-      return Number(habit.day_of_month || habit.monthly_day) === date.getDate();
+      return (
+        Number(habit.day_of_month || habit.monthly_day || habit.target_days?.[0]) ===
+        date.getDate()
+      );
     }
 
     const interval = Number(habit.custom_every || habit.custom_interval || 1);
     const unit = habit.custom_unit || habit.repeat_unit || "days";
-    const anchor = startDate || monthStart;
+    const anchor = startDate || new Date(date.getFullYear(), date.getMonth(), 1);
     const dayDiff = Math.floor(
       (date.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24),
     );
@@ -1712,7 +1837,50 @@ const GoalsHabits = () => {
     return dayDiff % interval === 0;
   };
 
+  const isCompletedStatus = (value?: string) =>
+    ["completed", "complete", "done", "true"].includes(
+      String(value || "").toLowerCase(),
+    );
+
+  const getHabitApiDayForDate = (habit: Habit, date: Date) => {
+    const dateKey = getDateKey(date);
+    return [...(habit.this_week || []), ...(habit.calendar_days || [])].find(
+      (day) => day.date?.slice(0, 10) === dateKey,
+    );
+  };
+
   const getHabitCompletedForDate = (habit: Habit, date: Date) => {
+    const apiDay = getHabitApiDayForDate(habit, date);
+    if (apiDay) return Boolean(apiDay.completed);
+
+    const dateKey = getDateKey(date);
+    const completedDateStrings = [
+      ...(habit.completed_dates || []),
+      ...(habit.completion_dates || []),
+    ];
+    if (completedDateStrings.some((value) => String(value).slice(0, 10) === dateKey)) {
+      return true;
+    }
+
+    const completionEntries = [
+      ...(habit.completions || []),
+      ...(habit.habit_logs || []),
+      ...(habit.logs || []),
+    ];
+    const dateEntry = completionEntries.find((entry) => {
+      if (typeof entry === "string") return entry.slice(0, 10) === dateKey;
+      return String(entry.date || "").slice(0, 10) === dateKey;
+    });
+    if (dateEntry) {
+      if (typeof dateEntry === "string") return true;
+      return Boolean(dateEntry.completed) || isCompletedStatus(dateEntry.status);
+    }
+
+    const monthlyHistory = habit.month_history || habit.monthly_completion || [];
+    if (monthlyHistory.length > 0) {
+      return Boolean(monthlyHistory[date.getDate() - 1]);
+    }
+
     const history = habit.week_history || habit.weekly_completion || [];
     const weekIndex = weekDates.findIndex((weekDate) => isSameDay(weekDate, date));
     if (weekIndex >= 0) return Boolean(history[weekIndex]);
@@ -1720,18 +1888,50 @@ const GoalsHabits = () => {
     return false;
   };
 
-  const getHabitTrackerStats = (habit: Habit) => {
-    const scheduledToToday = currentMonthDates.filter(
+  const getHabitDayState = (habit: Habit, date: Date) => {
+    const apiDay = getHabitApiDayForDate(habit, date);
+    if (apiDay) {
+      return {
+        scheduled: Boolean(apiDay.scheduled),
+        completed: Boolean(apiDay.completed),
+        missed: Boolean(apiDay.missed),
+        today: Boolean(apiDay.today),
+        future: Boolean(apiDay.future),
+      };
+    }
+
+    const scheduled = isHabitScheduledOnDate(habit, date);
+    const completed = getHabitCompletedForDate(habit, date);
+    return {
+      scheduled,
+      completed,
+      missed: scheduled && date < today && !completed,
+      today: isSameDay(date, today),
+      future: date > today,
+    };
+  };
+
+  const getHabitTrackerStats = (habit: Habit, monthDates = currentMonthDates) => {
+    if (habit.monthly_stats) {
+      return {
+        completed: habit.monthly_stats.completed_count ?? 0,
+        missed: habit.monthly_stats.missed_count ?? 0,
+        total: habit.monthly_stats.scheduled_count ?? 0,
+        percent: habit.monthly_stats.percentage ?? 0,
+      };
+    }
+
+    const scheduledToDate = monthDates.filter(
       (date) => date <= today && isHabitScheduledOnDate(habit, date),
     );
-    const completed = scheduledToToday.filter((date) =>
+    const completed = scheduledToDate.filter((date) =>
       getHabitCompletedForDate(habit, date),
     ).length;
-    const missed = scheduledToToday.length - completed;
-    const percent = scheduledToToday.length
-      ? Math.round((completed / scheduledToToday.length) * 100)
+    const missed = scheduledToDate.length - completed;
+    const percent = scheduledToDate.length
+      ? Math.round((completed / scheduledToDate.length) * 100)
       : 0;
-    return { completed, missed, total: scheduledToToday.length, percent };
+    return { completed, missed, total: scheduledToDate.length, percent };
   };
 
   const getHabitEncouragement = (percent: number) => {
@@ -2276,7 +2476,30 @@ const GoalsHabits = () => {
                 </>
               ) : (
                 <div className="space-y-5">
-                  {habits.map((h) => (
+                  {habits.map((h) => {
+                    const idStr = String(h.id);
+                    const currentMonthKey = getMonthKey(today);
+                    const selectedMonthKey =
+                      habitMonthById[idStr] ?? currentMonthKey;
+                    const detailCacheKey = `${idStr}:${selectedMonthKey}`;
+                    const currentDetailCacheKey = `${idStr}:${currentMonthKey}`;
+                    const habitForCurrentMonth =
+                      habitDetailsByKey[currentDetailCacheKey] ?? h;
+                    const habitForSelectedMonth =
+                      habitDetailsByKey[detailCacheKey] ?? h;
+                    const currentMonthStats =
+                      getHabitTrackerStats(habitForCurrentMonth);
+                    const selectedMonthDates = getMonthDates(selectedMonthKey);
+                    const selectedMonthGridDates =
+                      getMonthGridDates(selectedMonthKey);
+                    const selectedMonthStats = getHabitTrackerStats(
+                      habitForSelectedMonth,
+                      selectedMonthDates,
+                    );
+                    const isHabitDetailLoading =
+                      Boolean(habitDetailsLoading[detailCacheKey]);
+
+                    return (
                     <Card
                       key={h.id}
                       className="overflow-hidden rounded-xl border border-[#D6B99D] bg-white p-4 shadow-sm"
@@ -2313,11 +2536,7 @@ const GoalsHabits = () => {
                         <div className="flex shrink-0 items-center gap-1">
                           <button
                             type="button"
-                            onClick={() =>
-                              setExpandedHabitId(
-                                String(expandedHabitId) === String(h.id) ? null : h.id,
-                              )
-                            }
+                            onClick={() => toggleHabitExpanded(h)}
                             className="rounded-md bg-[#FEF4EE] p-2 text-[#2C2C2A] transition-colors hover:bg-[#DA7756]/10"
                             aria-label="Toggle habit calendar"
                           >
@@ -2367,15 +2586,15 @@ const GoalsHabits = () => {
                           <div className="flex flex-wrap items-center gap-3 text-sm font-semibold">
                             <span className="inline-flex items-center gap-1 text-[#0B5D41]">
                               <Check className="h-4 w-4" />
-                              {getHabitTrackerStats(h).completed}/
-                              {getHabitTrackerStats(h).total}
+                              {currentMonthStats.completed}/
+                              {currentMonthStats.total}
                             </span>
                             <span className="inline-flex items-center gap-1 text-[#A32D2D]">
                               <X className="h-4 w-4" />
-                              {getHabitTrackerStats(h).missed} missed
+                              {currentMonthStats.missed} missed
                             </span>
                             <span className="rounded-full bg-[#DA7756]/15 px-2.5 py-1 text-xs font-bold text-[#C96B4D]">
-                              {getHabitTrackerStats(h).percent}%
+                              {currentMonthStats.percent}%
                             </span>
                           </div>
                         </div>
@@ -2383,12 +2602,12 @@ const GoalsHabits = () => {
                           <div
                             className="h-full rounded-full bg-[#DA7756] transition-all"
                             style={{
-                              width: `${getHabitTrackerStats(h).percent}%`,
+                              width: `${currentMonthStats.percent}%`,
                             }}
                           />
                         </div>
                         <p className="mt-2 text-xs italic text-[#2C2C2A]">
-                          {getHabitEncouragement(getHabitTrackerStats(h).percent)}
+                          {getHabitEncouragement(currentMonthStats.percent)}
                         </p>
                       </div>
 
@@ -2398,11 +2617,10 @@ const GoalsHabits = () => {
                         </p>
                         <div className="flex flex-wrap gap-2">
                           {weekDates.map((date, index) => {
-                            const scheduled = isHabitScheduledOnDate(h, date);
-                            const completed = getHabitCompletedForDate(h, date);
-                            const missed =
-                              scheduled && date < today && !completed;
-                            const isToday = isSameDay(date, today);
+                            const dayState = getHabitDayState(
+                              habitForCurrentMonth,
+                              date,
+                            );
                             const label = WEEKDAY_OPTIONS[index].label;
 
                             return (
@@ -2412,18 +2630,18 @@ const GoalsHabits = () => {
                                 </p>
                                 <div
                                   className={`flex h-8 w-8 items-center justify-center rounded-md border text-xs font-bold ${
-                                    completed
+                                    dayState.completed
                                       ? "border-[#DA7756] bg-[#DA7756] text-white"
-                                      : missed
+                                      : dayState.missed
                                         ? "border-[#A32D2D]/40 bg-[#A32D2D]/10 text-[#A32D2D]"
-                                        : isToday
+                                        : dayState.today
                                           ? "border-[#DA7756] bg-white text-[#C96B4D]"
-                                          : scheduled
+                                          : dayState.scheduled
                                             ? "border-[#D6B99D] bg-[#FEF4EE] text-[#2C2C2A]"
                                             : "border-gray-200 bg-gray-50 text-gray-300"
                                   }`}
                                 >
-                                  {completed ? <Check className="h-4 w-4" /> : date.getDate()}
+                                  {dayState.completed ? <Check className="h-4 w-4" /> : date.getDate()}
                                 </div>
                               </div>
                             );
@@ -2433,13 +2651,45 @@ const GoalsHabits = () => {
 
                       {String(expandedHabitId) === String(h.id) && (
                         <div className="mt-4 rounded-lg bg-[#FEF4EE]/60 p-3">
-                          <div className="mb-4 flex items-center justify-center">
-                            <p className="text-sm font-bold text-[#2C2C2A]">
-                              {today.toLocaleString("default", {
-                                month: "long",
-                                year: "numeric",
-                              })}
-                            </p>
+                          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                            <button
+                              type="button"
+                              onClick={() => changeHabitMonth(h.id, -1)}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#D6B99D] bg-white text-[#2C2C2A] transition-colors hover:bg-[#DA7756]/10"
+                              aria-label="Previous month"
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                            </button>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-bold text-[#2C2C2A]">
+                                {getMonthLabel(selectedMonthKey)}
+                              </p>
+                              {isHabitDetailLoading && (
+                                <Loader2 className="h-4 w-4 animate-spin text-[#DA7756]" />
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => changeHabitMonth(h.id, 1)}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#D6B99D] bg-white text-[#2C2C2A] transition-colors hover:bg-[#DA7756]/10"
+                              aria-label="Next month"
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <div className="mb-3 flex flex-wrap items-center justify-center gap-3 text-xs font-semibold">
+                            <span className="inline-flex items-center gap-1 text-[#0B5D41]">
+                              <Check className="h-3.5 w-3.5" />
+                              {selectedMonthStats.completed}/
+                              {selectedMonthStats.total}
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-[#A32D2D]">
+                              <X className="h-3.5 w-3.5" />
+                              {selectedMonthStats.missed} missed
+                            </span>
+                            <span className="rounded-full bg-[#DA7756]/15 px-2.5 py-1 text-[11px] font-bold text-[#C96B4D]">
+                              {selectedMonthStats.percent}%
+                            </span>
                           </div>
                           <div className="grid grid-cols-7 gap-1.5 text-center">
                             {WEEKDAY_OPTIONS.map((day) => (
@@ -2450,30 +2700,29 @@ const GoalsHabits = () => {
                                 {day.label[0]}
                               </p>
                             ))}
-                            {monthGridDates.map((date, index) => {
+                            {selectedMonthGridDates.map((date, index) => {
                               if (!date) return <div key={`blank-${index}`} />;
-                              const scheduled = isHabitScheduledOnDate(h, date);
-                              const completed = getHabitCompletedForDate(h, date);
-                              const missed =
-                                scheduled && date < today && !completed;
-                              const isToday = isSameDay(date, today);
+                              const dayState = getHabitDayState(
+                                habitForSelectedMonth,
+                                date,
+                              );
 
                               return (
                                 <div
                                   key={date.toISOString()}
                                   className={`flex aspect-square min-h-10 items-center justify-center rounded-md border text-xs font-bold ${
-                                    completed
+                                    dayState.completed
                                       ? "border-[#DA7756] bg-[#DA7756] text-white"
-                                      : missed
+                                      : dayState.missed
                                         ? "border-[#A32D2D]/35 bg-white text-[#A32D2D]"
-                                        : isToday
+                                        : dayState.today
                                           ? "border-[#DA7756] bg-white text-[#C96B4D]"
-                                          : scheduled
+                                          : dayState.scheduled
                                             ? "border-[#D6B99D] bg-white text-[#2C2C2A]"
                                             : "border-transparent bg-white/40 text-[#888780]/45"
                                   }`}
                                 >
-                                  {completed ? <Check className="h-4 w-4" /> : date.getDate()}
+                                  {dayState.completed ? <Check className="h-4 w-4" /> : date.getDate()}
                                 </div>
                               );
                             })}
@@ -2496,7 +2745,8 @@ const GoalsHabits = () => {
                       )}
 
                     </Card>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Plus, Eye, Trash2, GripVertical, Pencil, CalendarIcon } from "lucide-react";
+import { Plus, Eye, Trash2, Pencil, CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -64,6 +64,19 @@ const toApiStatus = (ui: string) => {
 
 const toApiPriority = (ui: string) => ui.toLowerCase();
 
+const toUiRecurrencePattern = (pattern?: string) => {
+  const map: Record<string, string> = {
+    daily: "Daily",
+    weekly: "Weekly",
+    monthly: "Monthly",
+    custom: "Custom",
+  };
+  return map[String(pattern || "").toLowerCase()] || pattern;
+};
+
+const toApiRecurrencePattern = (pattern?: string) =>
+  pattern ? pattern.toLowerCase() : undefined;
+
 const formatTodoFromApi = (item: any): TodoItem => {
   const statusMap: Record<string, string> = {
     not_started: "Not Started",
@@ -87,21 +100,41 @@ const formatTodoFromApi = (item: any): TodoItem => {
     targetDate: item.target_date ? new Date(item.target_date) : undefined,
     goalId: item.goal_id ? String(item.goal_id) : undefined,
     recurring: Boolean(item.recurring),
-    recurrencePattern: item.recurrence_pattern || item.recurrencePattern,
-    recurringDays: item.recurring_days || item.recurringDays || [],
-    repeatInterval: item.repeat_interval || item.repeatInterval || "",
+    recurrencePattern: toUiRecurrencePattern(
+      item.recurrence_pattern || item.recurrencePattern,
+    ),
+    recurringDays:
+      item.recurrence_days ||
+      item.recurring_days ||
+      item.recurringDays ||
+      [],
+    repeatInterval: String(
+      item.recurrence_interval || item.repeat_interval || item.repeatInterval || "",
+    ),
   };
 };
 
-const buildRecurrencePayload = (todo: TodoItem) => ({
-  recurring: todo.recurring,
-  recurrence_pattern: todo.recurring ? todo.recurrencePattern : null,
-  recurring_days: todo.recurring ? todo.recurringDays ?? [] : [],
-  repeat_interval:
-    todo.recurring && todo.recurrencePattern === "Custom"
-      ? todo.repeatInterval || null
-      : null,
-});
+const buildRecurrencePayload = (todo: TodoItem) => {
+  if (!todo.recurring) return { recurring: false };
+
+  const pattern = toApiRecurrencePattern(todo.recurrencePattern);
+  const payload: Record<string, unknown> = {
+    recurring: true,
+    recurrence_pattern: pattern,
+    recurrence_days: [],
+    recurrence_interval: null,
+  };
+
+  if (pattern === "weekly" || pattern === "custom") {
+    payload.recurrence_days = todo.recurringDays ?? [];
+  }
+
+  if (pattern === "custom") {
+    payload.recurrence_interval = Number(todo.repeatInterval || 1);
+  }
+
+  return payload;
+};
 
 const getLifeAreaId = (lifeArea: string) =>
   LIFE_AREA_ID_BY_NAME[lifeArea] ?? null;
@@ -300,22 +333,6 @@ const Todos = () => {
         });
       }
 
-      if (!res.ok) {
-        const payloadFlat: any = {
-          ...buildTodoApiPayload(updated),
-        };
-        res = await fetchWithAuth(`/todos/${updated.id}`, {
-          method: "PUT",
-          body: JSON.stringify(payloadFlat),
-        });
-        if (!res.ok) {
-          res = await fetchWithAuth(`/todos/${updated.id}`, {
-            method: "PATCH",
-            body: JSON.stringify(payloadFlat),
-          });
-        }
-      }
-
       if (!res.ok) throw new Error(`Failed (${res.status})`);
       toast({
         title: "To do updated",
@@ -378,20 +395,6 @@ const Todos = () => {
           body: JSON.stringify(payloadWrapped),
         });
       }
-      if (!res.ok) {
-        const payloadFlat = buildTodoApiPayload(updatedTodo, { status: newStatus });
-        res = await fetchWithAuth(`/todos/${id}`, {
-          method: "PUT",
-          body: JSON.stringify(payloadFlat),
-        });
-        if (!res.ok) {
-          res = await fetchWithAuth(`/todos/${id}`, {
-            method: "PATCH",
-            body: JSON.stringify(payloadFlat),
-          });
-        }
-      }
-
       if (res.ok) {
         // ✅ Success — show success toast
         toast({
@@ -671,7 +674,6 @@ const Todos = () => {
                               >
                                 <div className="space-y-2">
                                   <div className="flex items-start justify-between gap-2">
-                                    <GripVertical className="h-4 w-4 flex-shrink-0 mt-0.5 text-muted-foreground/40" />
                                     <p className="text-sm sm:text-base font-medium text-foreground flex-1 line-clamp-2">{todo.title}</p>
                                     <button
                                       onPointerDown={(e) => e.stopPropagation()}
@@ -784,7 +786,6 @@ const Todos = () => {
           <Card className="bg-white p-2 sm:p-3 border-2 border-purple-400">
             <div className="space-y-2">
               <div className="flex items-start gap-2">
-                <GripVertical className="h-4 w-4 text-purple-400 flex-shrink-0 mt-0.5" />
                 <p className="text-sm font-medium text-foreground flex-1 line-clamp-2">{draggingTodo.title}</p>
               </div>
               <div className="flex flex-wrap gap-1 mt-1">
