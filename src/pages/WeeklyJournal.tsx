@@ -327,7 +327,7 @@ const PeopleUpcomingDates = () => {
 // ── Past Journal Card ─────────────────────────────────────────────────────────
 interface PastJournalCardProps {
   journal: PastWeeklyJournal;
-  onDelete: (id: number, e: React.MouseEvent) => void;
+  onDelete: (journal: PastWeeklyJournal, e: React.MouseEvent) => void;
   onEdit: (journal: PastWeeklyJournal) => void;
 }
 
@@ -379,7 +379,7 @@ const PastJournalCard = ({ journal, onDelete, onEdit }: PastJournalCardProps) =>
           >
             <Pencil className="w-3 h-3" /> Update
           </button>
-          <button onClick={(e) => onDelete(journal.id, e)} className="p-1.5 transition-colors"
+          <button onClick={(e) => onDelete(journal, e)} className="p-1.5 transition-colors"
             style={{ color: C.muted }}
             onMouseEnter={e => (e.currentTarget.style.color = C.crimson)}
             onMouseLeave={e => (e.currentTarget.style.color = C.muted)}
@@ -651,7 +651,7 @@ const WeeklyJournal = () => {
       setIsEditMode(false);
       setIsEditingFromPast(false);
 
-      localStorage.setItem(`weekly_wins_${startDate}`, JSON.stringify(wins));
+      localStorage.removeItem(`weekly_wins_${startDate}`);
       localStorage.removeItem(getWeeklyDraftKey(currentDate));
 
       if (isUpdate) {
@@ -839,12 +839,16 @@ const WeeklyJournal = () => {
     showToast(`Loaded journal for week of ${format(new Date(journal.start_date), "MMMM d, yyyy")}. Save to update.`, "success");
   };
 
-  const handleDeletePastJournal = async (id: number, e: React.MouseEvent) => {
+  const handleDeletePastJournal = async (journal: PastWeeklyJournal, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!window.confirm("Are you sure you want to delete this weekly journal entry?")) return;
     try {
+      const id = journal.id;
       const res = await apiRequest(`/user_journals/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
+      if (journal.start_date) {
+        localStorage.removeItem(getWeeklyDraftKey(new Date(`${journal.start_date}T00:00:00`)));
+      }
       
       showToast("Weekly journal entry removed successfully.", "success");
       setPastJournals((prev) => prev.filter((j) => j.id !== id));
@@ -954,7 +958,7 @@ const WeeklyJournal = () => {
                 />
               </div>
               <div className="rounded-2xl overflow-hidden shadow-sm" style={{ background: C.pageBg, border: `1px solid ${C.cream}` }}>
-                <WeeklyPlanComponent data={weeklyPlanData} setData={setWeeklyPlanData} />
+                <WeeklyPlanComponent data={weeklyPlanData} setData={setWeeklyPlanData} currentDate={currentDate} />
               </div>
               <div className="rounded-2xl overflow-hidden shadow-sm" style={{ background: C.pageBg, border: `1px solid ${C.cream}` }}>
                 <FocusAndBoundaries data={focusData} setData={setFocusData} apiGoals={goals} />

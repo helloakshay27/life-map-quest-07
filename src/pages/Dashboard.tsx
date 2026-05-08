@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useMemo } from "react";
-import { addDays, format, startOfWeek } from "date-fns";
+import { format } from "date-fns";
 
 // ─── Brand Palette ────────────────────────────────────────────────────────────
 const C = {
@@ -47,57 +47,8 @@ const C = {
 
 const LIFE_API = "https://life-api.lockated.com";
 
-const normalizeDateOnly = (date: Date) => {
-  const normalized = new Date(date);
-  normalized.setHours(0, 0, 0, 0);
-  return normalized;
-};
-
-const weeklyPlanPrioritiesForDate = (weeklyJournals: any[], selectedDate: Date) => {
-  const selected = normalizeDateOnly(selectedDate);
-
-  for (const journal of weeklyJournals) {
-    const planDays = journal?.data?.weekly_plan?.days;
-    if (!journal?.start_date || !Array.isArray(planDays)) continue;
-
-    const journalWeekStart = startOfWeek(new Date(`${journal.start_date}T00:00:00`), { weekStartsOn: 0 });
-    const candidateWeekStarts = [journalWeekStart, addDays(journalWeekStart, 7)];
-    const selectedDay = format(selected, "EEE").toLowerCase();
-    const selectedMonthDay = format(selected, "d MMM").toLowerCase();
-    const dateMatchedIndex = planDays.findIndex((day: any) => {
-      const planDate = String(day?.date || "").trim().toLowerCase();
-      const planDay = String(day?.day || day?.id || "").slice(0, 3).toLowerCase();
-      return planDate === selectedMonthDay && planDay === selectedDay;
-    });
-    const calculatedIndex = candidateWeekStarts
-      .map((weekStart) => Math.round((selected.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24)))
-      .find((index) => index >= 0 && index <= 6);
-    const dayIndex = dateMatchedIndex >= 0 ? dateMatchedIndex : calculatedIndex;
-
-    if (typeof dayIndex !== "number") continue;
-
-    const planDay = planDays[dayIndex];
-    const planDayDate = String(planDay?.date || "").trim().toLowerCase();
-    if (dateMatchedIndex < 0 && planDayDate && planDayDate !== selectedMonthDay) continue;
-
-    const priorities = Array.isArray(planDay?.priorities) ? planDay.priorities : [];
-    const dashboardPriorities = priorities
-      .map((priority: any, index: number) => ({
-        id: Number(priority?.id) || Number(`${format(selected, "yyyyMMdd")}${index + 1}`),
-        title: String(priority?.text || priority?.title || "").trim(),
-        day: planDay?.day,
-        category: priority?.category,
-        quadrant: priority?.quadrant,
-      }))
-      .filter((priority: any) => priority.title);
-    if (dashboardPriorities.length > 0 || dateMatchedIndex >= 0) return dashboardPriorities;
-  }
-
-  return [];
-};
-
-const tomorrowPrioritiesToDashboardItems = (journal: any) => {
-  const priorities = Array.isArray(journal?.priorities) ? journal.priorities : [];
+const priorityAccomplishmentsToDashboardItems = (journal: any) => {
+  const priorities = Array.isArray(journal?.priority_accomplishments) ? journal.priority_accomplishments : [];
   const idPrefix = journal?.start_date
     ? format(new Date(`${journal.start_date}T00:00:00`), "yyyyMMdd")
     : "0";
@@ -105,21 +56,15 @@ const tomorrowPrioritiesToDashboardItems = (journal: any) => {
   return priorities
     .map((priority: any, index: number) => ({
       id: Number(`${idPrefix}${index + 1}`),
-      title: String(priority || "").trim(),
+      title: String(priority?.description || priority?.title || priority?.text || "").trim(),
+      description: String(priority?.description || "").trim(),
+      life_area: priority?.life_area,
+      quadrant: priority?.quadrant,
+      start_time: priority?.start_time,
+      end_time: priority?.end_time,
+      completed: Boolean(priority?.completed),
     }))
     .filter((priority: any) => priority.title);
-};
-
-const mergeDashboardPriorities = (
-  ...groups: Array<Array<{ id?: number | string; title?: string; [key: string]: unknown }>>
-) => {
-  const seen = new Set<string>();
-  return groups.flat().filter((priority) => {
-    const key = String(priority.title || "").trim().toLowerCase();
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
 };
 
 const Dashboard = () => {
@@ -350,48 +295,21 @@ const Dashboard = () => {
     const fetchDashboardPriorities = async () => {
       const authHeader = { Authorization: `Bearer ${token || localStorage.getItem("auth_token") || ""}` };
       const today = new Date();
-      const todayStr = format(today, "yyyy-MM-dd");
 
       try {
-        let savedAccomplishments: Array<{ id?: number | string; title?: string }> = [];
-        let previousDayPriorities: Array<{ id?: number | string; title?: string }> = [];
-        let weeklyPlanPriorities: Array<{ id?: number | string; title?: string; [key: string]: unknown }> = [];
+        let currentDayPriorities: Array<{ id?: number | string; title?: string; [key: string]: unknown }> = [];
 
-        const todayRes = await fetch(`${LIFE_API}/user_journals/0?date=${todayStr}&journal_type=daily`, { headers: authHeader });
-        if (todayRes.ok) {
-          const todayData = await todayRes.json();
-          const todayJournal = Array.isArray(todayData) ? (todayData.length > 0 ? todayData[0] : null) : (todayData?.user_journal ?? todayData);
-          savedAccomplishments = (Array.isArray(todayJournal?.accomplishments) ? todayJournal.accomplishments : [])
-            .map((a: any, idx: number) => (
-              typeof a === "string"
-                ? { id: idx, title: a }
-                : { id: a?.id || idx, title: a?.title || a?.name || "" }
-            ))
-            .filter((item: any) => item.title);
-        }
-
-        const previousDate = format(addDays(today, -1), "yyyy-MM-dd");
-        const previousRes = await fetch(`${LIFE_API}/user_journals/0?date=${previousDate}&journal_type=daily`, { headers: authHeader });
-        if (previousRes.ok) {
-          const previousData = await previousRes.json();
-          const previousJournal = Array.isArray(previousData) ? (previousData.length > 0 ? previousData[0] : null) : (previousData?.user_journal ?? previousData);
-          previousDayPriorities = tomorrowPrioritiesToDashboardItems(previousJournal);
-        }
-
-        const weeklyRes = await fetch(`${LIFE_API}/user_journals?journal_type=weekly`, { headers: authHeader });
-        if (weeklyRes.ok) {
-          const weeklyData = await weeklyRes.json();
-          const weeklyJournals = Array.isArray(weeklyData) ? weeklyData : (weeklyData?.user_journals ?? weeklyData?.data ?? []);
-          weeklyPlanPriorities = weeklyPlanPrioritiesForDate(weeklyJournals, today);
+        const currentDate = format(today, "yyyy-MM-dd");
+        const currentRes = await fetch(`${LIFE_API}/user_journals/0?date=${currentDate}&journal_type=daily`, { headers: authHeader });
+        if (currentRes.ok) {
+          const currentData = await currentRes.json();
+          const currentJournal = Array.isArray(currentData) ? (currentData.length > 0 ? currentData[0] : null) : (currentData?.user_journal ?? currentData);
+          currentDayPriorities = priorityAccomplishmentsToDashboardItems(currentJournal);
         }
 
         setPreviewData((prev) => ({
           ...prev,
-          priorities: mergeDashboardPriorities(
-            savedAccomplishments,
-            previousDayPriorities,
-            weeklyPlanPriorities,
-          ),
+          priorities: currentDayPriorities,
         }));
       } catch (error) {
         console.error("Dashboard priorities API error:", error);

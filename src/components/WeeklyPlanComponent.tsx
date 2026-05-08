@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Target,
   Info,
@@ -123,6 +123,20 @@ const DRAG_TYPE_TODO = "todo";
 const isInteractiveDragTarget = (target: EventTarget | null) =>
   target instanceof HTMLElement &&
   Boolean(target.closest("input, select, textarea, button, a"));
+
+const normalizeWeekday = (value: string) => String(value || "").trim().slice(0, 3).toLowerCase();
+
+const todoMatchesAnyDate = (todo: Todo, dates: Date[]) => {
+  if (!todo?.recurring) return true;
+  const recurrenceDays = Array.isArray(todo.recurrence_days)
+    ? todo.recurrence_days
+    : Array.isArray(todo.recurringDays)
+      ? todo.recurringDays
+      : [];
+  if (recurrenceDays.length === 0) return true;
+  const allowedDays = new Set(recurrenceDays.map((day: string) => normalizeWeekday(day)));
+  return dates.some((date) => allowedDays.has(normalizeWeekday(format(date, "EEE"))));
+};
 
 // --- DYNAMIC WEEK GENERATOR ---
 export const generateEmptyWeekData = (baseDate = new Date()) => {
@@ -384,11 +398,13 @@ function TodosSection({
 interface WeeklyPlanComponentProps {
   data: any;
   setData: React.Dispatch<React.SetStateAction<any>>;
+  currentDate?: Date;
 }
 
 export default function WeeklyPlanComponent({
   data,
   setData,
+  currentDate = new Date(),
 }: WeeklyPlanComponentProps) {
   // Priority drag state
   const [draggedPriority, setDraggedPriority] = useState<{
@@ -406,6 +422,10 @@ export default function WeeklyPlanComponent({
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loadingTodos, setLoadingTodos] = useState(true);
   const [todosError, setTodosError] = useState<string | null>(null);
+  const planWeekDates = useMemo(() => {
+    const start = addDays(startOfWeek(currentDate, { weekStartsOn: 0 }), 7);
+    return Array.from({ length: 7 }, (_, index) => addDays(start, index));
+  }, [currentDate]);
 
 
 
@@ -428,7 +448,8 @@ export default function WeeklyPlanComponent({
           ? responseData
           : responseData.data || responseData.todos || [];
         const parsed = all.filter((t) =>
-          ["not_started", "in_progress"].includes((t.status || "").toLowerCase()),
+          ["not_started", "in_progress"].includes((t.status || "").toLowerCase()) &&
+          todoMatchesAnyDate(t, planWeekDates),
         );
         setTodos(parsed);
       } catch (err: any) {
@@ -438,7 +459,7 @@ export default function WeeklyPlanComponent({
       }
     };
     fetchTodos();
-  }, []);
+  }, [planWeekDates]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 

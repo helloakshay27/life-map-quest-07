@@ -1558,29 +1558,19 @@ const GoalsHabits = () => {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(`Failed (${res.status})`);
-      const updated = await res.json().catch(() => ({}));
-      const h = updated?.habit ?? updated?.data ?? updated;
-      const targetDays = getHabitTargetDaysPayload();
+      const latestHabit = await fetchHabitById(editingHabitId);
       setHabits((prev) =>
         prev.map((habit) =>
           String(habit.id) === String(editingHabitId)
-            ? {
-                ...habit,
-                ...h,
-                frequency: habitFrequency,
-                target_days: targetDays,
-                day_of_month:
-                  habitFrequency === "monthly" && habitMonthDay
-                    ? Number(habitMonthDay)
-                    : null,
-                custom_every:
-                  habitFrequency === "custom"
-                    ? Number(habitCustomEvery || 1)
-                    : null,
-                custom_unit: habitFrequency === "custom" ? habitCustomUnit : null,
-                id: String(h?.id ?? editingHabitId),
-              }
+            ? latestHabit
             : habit,
+        ),
+      );
+      setHabitDetailsByKey((prev) =>
+        Object.fromEntries(
+          Object.entries(prev).filter(
+            ([key]) => !key.startsWith(`${String(editingHabitId)}:`),
+          ),
         ),
       );
       resetHabitForm();
@@ -1648,6 +1638,14 @@ const GoalsHabits = () => {
       ? data.find((item) => String(item?.id) === fallbackId) ?? data[0]
       : data?.habit ?? data?.data?.habit ?? data?.data ?? data;
     return { ...habit, id: String(habit?.id ?? fallbackId) };
+  };
+
+  const fetchHabitById = async (habitId: string | number) => {
+    const idStr = String(habitId);
+    const res = await fetchWithAuth(`/habits/${idStr}`);
+    if (!res.ok) throw new Error(`Failed to refresh habit (${res.status})`);
+    const data = await res.json();
+    return normalizeHabitResponse(data, idStr);
   };
 
   const fetchHabitForMonth = useCallback(
@@ -1800,6 +1798,16 @@ const GoalsHabits = () => {
     return new Date(year, month - 1, day);
   };
 
+  const formatHabitStartDate = (habit: Habit) => {
+    const startDate = parseDateOnly(habit.start_date || habit.startDate);
+    if (!startDate) return "";
+    return startDate.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
   const isHabitScheduledOnDate = (habit: Habit, date: Date) => {
     const startDate = parseDateOnly(habit.start_date || habit.startDate);
     if (startDate && date < startDate) return false;
@@ -1891,10 +1899,12 @@ const GoalsHabits = () => {
   const getHabitDayState = (habit: Habit, date: Date) => {
     const apiDay = getHabitApiDayForDate(habit, date);
     if (apiDay) {
+      const scheduled = Boolean(apiDay.scheduled);
+      const completed = Boolean(apiDay.completed);
       return {
-        scheduled: Boolean(apiDay.scheduled),
-        completed: Boolean(apiDay.completed),
-        missed: Boolean(apiDay.missed),
+        scheduled,
+        completed,
+        missed: Boolean(apiDay.missed) || (scheduled && !completed && date < today),
         today: Boolean(apiDay.today),
         future: Boolean(apiDay.future),
       };
@@ -1909,6 +1919,32 @@ const GoalsHabits = () => {
       today: isSameDay(date, today),
       future: date > today,
     };
+  };
+
+  const getHabitCalendarDayClass = (dayState: {
+    scheduled: boolean;
+    completed: boolean;
+    missed: boolean;
+    today: boolean;
+    future: boolean;
+  }) => {
+    if (dayState.completed) return "border-[#0B5D41] bg-[#0B5D41] text-white";
+    if (dayState.missed) return "border-[#A32D2D]/40 bg-[#A32D2D]/10 text-[#A32D2D]";
+    if (!dayState.scheduled || dayState.future) return "border-gray-200 bg-gray-50 text-gray-300";
+    if (dayState.today) return "border-[#DA7756] bg-white text-[#C96B4D]";
+    return "border-[#D6B99D] bg-[#FEF4EE] text-[#2C2C2A]";
+  };
+
+  const getHabitCalendarDayContent = (
+    dayState: {
+      completed: boolean;
+      missed: boolean;
+    },
+    date: Date,
+  ) => {
+    if (dayState.completed) return <Check className="h-4 w-4" />;
+    if (dayState.missed) return <X className="h-4 w-4" />;
+    return date.getDate();
   };
 
   const getHabitTrackerStats = (habit: Habit, monthDates = currentMonthDates) => {
@@ -2498,6 +2534,7 @@ const GoalsHabits = () => {
                     );
                     const isHabitDetailLoading =
                       Boolean(habitDetailsLoading[detailCacheKey]);
+                    const habitStartDateLabel = formatHabitStartDate(h);
 
                     return (
                     <Card
@@ -2519,6 +2556,12 @@ const GoalsHabits = () => {
                               <CalendarDays className="h-3.5 w-3.5 text-[#DA7756]" />
                               {getHabitScheduleLabel(h)}
                             </span>
+                            {habitStartDateLabel && (
+                              <span className="inline-flex items-center gap-1 rounded-md border border-[#D6B99D] bg-white px-2.5 py-1 text-xs font-semibold text-[#2C2C2A]">
+                                <CalendarDays className="h-3.5 w-3.5 text-[#DA7756]" />
+                                Starts {habitStartDateLabel}
+                              </span>
+                            )}
                             {h.time && (
                               <span className="inline-flex items-center gap-1 rounded-md border border-[#D6B99D] bg-white px-2.5 py-1 text-xs font-semibold text-[#2C2C2A]">
                                 <Clock className="h-3.5 w-3.5 text-[#DA7756]" />
@@ -2630,18 +2673,10 @@ const GoalsHabits = () => {
                                 </p>
                                 <div
                                   className={`flex h-8 w-8 items-center justify-center rounded-md border text-xs font-bold ${
-                                    dayState.completed
-                                      ? "border-[#DA7756] bg-[#DA7756] text-white"
-                                      : dayState.missed
-                                        ? "border-[#A32D2D]/40 bg-[#A32D2D]/10 text-[#A32D2D]"
-                                        : dayState.today
-                                          ? "border-[#DA7756] bg-white text-[#C96B4D]"
-                                          : dayState.scheduled
-                                            ? "border-[#D6B99D] bg-[#FEF4EE] text-[#2C2C2A]"
-                                            : "border-gray-200 bg-gray-50 text-gray-300"
+                                    getHabitCalendarDayClass(dayState)
                                   }`}
                                 >
-                                  {dayState.completed ? <Check className="h-4 w-4" /> : date.getDate()}
+                                  {getHabitCalendarDayContent(dayState, date)}
                                 </div>
                               </div>
                             );
@@ -2711,34 +2746,30 @@ const GoalsHabits = () => {
                                 <div
                                   key={date.toISOString()}
                                   className={`flex aspect-square min-h-10 items-center justify-center rounded-md border text-xs font-bold ${
-                                    dayState.completed
-                                      ? "border-[#DA7756] bg-[#DA7756] text-white"
-                                      : dayState.missed
-                                        ? "border-[#A32D2D]/35 bg-white text-[#A32D2D]"
-                                        : dayState.today
-                                          ? "border-[#DA7756] bg-white text-[#C96B4D]"
-                                          : dayState.scheduled
-                                            ? "border-[#D6B99D] bg-white text-[#2C2C2A]"
-                                            : "border-transparent bg-white/40 text-[#888780]/45"
+                                    getHabitCalendarDayClass(dayState)
                                   }`}
                                 >
-                                  {dayState.completed ? <Check className="h-4 w-4" /> : date.getDate()}
+                                  {getHabitCalendarDayContent(dayState, date)}
                                 </div>
                               );
                             })}
                           </div>
                           <div className="mt-4 flex justify-center gap-4 text-xs text-[#2C2C2A]">
                             <span className="inline-flex items-center gap-1">
-                              <span className="h-3 w-3 rounded-sm bg-[#DA7756]" />
+                              <span className="h-3 w-3 rounded-sm bg-[#0B5D41]" />
                               Done
                             </span>
                             <span className="inline-flex items-center gap-1">
-                              <span className="h-3 w-3 rounded-sm border border-[#A32D2D]/50 bg-white" />
+                              <span className="h-3 w-3 rounded-sm border border-[#A32D2D]/40 bg-[#A32D2D]/10" />
                               Missed
                             </span>
                             <span className="inline-flex items-center gap-1">
                               <span className="h-3 w-3 rounded-sm border border-[#DA7756] bg-white" />
                               Today
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <span className="h-3 w-3 rounded-sm border border-gray-200 bg-gray-50" />
+                              Not scheduled / Upcoming
                             </span>
                           </div>
                         </div>

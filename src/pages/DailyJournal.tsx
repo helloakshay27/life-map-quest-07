@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AddAchievementDialog from "@/components/journal/AddAchievementDialog";
-import CreateToDoDialog from "@/components/journal/CreateToDoDialog"; // <-- IMPORTED DIALOG
 
 // ─── EXACT BRAND PALETTE ──────────────────────────────────────────────────────
 const C = {
@@ -62,7 +61,7 @@ const MOODS            = ["Peaceful", "Energized", "Grateful", "Anxious", "Tired
 const PROGRESS_OPTIONS = ["Dreaming", "Planning", "In Progress", "Achieved"];
 const CATEGORY_OPTIONS = ["Personal", "Career", "Travel", "Adventure", "Learning", "Health", "Relationships", "Finance", "Other"];
 const PRIORITY_QUADRANTS = [
-  { value: "Q1", label: "Q1 - Urgent, Important", color: C.crimson },
+  { value: "Q1", label: "Q1 - Urgent & Important", color: C.crimson },
   { value: "Q2", label: "Q2 - Important, Not Urgent", color: C.forest },
   { value: "Q3", label: "Q3 - Urgent, Not Important", color: C.warning },
   { value: "Q4", label: "Q4 - Not Urgent, Not Important", color: C.stone },
@@ -75,11 +74,21 @@ interface PastLetter {
 }
 interface PastJournal {
   id: number; journal_type: string; start_date: string; formatted_date?: string;
-  energy_score: number; alignment_score: number; affirmation?: string; priorities?: string[];
+  energy_score: number; alignment_score: number; affirmation?: string; priorities?: JournalPriority[];
+}
+interface JournalPriority {
+  description: string;
+  life_area: string;
+  quadrant: string;
+  start_time: string;
+  end_time: string;
+  completed: boolean;
+  planned_for: string;
 }
 interface DetailedJournal extends PastJournal {
   description?: string; gratitude_note?: string; challenges_note?: string; mood_tags?: string[];
   accomplishments?: { title: string }[];
+  priority_accomplishments?: Partial<JournalPriority>[];
   todos_snapshot?: { title: string; priority: string; status: string }[];
   habits_snapshot?: { habit_id?: number; name: string; completed: boolean }[];
   bucket_updates?: { title: string; update: string }[];
@@ -89,6 +98,7 @@ interface DetailedJournal extends PastJournal {
 interface HabitItem {
   habit_id?: number; name: string; completed: boolean;
   frequency?: string; category?: string; week_history?: boolean[];
+  week_days?: ApiHabitDay[];
 }
 interface ApiHabitDay {
   date?: string;
@@ -100,23 +110,6 @@ interface ApiHabitDay {
 }
 
 // ─── Mapping Helpers for To-Do API ────────────────────────────────────────────
-const toApiStatus = (ui: string) => {
-  const map: Record<string, string> = { "Not Started": "not_started", "In Progress": "in_progress", "Completed": "completed", "Someday": "someday" };
-  return map[ui] ?? ui.toLowerCase().replace(/ /g, "_");
-};
-
-const toApiPriority = (ui: string) => ui.toLowerCase();
-
-const fromApiStatus = (api: string) => {
-  const map: Record<string, string> = { "not_started": "Not Started", "in_progress": "In Progress", "completed": "Completed", "someday": "Someday" };
-  return map[api] || "Not Started";
-}
-
-const fromApiPriority = (api: string) => {
-  const map: Record<string, string> = { "low": "Low", "medium": "Medium", "high": "High", "urgent": "Urgent" };
-  return map[api] || "Medium";
-}
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const getProgressStyle = (progress: string) => {
   switch (progress) {
@@ -138,55 +131,115 @@ const getProgressClass = (progress: string) => {
 const statusToProgress  = (s: string) => ({ dreaming: "Dreaming", planning: "Planning", in_progress: "In Progress", achieved: "Achieved" }[s] || "Dreaming");
 const progressToStatus  = (p: string) => ({ Dreaming: "dreaming", Planning: "planning", "In Progress": "in_progress", Achieved: "achieved" }[p] || "dreaming");
 const habitKey = (habit: any) => String(habit?.habit_id ?? habit?.id ?? "");
-const normalizeDateOnly = (date: Date) => {
-  const normalized = new Date(date);
-  normalized.setHours(0, 0, 0, 0);
-  return normalized;
+const getHabitApiDayForDate = (habit: any, dateKey: string) =>
+  [...(habit?.this_week || []), ...(habit?.calendar_days || [])].find(
+    (day: ApiHabitDay) => String(day.date || "").slice(0, 10) === dateKey,
+  );
+const normalizeWeekday = (value: string) => String(value || "").trim().slice(0, 3).toLowerCase();
+const parseDateOnlyValue = (value?: string | null) => {
+  if (!value) return null;
+  const datePart = String(value).slice(0, 10);
+  const [year, month, day] = datePart.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+const getTodoAnchorDate = (todo: any) =>
+  parseDateOnlyValue(todo?.target_date) ||
+  parseDateOnlyValue(todo?.start_date) ||
+  parseDateOnlyValue(todo?.created_at) ||
+  parseDateOnlyValue(todo?.updated_at);
+const dateDiffDays = (from: Date, to: Date) =>
+  Math.floor((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
+const dateDiffWeeks = (from: Date, to: Date) =>
+  Math.floor(dateDiffDays(startOfWeek(from, { weekStartsOn: 0 }), startOfWeek(to, { weekStartsOn: 0 })) / 7);
+const dateDiffMonths = (from: Date, to: Date) =>
+  (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
+const isTodoCompleted = (todo: any) =>
+  ["completed", "complete", "done"].includes(String(todo?.status || "").toLowerCase());
+const todoMatchesDate = (todo: any, date: Date) => {
+  if (isTodoCompleted(todo)) return false;
+
+  const dateKey = format(date, "yyyy-MM-dd");
+  const targetDate = parseDateOnlyValue(todo?.target_date);
+  if (!todo?.recurring) return targetDate ? format(targetDate, "yyyy-MM-dd") === dateKey : true;
+
+  const recurrenceDays = Array.isArray(todo.recurrence_days)
+    ? todo.recurrence_days
+    : Array.isArray(todo.recurringDays)
+      ? todo.recurringDays
+      : [];
+  const dateDay = normalizeWeekday(format(date, "EEE"));
+  if (recurrenceDays.length > 0 && !recurrenceDays.some((day: string) => normalizeWeekday(day) === dateDay)) return false;
+
+  const interval = Math.max(1, Number(todo?.recurrence_interval || todo?.custom_interval || 1));
+  if (interval <= 1) return true;
+
+  const anchorDate = getTodoAnchorDate(todo);
+  if (!anchorDate) return true;
+  if (date < anchorDate) return false;
+
+  const pattern = String(todo?.recurrence_pattern || "").toLowerCase();
+  if (pattern === "daily") return dateDiffDays(anchorDate, date) % interval === 0;
+  if (pattern === "monthly") return dateDiffMonths(anchorDate, date) % interval === 0;
+  return dateDiffWeeks(anchorDate, date) % interval === 0;
+};
+const getPriorityQuadrantLabel = (quadrant?: string) => {
+  const clean = String(quadrant || "").trim();
+  const match = PRIORITY_QUADRANTS.find((item) => item.value === clean || item.label === clean);
+  return match?.label || PRIORITY_QUADRANTS[1].label;
 };
 
-const weeklyPlanPrioritiesForDate = (weeklyJournals: any[], selectedDate: Date) => {
-  const selected = normalizeDateOnly(selectedDate);
+const getPriorityQuadrantValue = (quadrant?: string) => {
+  const clean = String(quadrant || "").trim();
+  const match = PRIORITY_QUADRANTS.find((item) => item.value === clean || item.label === clean);
+  return match?.value || "Q2";
+};
 
-  for (const journal of weeklyJournals) {
-    const planDays = journal?.data?.weekly_plan?.days;
-    if (!journal?.start_date || !Array.isArray(planDays)) continue;
+const priorityHasDescription = (priority: JournalPriority) => priority.description.trim().length > 0;
 
-    const journalWeekStart = startOfWeek(new Date(`${journal.start_date}T00:00:00`), { weekStartsOn: 0 });
-    const candidateWeekStarts = [journalWeekStart, addDays(journalWeekStart, 7)];
-    const selectedDay = format(selected, "EEE").toLowerCase();
-    const selectedMonthDay = format(selected, "d MMM").toLowerCase();
-    const dateMatchedIndex = planDays.findIndex((day: any) => {
-      const planDate = String(day?.date || "").trim().toLowerCase();
-      const planDay = String(day?.day || day?.id || "").slice(0, 3).toLowerCase();
-      return planDate === selectedMonthDay && planDay === selectedDay;
-    });
-    const calculatedIndex = candidateWeekStarts
-      .map((weekStart) => Math.round((selected.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24)))
-      .find((index) => index >= 0 && index <= 6);
-    const dayIndex = dateMatchedIndex >= 0 ? dateMatchedIndex : calculatedIndex;
+const normalizeJournalPriority = (
+  priority: any,
+  index = 0,
+  plannedFor = "",
+): JournalPriority => {
+  const defaultHour = Math.min(9 + index, 21);
+  const start = `${String(defaultHour).padStart(2, "0")}:00`;
+  const end = `${String(Math.min(defaultHour + 1, 22)).padStart(2, "0")}:00`;
 
-    if (typeof dayIndex !== "number") continue;
-
-    const planDay = planDays[dayIndex];
-    const planDayDate = String(planDay?.date || "").trim().toLowerCase();
-    if (dateMatchedIndex < 0 && planDayDate && planDayDate !== selectedMonthDay) continue;
-
-    const priorities = Array.isArray(planDay?.priorities) ? planDay.priorities : [];
-    const achievements = priorities
-      .map((priority: any, index: number) => ({
-        id: Number(priority?.id) || Number(`${format(selected, "yyyyMMdd")}${index + 1}`),
-        title: String(priority?.text || priority?.title || "").trim(),
-        checked: false,
-      }))
-      .filter((priority: any) => priority.title);
-    if (achievements.length > 0 || dateMatchedIndex >= 0) return achievements;
+  if (typeof priority === "string") {
+    return {
+      description: priority,
+      life_area: "Career",
+      quadrant: getPriorityQuadrantLabel("Q2"),
+      start_time: start,
+      end_time: end,
+      completed: false,
+      planned_for: plannedFor,
+    };
   }
 
-  return [];
+  return {
+    description: String(priority?.description || priority?.title || priority?.text || "").trim(),
+    life_area: String(priority?.life_area || priority?.lifeArea || priority?.category || "Career"),
+    quadrant: getPriorityQuadrantLabel(priority?.quadrant),
+    start_time: String(priority?.start_time || priority?.start || start),
+    end_time: String(priority?.end_time || priority?.end || end),
+    completed: Boolean(priority?.completed),
+    planned_for: String(priority?.planned_for || plannedFor),
+  };
 };
 
-const tomorrowPrioritiesToAchievements = (journal: any) => {
-  const priorities = Array.isArray(journal?.priorities) ? journal.priorities : [];
+const normalizeJournalPriorities = (priorities: any, plannedFor = ""): JournalPriority[] => {
+  if (!Array.isArray(priorities)) return [];
+  return priorities
+    .map((priority, index) => normalizeJournalPriority(priority, index, plannedFor))
+    .filter(priorityHasDescription);
+};
+
+const priorityAccomplishmentsToAchievements = (journal: any) => {
+  const priorities = Array.isArray(journal?.priority_accomplishments) ? journal.priority_accomplishments : [];
   const idPrefix = journal?.start_date
     ? format(new Date(`${journal.start_date}T00:00:00`), "yyyyMMdd")
     : "0";
@@ -194,7 +247,7 @@ const tomorrowPrioritiesToAchievements = (journal: any) => {
   return priorities
     .map((priority: any, index: number) => ({
       id: Number(`${idPrefix}${index + 1}`),
-      title: String(priority || "").trim(),
+      title: String(priority?.description || priority?.title || priority?.text || "").trim(),
       checked: false,
     }))
     .filter((priority: any) => priority.title);
@@ -485,15 +538,35 @@ const TodaysReflection = ({
     const u = [...habits];
     const nextCompleted = !u[idx].completed;
     const weekHistory = [...(u[idx].week_history || [])];
+    const weekDays = [...(u[idx].week_days || [])];
     weekHistory[selectedDayIdx] = nextCompleted;
-    u[idx] = { ...u[idx], completed: nextCompleted, week_history: weekHistory };
+    if (weekDays[selectedDayIdx]) {
+      const selectedDateNorm = new Date(selectedDate);
+      selectedDateNorm.setHours(0, 0, 0, 0);
+      weekDays[selectedDayIdx] = {
+        ...weekDays[selectedDayIdx],
+        completed: nextCompleted,
+        missed: Boolean(weekDays[selectedDayIdx].scheduled) && !nextCompleted && selectedDateNorm < today,
+      };
+    }
+    u[idx] = { ...u[idx], completed: nextCompleted, week_history: weekHistory, week_days: weekDays };
     setHabits(u);
   };
   const setAllHabitsCompleted = (completed: boolean) => {
     setHabits(habits.map((habit: any) => {
       const weekHistory = [...(habit.week_history || [])];
+      const weekDays = [...(habit.week_days || [])];
       weekHistory[selectedDayIdx] = completed;
-      return { ...habit, completed, week_history: weekHistory };
+      if (weekDays[selectedDayIdx]) {
+        const selectedDateNorm = new Date(selectedDate);
+        selectedDateNorm.setHours(0, 0, 0, 0);
+        weekDays[selectedDayIdx] = {
+          ...weekDays[selectedDayIdx],
+          completed,
+          missed: Boolean(weekDays[selectedDayIdx].scheduled) && !completed && selectedDateNorm < today,
+        };
+      }
+      return { ...habit, completed, week_history: weekHistory, week_days: weekDays };
     }));
   };
 
@@ -594,6 +667,7 @@ const TodaysReflection = ({
           <div className="flex flex-col gap-3">
             {habits.map((habit: any, idx: number) => {
               const habitHistory: boolean[] = habit.week_history || [];
+              const weekDayStates: ApiHabitDay[] = Array.isArray(habit.week_days) ? habit.week_days : [];
               return (
                 <div key={habit.habit_id || idx} className="rounded-lg overflow-hidden border transition-all" style={{ borderColor: habit.completed ? C.forest15 : C.cream }}>
                   <div className="flex items-center gap-3 px-3 py-3 cursor-pointer transition-colors"
@@ -618,45 +692,52 @@ const TodaysReflection = ({
                   <div className="px-3 pb-2 pt-1.5 border-t" style={{ borderColor: C.cream, background: habit.completed ? C.forest8 : C.pageBg }}>
                     <div className="inline-grid grid-cols-7 gap-1">
                       {DAY_LABELS.map((label, i) => (
-                        <div key={i} className="text-center text-[9px] font-semibold leading-none" style={{ color: C.muted }}>{label}</div>
+                        <div key={i} className="text-center text-[10px] font-bold leading-none" style={{ color: C.stone }}>{label}</div>
                       ))}
                       {weekDates.map((date, i) => {
                         const dateNorm = new Date(date); dateNorm.setHours(0,0,0,0);
+                        const dayState = weekDayStates[i] || {};
                         const isSelectedDay = i === selectedDayIdx;
-                        const isPast        = dateNorm < today;
-                        const completed     = isSelectedDay ? habit.completed : isPast ? (habitHistory[i] ?? false) : false;
+                        const completed = isSelectedDay
+                          ? Boolean(habit.completed)
+                          : Boolean(dayState.completed ?? habitHistory[i]);
+                        const scheduled = Boolean(dayState.scheduled);
+                        const future = Boolean(dayState.future) || dateNorm > today;
+                        const missed = Boolean(dayState.missed) || (scheduled && !completed && dateNorm < today);
+                        const neutral = !scheduled || future;
 
-                        if (isSelectedDay) return (
+                        if (completed) return (
                           <div key={i} className="flex items-center justify-center">
-                            <div className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold border-2"
-                              style={{
-                                color: completed ? "#fff" : C.coral,
-                                borderColor: completed ? C.forest : C.coral,
-                                background: completed ? C.forest : "#fff",
-                              }}>
-                              {completed ? (
-                                <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                              ) : date.getDate()}
-                            </div>
-                          </div>
-                        );
-                        if (isPast && completed) return (
-                          <div key={i} className="flex items-center justify-center">
-                            <div className="w-6 h-6 rounded flex items-center justify-center" style={{ background: C.forest }}>
+                            <div className="w-6 h-6 rounded flex items-center justify-center border"
+                              style={{ color: "#fff", borderColor: C.forest, background: C.forest }}>
                               <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                             </div>
                           </div>
                         );
-                        if (isPast && !completed) return (
+                        if (missed) return (
                           <div key={i} className="flex items-center justify-center">
-                            <div className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold"
-                              style={{ color: C.crimson, background: C.crimson8 }}>{date.getDate()}</div>
+                            <div className="w-6 h-6 rounded flex items-center justify-center border"
+                              style={{ color: C.crimson, borderColor: C.crimson, background: C.crimson8 }}>
+                              <X className="w-3.5 h-3.5" strokeWidth={3} />
+                            </div>
+                          </div>
+                        );
+                        if (isSelectedDay || dayState.today) return (
+                          <div key={i} className="flex items-center justify-center">
+                            <div className="w-6 h-6 rounded flex items-center justify-center text-[11px] font-extrabold border-2"
+                              style={{ color: C.coral, borderColor: C.coral, background: "#fff" }}>
+                              {date.getDate()}
+                            </div>
                           </div>
                         );
                         return (
                           <div key={i} className="flex items-center justify-center">
-                            <div className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-medium"
-                              style={{ color: C.muted, background: C.mist+"30" }}>{date.getDate()}</div>
+                            <div className="w-6 h-6 rounded flex items-center justify-center text-[11px] font-bold border"
+                              style={{
+                                color: neutral ? C.stone : C.charcoal,
+                                borderColor: neutral ? C.sand30 : C.cream,
+                                background: neutral ? C.mist+"30" : C.pageBg,
+                              }}>{date.getDate()}</div>
                           </div>
                         );
                       })}
@@ -720,28 +801,27 @@ const TodaysReflection = ({
 };
 
 // ─── ShapingTomorrow ──────────────────────────────────────────────────────────
-const ShapingTomorrow = ({ priorities, setPriorities, token, showToast, selectedDate }: { priorities: string[]; setPriorities: any; token?: string; showToast: (msg: string, type?: "success" | "error") => void; selectedDate: Date }) => {
+const ShapingTomorrow = ({ priorities, setPriorities, token, showToast, selectedDate }: { priorities: JournalPriority[]; setPriorities: any; token?: string; showToast: (msg: string, type?: "success" | "error") => void; selectedDate: Date }) => {
   const [calendars, setCalendars] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   // ── To-Dos State ──
   const [todos, setTodos] = useState<any[]>([]);
   const [isLoadingTodos, setIsLoadingTodos] = useState(true);
-  const [isTodoDialogOpen, setIsTodoDialogOpen] = useState(false);
-  const [editingTodo, setEditingTodo] = useState<any>(null);
   const [quickDescription, setQuickDescription] = useState("");
   const [quickCategory, setQuickCategory] = useState("Career");
   const [quickQuadrant, setQuickQuadrant] = useState("Q2");
   const [quickStart, setQuickStart] = useState("09:00");
   const [quickEnd, setQuickEnd] = useState("10:00");
-  const [priorityMeta, setPriorityMeta] = useState<Record<number, { category: string; quadrant: string; start: string; end: string }>>({});
   const [editingPriorityIndex, setEditingPriorityIndex] = useState<number | null>(null);
   const [editingPriorityDraft, setEditingPriorityDraft] = useState({ title: "", category: "Career", quadrant: "Q2", start: "09:00", end: "10:00" });
   const scheduleRef = useRef<HTMLDivElement | null>(null);
 
   const tomorrowDate = addDays(selectedDate, 1);
+  const tomorrowDateKey = format(tomorrowDate, "yyyy-MM-dd");
   const tomorrowLabel = format(tomorrowDate, "d MMM (EEE)");
-  const scheduledPriorities = priorities.filter((priority: string) => priority.trim());
+  const todoFilterDateKey = format(selectedDate, "yyyy-MM-dd");
+  const scheduledPriorities = priorities.filter(priorityHasDescription);
 
   const getTodoTitle = (todo: any) => todo.title || todo.name || "Untitled Task";
   const getTodoArea = (todo: any) => todo.life_area || todo.lifeArea || "Career";
@@ -783,7 +863,11 @@ const ShapingTomorrow = ({ priorities, setPriorities, token, showToast, selected
     if (scheduledPriorities.length === 0) return { start: quickStart, end: quickEnd };
 
     const previousIndex = scheduledPriorities.length - 1;
-    const previousTime = priorityMeta[previousIndex] || getDefaultTime(previousIndex);
+    const previousPriority = scheduledPriorities[previousIndex];
+    const previousTime = {
+      start: previousPriority?.start_time || getDefaultTime(previousIndex).start,
+      end: previousPriority?.end_time || getDefaultTime(previousIndex).end,
+    };
     const durationHours = getDurationHours({ start: quickStart, end: quickEnd });
     const [previousEndHour] = previousTime.end.split(":").map(Number);
     const nextStartHour = Math.min(previousEndHour, 22);
@@ -798,32 +882,30 @@ const ShapingTomorrow = ({ priorities, setPriorities, token, showToast, selected
   const addPriorityBlock = (title: string, meta?: { category: string; quadrant: string; start: string; end: string }) => {
     const cleanTitle = title.trim();
     if (!cleanTitle) return;
-    setPriorities((current: string[]) => {
-      const filled = current.filter((priority) => priority.trim());
-      const nextIndex = filled.length;
-      setPriorityMeta((currentMeta) => ({
-        ...currentMeta,
-        [nextIndex]: meta || { category: quickCategory, quadrant: quickQuadrant, start: quickStart, end: quickEnd },
-      }));
-      return [...filled, cleanTitle];
+    setPriorities((current: JournalPriority[]) => {
+      const filled = current.filter(priorityHasDescription);
+      const nextMeta = meta || { category: quickCategory, quadrant: quickQuadrant, start: quickStart, end: quickEnd };
+      return [
+        ...filled,
+        {
+          description: cleanTitle,
+          life_area: nextMeta.category,
+          quadrant: getPriorityQuadrantLabel(nextMeta.quadrant),
+          start_time: nextMeta.start,
+          end_time: nextMeta.end,
+          completed: false,
+          planned_for: tomorrowDateKey,
+        },
+      ];
     });
   };
 
   const removePriority = (index: number) => {
-    setPriorities((current: string[]) => current.filter((priority, i) => priority.trim() && i !== index));
-    setPriorityMeta((currentMeta) => {
-      const nextMeta: Record<number, { category: string; quadrant: string; start: string; end: string }> = {};
-      Object.entries(currentMeta).forEach(([key, value]) => {
-        const oldIndex = Number(key);
-        if (oldIndex < index) nextMeta[oldIndex] = value;
-        if (oldIndex > index) nextMeta[oldIndex - 1] = value;
-      });
-      return nextMeta;
-    });
+    setPriorities((current: JournalPriority[]) => current.filter((priority, i) => priorityHasDescription(priority) && i !== index));
   };
 
   const updatePriority = (index: number, value: string) => {
-    setPriorities((current: string[]) => current.map((priority, i) => (i === index ? value : priority)));
+    setPriorities((current: JournalPriority[]) => current.map((priority, i) => (i === index ? { ...priority, description: value } : priority)));
   };
 
   const handleQuickAddPriority = () => {
@@ -874,14 +956,15 @@ const ShapingTomorrow = ({ priorities, setPriorities, token, showToast, selected
         });
       }
       if (payload.type === "priority" && typeof payload.index === "number") {
-        const currentMeta = priorityMeta[payload.index] || { category: quickCategory, quadrant: quickQuadrant, ...getDefaultTime(payload.index) };
-        setPriorityMeta((current) => ({
-          ...current,
-          [payload.index]: {
-            ...currentMeta,
-            ...getDropTime(event, getDurationHours(currentMeta)),
-          },
-        }));
+        const currentPriority = scheduledPriorities[payload.index];
+        const currentTime = {
+          start: currentPriority?.start_time || getDefaultTime(payload.index).start,
+          end: currentPriority?.end_time || getDefaultTime(payload.index).end,
+        };
+        const dropTime = getDropTime(event, getDurationHours(currentTime));
+        setPriorities((current: JournalPriority[]) => current.map((priority, index) => (
+          index === payload.index ? { ...priority, start_time: dropTime.start, end_time: dropTime.end } : priority
+        )));
       }
     } catch (error) {
       console.error("Failed to drop priority:", error);
@@ -889,23 +972,33 @@ const ShapingTomorrow = ({ priorities, setPriorities, token, showToast, selected
   };
 
   const openPriorityEdit = (index: number, title: string) => {
-    const meta = priorityMeta[index] || { category: quickCategory, quadrant: quickQuadrant, ...getDefaultTime(index) };
+    const priority = scheduledPriorities[index];
+    const defaultTime = getDefaultTime(index);
     setEditingPriorityIndex(index);
-    setEditingPriorityDraft({ title, ...meta });
+    setEditingPriorityDraft({
+      title,
+      category: priority?.life_area || quickCategory,
+      quadrant: getPriorityQuadrantValue(priority?.quadrant || quickQuadrant),
+      start: priority?.start_time || defaultTime.start,
+      end: priority?.end_time || defaultTime.end,
+    });
   };
 
   const savePriorityEdit = () => {
     if (editingPriorityIndex === null) return;
     updatePriority(editingPriorityIndex, editingPriorityDraft.title);
-    setPriorityMeta((current) => ({
-      ...current,
-      [editingPriorityIndex]: {
-        category: editingPriorityDraft.category,
-        quadrant: editingPriorityDraft.quadrant,
-        start: editingPriorityDraft.start,
-        end: editingPriorityDraft.end,
-      },
-    }));
+    setPriorities((current: JournalPriority[]) => current.map((priority, index) => (
+      index === editingPriorityIndex
+        ? {
+            ...priority,
+            life_area: editingPriorityDraft.category,
+            quadrant: getPriorityQuadrantLabel(editingPriorityDraft.quadrant),
+            start_time: editingPriorityDraft.start,
+            end_time: editingPriorityDraft.end,
+            planned_for: priority.planned_for || tomorrowDateKey,
+          }
+        : priority
+    )));
     setEditingPriorityIndex(null);
   };
 
@@ -926,7 +1019,7 @@ const ShapingTomorrow = ({ priorities, setPriorities, token, showToast, selected
       if (res.ok) {
         const data = await res.json();
         const list = Array.isArray(data) ? data : (data.data || data.todos || []);
-        setTodos(list.filter((t: any) => t.status !== 'completed'));
+        setTodos(list.filter((t: any) => todoMatchesDate(t, selectedDate)));
       }
     } catch (err) {
       console.error("Failed to fetch todos:", err);
@@ -937,51 +1030,7 @@ const ShapingTomorrow = ({ priorities, setPriorities, token, showToast, selected
 
   useEffect(() => {
     fetchTodos();
-  }, [token]);
-
-  // Handle Edit Submission
-  const handleUpdateTodo = async (updated: any) => {
-    try {
-      const payloadWrapped = {
-        todo: {
-          title: updated.title,
-          description: updated.description,
-          life_area: updated.lifeArea,
-          priority: toApiPriority(updated.priority),
-          status: toApiStatus(updated.status),
-          recurring: updated.recurring,
-          target_date: updated.targetDate ? new Date(updated.targetDate).toISOString().split("T")[0] : null,
-          goal_id: updated.goalId ? Number(updated.goalId) : null,
-        },
-      };
-
-      const tokenToUse = token || localStorage.getItem("auth_token") || "";
-      let res = await fetch(`https://life-api.lockated.com/todos/${updated.id}`, {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${tokenToUse}`, "Content-Type": "application/json" },
-        body: JSON.stringify(payloadWrapped),
-      });
-
-      if (!res.ok) {
-        res = await fetch(`https://life-api.lockated.com/todos/${updated.id}`, {
-          method: "PATCH",
-          headers: { Authorization: `Bearer ${tokenToUse}`, "Content-Type": "application/json" },
-          body: JSON.stringify(payloadWrapped),
-        });
-      }
-
-      if (res.ok) {
-        showToast("To do updated successfully.", "success");
-        setIsTodoDialogOpen(false);
-        fetchTodos(); // Refresh the to-dos list
-      } else {
-        throw new Error("Update failed");
-      }
-    } catch (e) {
-      console.error(e);
-      showToast("Failed to update to do.", "error");
-    }
-  };
+  }, [token, todoFilterDateKey]);
 
   return (
     <div className="w-full border rounded-xl p-6 font-sans shadow-sm" style={{ background: C.pageBg, borderColor: C.cream }}>
@@ -1141,14 +1190,20 @@ const ShapingTomorrow = ({ priorities, setPriorities, token, showToast, selected
               ))}
               <div className="absolute inset-x-0 top-0">
                 {scheduledPriorities.length > 0 ? (
-                  scheduledPriorities.map((priority: string, index: number) => {
-                    const time = priorityMeta[index] || { category: quickCategory, quadrant: quickQuadrant, ...getDefaultTime(index) };
+                  scheduledPriorities.map((priority: JournalPriority, index: number) => {
+                    const defaultTime = getDefaultTime(index);
+                    const time = {
+                      category: priority.life_area || quickCategory,
+                      quadrant: getPriorityQuadrantValue(priority.quadrant || quickQuadrant),
+                      start: priority.start_time || defaultTime.start,
+                      end: priority.end_time || defaultTime.end,
+                    };
                     const quadrant = PRIORITY_QUADRANTS.find((item) => item.value === time.quadrant) || getQuadrant(index);
                     const top = timeToTop(time.start);
                     const height = timeToHeight(time.start, time.end);
                     return (
                       <div
-                        key={`${priority}-${index}`}
+                        key={`${priority.description}-${index}`}
                         draggable
                         onDragStart={(event) => handlePriorityDragStart(event, index)}
                         className="absolute left-0 right-0 rounded-md shadow-sm flex items-center justify-between px-3 cursor-grab active:cursor-grabbing"
@@ -1156,15 +1211,15 @@ const ShapingTomorrow = ({ priorities, setPriorities, token, showToast, selected
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="text-[14px] font-bold min-w-0 flex-1 truncate">
-                            {priority}
+                            {priority.description}
                           </span>
                           <span className="text-[12px] font-bold opacity-90 flex-shrink-0">({time.category} / {quadrant.value})</span>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <button type="button" onClick={() => openPriorityEdit(index, priority)} aria-label={`Edit ${priority}`}>
+                          <button type="button" onClick={() => openPriorityEdit(index, priority.description)} aria-label={`Edit ${priority.description}`}>
                             <Edit2 className="w-4 h-4 opacity-80" />
                           </button>
-                          <button type="button" onClick={() => removePriority(index)} aria-label={`Remove ${priority}`}>
+                          <button type="button" onClick={() => removePriority(index)} aria-label={`Remove ${priority.description}`}>
                             <X className="w-4 h-4 opacity-90" />
                           </button>
                         </div>
@@ -1181,19 +1236,6 @@ const ShapingTomorrow = ({ priorities, setPriorities, token, showToast, selected
           </div>
         </div>
       </div>
-
-      {/* Edit Todo Modal */}
-      <CreateToDoDialog
-        open={isTodoDialogOpen}
-        onOpenChange={(open) => {
-          setIsTodoDialogOpen(open);
-          if (!open) setEditingTodo(null);
-        }}
-        initialData={editingTodo}
-        onSubmit={async (todo) => {
-          await handleUpdateTodo(todo);
-        }}
-      />
 
       {editingPriorityIndex !== null && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4">
@@ -1814,7 +1856,7 @@ const BucketListProgress = ({
   );
 };
 // ─── PastJournalRow ───────────────────────────────────────────────────────────
-const PastJournalRow = ({ journal, token, onDelete, onEdit, showToast }: { journal: PastJournal; token?: string; onDelete: (id: number) => void; onEdit: (id: number) => void; showToast: (msg: string, type?: "success"| "error") => void }) => {
+const PastJournalRow = ({ journal, token, onDelete, onDraftDelete, onEdit, showToast }: { journal: PastJournal; token?: string; onDelete: (id: number) => void; onDraftDelete: (dateKey: string) => void; onEdit: (journal: PastJournal) => void; showToast: (msg: string, type?: "success"| "error") => void }) => {
   const [expanded, setExpanded] = useState(false);
   const [detail, setDetail]     = useState<DetailedJournal | null>(null);
   const [loading, setLoading]   = useState(false);
@@ -1838,6 +1880,7 @@ const PastJournalRow = ({ journal, token, onDelete, onEdit, showToast }: { journ
       await fetch(`${LIFE_API}/user_journals/${journal.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${getToken(token)}` } });
       showToast("Entry Deleted", "success");
       localStorage.removeItem(`daily_journal_${journal.start_date}`);
+      onDraftDelete(journal.start_date);
       onDelete(journal.id);
     } catch { showToast("Error deleting entry", "error"); }
   };
@@ -1866,7 +1909,7 @@ const PastJournalRow = ({ journal, token, onDelete, onEdit, showToast }: { journ
         <span className="font-semibold text-sm flex-1 min-w-0 truncate" style={{ color: C.charcoal }}>{dateLabel}</span>
         {infoChip(`Energy ${journal.energy_score}/10`)}
         {infoChip(`Align ${journal.alignment_score}/10`)}
-        <button onClick={e => { e.stopPropagation(); onEdit(journal.id); }}
+        <button onClick={e => { e.stopPropagation(); onEdit(journal); }}
           className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border text-xs font-semibold transition-colors"
           style={{ color: C.charcoal, borderColor: C.cream }}
           onMouseEnter={e => (e.currentTarget.style.background = C.pageBg)} onMouseLeave={e => (e.currentTarget.style.background = "#fff")}>
@@ -1896,7 +1939,13 @@ const PastJournalRow = ({ journal, token, onDelete, onEdit, showToast }: { journ
               <p className="text-sm italic" style={{ color: C.stone }}>"{detail.affirmation}"</p>
             )}
             {detail.priorities?.length > 0 && sectionBlock("Priorities for Tomorrow",
-              <ul className="space-y-1">{detail.priorities.map((p,i) => <li key={i} className="text-sm flex items-center gap-2" style={{ color: C.stone }}><span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: C.coral }}/>{p}</li>)}</ul>
+              <ul className="space-y-1">{normalizeJournalPriorities(detail.priorities, detail.start_date ? format(addDays(new Date(`${detail.start_date}T00:00:00`), 1), "yyyy-MM-dd") : "").map((p,i) => (
+                <li key={i} className="text-sm flex items-center gap-2" style={{ color: C.stone }}>
+                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: C.coral }}/>
+                  <span>{p.description}</span>
+                  <span className="text-[11px] font-semibold" style={{ color: C.muted }}>{p.start_time}-{p.end_time} | {p.life_area} | {getPriorityQuadrantValue(p.quadrant)}</span>
+                </li>
+              ))}</ul>
             )}
             {(detail.gratitude_note || detail.challenges_note) && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2139,7 +2188,7 @@ const DailyJournal = () => {
   const [challenges, setChallenges] = useState("");
   const [affirmation, setAffirmation] = useState("");
   const [description, setDescription] = useState("");
-  const [priorities, setPriorities]   = useState<string[]>([""]);
+  const [priorities, setPriorities]   = useState<JournalPriority[]>([]);
   const [achievements, setAchievements] = useState<{ id: number; title: string; checked: boolean }[]>([]);
   const [habitsSnapshot, setHabitsSnapshot] = useState<HabitItem[]>([]);
   const [showAchievementDialog, setShowAchievementDialog] = useState(false);
@@ -2177,8 +2226,8 @@ const DailyJournal = () => {
       if (typeof draft.challenges === "string") setChallenges(draft.challenges);
       if (typeof draft.affirmation === "string") setAffirmation(draft.affirmation);
       if (typeof draft.description === "string") setDescription(draft.description);
-      if (Array.isArray(draft.priorities)) setPriorities(draft.priorities.length ? draft.priorities : [""]);
-      if (Array.isArray(draft.achievements)) setAchievements(mergeSuggestedAchievements(draft.achievements, achievementFallback));
+      if (Array.isArray(draft.priorities)) setPriorities(normalizeJournalPriorities(draft.priorities, format(addDays(date, 1), "yyyy-MM-dd")));
+      if (Array.isArray(draft.achievements)) setAchievements(mergeSuggestedAchievements(achievementFallback, draft.achievements));
       // Habits come from /habits so stale local drafts do not override API completion.
     } catch (error) {
       console.error("Failed to restore daily journal draft:", error);
@@ -2226,39 +2275,24 @@ const DailyJournal = () => {
         if (jRes.ok) {
           const jData   = await jRes.json();
           const parsedJ = Array.isArray(jData) ? (jData.length > 0 ? jData[0] : null) : (jData?.user_journal ?? jData);
-          if (parsedJ && parsedJ.id) existingJournal = parsedJ;
+          if (
+            parsedJ &&
+            (parsedJ.id || parsedJ.start_date || Array.isArray(parsedJ.priority_accomplishments))
+          ) existingJournal = parsedJ;
         }
         let fetchedHabits: any[] = [];
         try {
           const hRes = await fetch(`${API_BASE_URL}/habits`, { headers: { Authorization: `Bearer ${getToken(token)}` } });
           if (hRes.ok) { const hData = await hRes.json(); fetchedHabits = Array.isArray(hData) ? hData : (hData.habits ?? hData.data ?? []); }
         } catch {}
-        const weekHabitHistory: Record<string, boolean[]> = {};
-        try {
-          const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
-          const today = new Date(); today.setHours(0,0,0,0);
-          const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-          await Promise.all(weekDates.map(async (date, dayIdx) => {
-            const normalizedDate = new Date(date); normalizedDate.setHours(0,0,0,0);
-            if (normalizedDate > today) return;
-            const dateKey = format(date, "yyyy-MM-dd");
-            const res = await fetch(`${LIFE_API}/user_journals/0?date=${dateKey}&journal_type=daily`, { headers: { Authorization: `Bearer ${getToken(token)}` } });
-            if (!res.ok) return;
-            const data = await res.json();
-            const journal = Array.isArray(data) ? (data.length > 0 ? data[0] : null) : (data?.user_journal ?? data);
-            const savedHabits = journal?.habits_snapshot || [];
-            savedHabits.forEach((habit: any) => {
-              const key = habitKey(habit);
-              if (!key || !habit.completed) return;
-              weekHabitHistory[key] = weekHabitHistory[key] || [];
-              weekHabitHistory[key][dayIdx] = true;
-            });
-          }));
-        } catch {}
-        const getHabitApiDay = (habit: any, dateKey: string) =>
-          (habit.this_week || []).find(
-            (day: ApiHabitDay) => String(day.date || "").slice(0, 10) === dateKey,
-          );
+        const getHabitApiDay = (habit: any, dateKey: string) => getHabitApiDayForDate(habit, dateKey);
+        const hasHabitScheduleData = (habit: any) =>
+          Array.isArray(habit?.this_week) || Array.isArray(habit?.calendar_days);
+        const isHabitScheduledForDate = (habit: any, dateKey: string) => {
+          const apiDay = getHabitApiDay(habit, dateKey);
+          if (apiDay) return Boolean(apiDay.scheduled);
+          return !hasHabitScheduleData(habit);
+        };
         const getHabitCompletedForSelectedDate = (habit: any) => {
           const apiDay = getHabitApiDay(habit, d);
           return apiDay ? Boolean(apiDay.completed) : Boolean(habit.completed);
@@ -2272,9 +2306,43 @@ const DailyJournal = () => {
               })
             : [];
           if (apiWeek.length) return apiWeek;
-          const fetchedHistory = apiWeek.length ? apiWeek : (habit.week_history || habit.weekly_completion || []);
-          const completedHistory = weekHabitHistory[habitKey(habit)] || [];
-          return Array.from({ length: 7 }, (_, i) => Boolean(fetchedHistory[i] || completedHistory[i]));
+          const fetchedHistory = habit.week_history || habit.weekly_completion || [];
+          return Array.from({ length: 7 }, (_, i) => Boolean(fetchedHistory[i]));
+        };
+        const mergeWeekDays = (habit: any): ApiHabitDay[] => {
+          const weekStartDate = startOfWeek(selectedDate, { weekStartsOn: 0 });
+          const fetchedHistory = habit.week_history || habit.weekly_completion || [];
+          return Array.from({ length: 7 }, (_, i) => {
+            const day = addDays(weekStartDate, i);
+            const dateKey = format(day, "yyyy-MM-dd");
+            const apiDay = getHabitApiDay(habit, dateKey);
+            const normalizedDay = new Date(day);
+            normalizedDay.setHours(0, 0, 0, 0);
+            const future = normalizedDay > new Date(new Date().setHours(0, 0, 0, 0));
+
+            if (apiDay) {
+              const scheduled = Boolean(apiDay.scheduled);
+              const completed = Boolean(apiDay.completed);
+              return {
+                date: dateKey,
+                scheduled,
+                completed,
+                missed: Boolean(apiDay.missed) || (scheduled && !completed && normalizedDay < new Date(new Date().setHours(0, 0, 0, 0))),
+                today: Boolean(apiDay.today),
+                future: Boolean(apiDay.future) || future,
+              };
+            }
+
+            const completed = Boolean(fetchedHistory[i]);
+            return {
+              date: dateKey,
+              scheduled: !hasHabitScheduleData(habit),
+              completed,
+              missed: !hasHabitScheduleData(habit) && !completed && normalizedDay < new Date(new Date().setHours(0, 0, 0, 0)),
+              today: dateKey === format(new Date(), "yyyy-MM-dd"),
+              future,
+            };
+          });
         };
         const mapApiHabitToSnapshot = (h: any): HabitItem => ({
           habit_id: h.id || h.habit_id,
@@ -2283,68 +2351,47 @@ const DailyJournal = () => {
           frequency: h.frequency || h.repeat_type || "Daily",
           category: h.category || h.habit_category || "Other",
           week_history: mergeWeekHistory(h),
+          week_days: mergeWeekDays(h),
         });
-        let weeklyPlanAchievements: { id: number; title: string; checked: boolean }[] = [];
-        let previousDayPriorityAchievements: { id: number; title: string; checked: boolean }[] = [];
-        try {
-          const weeklyRes = await fetch(`${LIFE_API}/user_journals?journal_type=weekly`, { headers: { Authorization: `Bearer ${getToken(token)}` } });
-          if (weeklyRes.ok) {
-            const weeklyData = await weeklyRes.json();
-            const weeklyJournals = Array.isArray(weeklyData) ? weeklyData : (weeklyData?.user_journals ?? weeklyData?.data ?? []);
-            weeklyPlanAchievements = weeklyPlanPrioritiesForDate(weeklyJournals, selectedDate);
-          }
-        } catch {}
-        try {
-          const previousDate = format(addDays(selectedDate, -1), "yyyy-MM-dd");
-          const previousRes = await fetch(`${LIFE_API}/user_journals/0?date=${previousDate}&journal_type=daily`, { headers: { Authorization: `Bearer ${getToken(token)}` } });
-          if (previousRes.ok) {
-            const previousData = await previousRes.json();
-            const previousJournal = Array.isArray(previousData) ? (previousData.length > 0 ? previousData[0] : null) : (previousData?.user_journal ?? previousData);
-            previousDayPriorityAchievements = tomorrowPrioritiesToAchievements(previousJournal);
-          }
-        } catch {}
+        const scheduledHabitsForSelectedDate = fetchedHabits.filter((habit) => isHabitScheduledForDate(habit, d));
         if (!isMounted) return;
         if (existingJournal) {
-          setJournalId(existingJournal.id); 
-          setIsEditMode(true);
+          setJournalId(existingJournal.id ?? null); 
+          setIsEditMode(Boolean(existingJournal.id));
           setIsEditingFromPast(false);
           setAffirmation(existingJournal.affirmation || ""); setGratitude(existingJournal.gratitude_note || "");
           setChallenges(existingJournal.challenges_note || ""); setDescription(existingJournal.data?.description || "");
           setEnergy(existingJournal.energy_score ?? 5); setAlignment(existingJournal.alignment_score ?? 5);
-          setPriorities(existingJournal.priorities?.length ? existingJournal.priorities : [""]);
+          setPriorities(normalizeJournalPriorities(existingJournal.priorities, format(addDays(selectedDate, 1), "yyyy-MM-dd")));
           setSelectedMoods(existingJournal.mood_tags || []);
           const savedAchievements = existingJournal.accomplishments?.map((a: any, i: number) => ({ id: i, title: a.title, checked: true })) || [];
-          const existingSuggestedAchievements = mergeSuggestedAchievements(savedAchievements, previousDayPriorityAchievements, weeklyPlanAchievements);
+          const priorityAchievements = priorityAccomplishmentsToAchievements(existingJournal);
+          const existingSuggestedAchievements = mergeSuggestedAchievements(priorityAchievements, savedAchievements);
           setAchievements(existingSuggestedAchievements);
           setSelectedValues(existingJournal.core_values_snapshot || []);
           setSelectedAreas(existingJournal.data?.selected_life_areas || []);
           const savedHabits = existingJournal.habits_snapshot || [];
-          setHabitsSnapshot(savedHabits.map((sh: any) => {
-            const match = fetchedHabits.find(ah => habitKey(ah) === habitKey(sh));
-            const apiHabit = match || sh;
+          setHabitsSnapshot(scheduledHabitsForSelectedDate.map((apiHabit: any) => {
+            const savedHabit = savedHabits.find((sh: any) => habitKey(sh) === habitKey(apiHabit));
             return {
-              ...sh,
-              completed: match ? getHabitCompletedForSelectedDate(match) : Boolean(sh.completed),
-              frequency: match?.frequency || match?.repeat_type || sh.frequency || "Daily",
-              category: match?.category || match?.habit_category || sh.category || "Other",
+              ...mapApiHabitToSnapshot(apiHabit),
+              completed: savedHabit ? Boolean(savedHabit.completed) : getHabitCompletedForSelectedDate(apiHabit),
+              frequency: apiHabit?.frequency || apiHabit?.repeat_type || savedHabit?.frequency || "Daily",
+              category: apiHabit?.category || apiHabit?.habit_category || savedHabit?.category || "Other",
               week_history: mergeWeekHistory(apiHabit),
+              week_days: mergeWeekDays(apiHabit),
             };
           }));
           applyDailyDraft(selectedDate, existingSuggestedAchievements);
         } else {
-          const suggestedAchievements = mergeSuggestedAchievements(
-            previousDayPriorityAchievements,
-            weeklyPlanAchievements,
-          );
-
           setJournalId(null); 
           setIsEditMode(false); 
           setIsEditingFromPast(false);
           setGratitude(""); setChallenges(""); setDescription("");
-          setEnergy(5); setAlignment(5); setPriorities([""]); setSelectedMoods([]); setAchievements(suggestedAchievements);
+          setEnergy(5); setAlignment(5); setPriorities([]); setSelectedMoods([]); setAchievements([]);
           setSelectedAreas([]); setSelectedValues([]); setAffirmation("");
-          setHabitsSnapshot(fetchedHabits.map(mapApiHabitToSnapshot));
-          applyDailyDraft(selectedDate, suggestedAchievements);
+          setHabitsSnapshot(scheduledHabitsForSelectedDate.map(mapApiHabitToSnapshot));
+          applyDailyDraft(selectedDate);
         }
         dailyDraftReadyRef.current = true;
       } catch (err) { console.error(err); } finally { if (isMounted) setIsLoadingDaily(false); }
@@ -2394,14 +2441,10 @@ const DailyJournal = () => {
     habitsSnapshot,
   ]);
 
-  const loadJournalIntoForm = async (id: number) => {
+  const loadJournalIntoForm = (journal: PastJournal) => {
     try {
-      const res = await fetch(`${LIFE_API}/user_journals/${id}`, { headers: { Authorization: `Bearer ${getToken(token)}` } });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      const j    = data?.user_journal ?? data;
-      if (j.start_date) { 
-        setSelectedDate(new Date(j.start_date + "T00:00:00")); 
+      if (journal.start_date) {
+        setSelectedDate(new Date(journal.start_date + "T00:00:00")); 
         setTimeout(() => {
           setIsEditMode(true);
           setIsEditingFromPast(true);
@@ -2440,8 +2483,12 @@ const DailyJournal = () => {
       const journalPayload = {
         journal_type: "daily", start_date: format(selectedDate, "yyyy-MM-dd"), affirmation,
         gratitude_note: gratitude, challenges_note: challenges, energy_score: energy, alignment_score: alignment,
-        mood_tags: selectedMoods, priorities: priorities.filter(p => p.trim() !== ""),
-        accomplishments: achievements.map(a => ({ title: a.title })), todos_snapshot: [],
+        mood_tags: selectedMoods,
+        priorities: normalizeJournalPriorities(priorities, format(addDays(selectedDate, 1), "yyyy-MM-dd")).map((priority) => ({
+          ...priority,
+          planned_for: priority.planned_for || format(addDays(selectedDate, 1), "yyyy-MM-dd"),
+        })),
+        accomplishments: achievements.filter(a => a.checked && a.title?.trim()).map(a => ({ title: a.title })), todos_snapshot: [],
         habits_snapshot: habitsSnapshot, bucket_updates: [], core_value_ids: selectedCoreValueIds,
         core_values_snapshot: selectedValues, data: { selected_life_areas: selectedAreas, description: description || "Overall productive and reflective day." },
       };
@@ -2455,7 +2502,7 @@ const DailyJournal = () => {
       setIsEditingFromPast(false);
       showToast(isUpdate ? "Journal Updated ✅" : "Journal Entry Saved ✅", "success");
       const dateKey = format(selectedDate, "yyyy-MM-dd");
-      localStorage.setItem(`daily_journal_${dateKey}`, JSON.stringify({ accomplishments: achievements.filter(a => a.title?.trim()).map(a => ({ title: a.title, checked: a.checked })) }));
+      localStorage.removeItem(`daily_journal_${dateKey}`);
       localStorage.removeItem(getDailyDraftKey(selectedDate));
       if (!isUpdate) setShowFortuneModal(true);
       await fetchPastJournals();
@@ -2604,7 +2651,17 @@ const DailyJournal = () => {
                 </div>
               ) : (
                 <div className="flex flex-col gap-3">
-                  {pastJournals.map(journal => <PastJournalRow key={journal.id} journal={journal} token={token} onDelete={id => setPastJournals(p => p.filter(j => j.id !== id))} onEdit={loadJournalIntoForm} showToast={showToast} />)}
+                  {pastJournals.map(journal => (
+                    <PastJournalRow
+                      key={journal.id}
+                      journal={journal}
+                      token={token}
+                      onDelete={id => setPastJournals(p => p.filter(j => j.id !== id))}
+                      onDraftDelete={(dateKey) => localStorage.removeItem(getDailyDraftKey(new Date(`${dateKey}T00:00:00`)))}
+                      onEdit={loadJournalIntoForm}
+                      showToast={showToast}
+                    />
+                  ))}
                 </div>
               )}
             </div>
