@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Shield, Upload, CheckCircle2 } from "lucide-react";
-import { 
+import {
   Select, 
   SelectContent, 
   SelectItem, 
@@ -17,6 +17,7 @@ import {
   ffSectionHeaderSubtitle,
   ffLabelUpper,
 } from "@/components/ForFamilySections/forFamilySectionStyles";
+import { DocumentName } from "@/components/ForFamilySections/documentUtils";
 import { cn } from "@/lib/utils";
 
 interface LegalDetails {
@@ -151,7 +152,10 @@ export default function LegalSection({
                   )}
                 >
                   {legalDetails.willDocumentUploaded ? (
-                    <><CheckCircle2 className="w-5 h-5 mr-2" /> {legalDetails.willDocumentUploaded}</>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 shrink-0" />
+                      <DocumentName fileName={legalDetails.willDocumentUploaded} />
+                    </span>
                   ) : (
                     <><Upload className="w-4 h-4 mr-2" strokeWidth={2.5}/> Upload Will Document</>
                   )}

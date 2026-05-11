@@ -20,6 +20,7 @@ import {
   ffLabelUpper,
   ffBtnSecondary,
 } from "@/components/ForFamilySections/forFamilySectionStyles";
+import { DocumentName } from "@/components/ForFamilySections/documentUtils";
 import { cn } from "@/lib/utils";
 
 interface BankAccount {
@@ -304,7 +305,7 @@ export default function FinanceSection({
                   <div className="space-y-2 mb-4 mt-3">
                     {investmentsDocuments.uploadedDocuments.map((doc) => (
                       <div key={doc.id} className={ffDocRow}>
-                        <span className="text-sm">{doc.fileName}</span>
+                        <DocumentName fileName={doc.fileName} />
                         <Button variant="ghost" size="sm" onClick={() => onRemoveInvestmentDocument(doc.id)} className={ffRemoveGhost}>
                           <Trash2 className="h-4 w-4" />
                         </Button>

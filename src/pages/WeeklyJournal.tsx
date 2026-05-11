@@ -24,6 +24,7 @@ import WeeklyReflection, { Win } from "@/components/WeeklyReflection";
 import MissionHabitsConnection from "@/components/MissionHabitsConnection";
 import WeeklyPlanComponent, {
   generateEmptyWeekData,
+  normalizeWeeklyPlanPayload,
 } from "@/components/WeeklyPlanComponent";
 import FocusAndBoundaries, {
   FocusData,
@@ -610,6 +611,7 @@ const WeeklyJournal = () => {
       const endDate = format(endOfWeek(currentDate, { weekStartsOn: 0 }), "yyyy-MM-dd");
 
       const isUpdate = isEditMode && !!journalId;
+      const weeklyPlanPayload = normalizeWeeklyPlanPayload(weeklyPlanData, currentDate);
 
       const payload = {
         user_journal: {
@@ -628,7 +630,7 @@ const WeeklyJournal = () => {
             key_insight: insight,
             mission_connection: missionText,
             life_balance_rating: balanceRating,
-            weekly_plan: weeklyPlanData,
+            weekly_plan: weeklyPlanPayload,
             focus_and_boundaries: focusData,
           },
         },
@@ -670,7 +672,7 @@ const WeeklyJournal = () => {
                     key_insight: insight,
                     mission_connection: missionText,
                     life_balance_rating: balanceRating,
-                    weekly_plan: weeklyPlanData,
+                    weekly_plan: weeklyPlanPayload,
                     focus_and_boundaries: focusData,
                   },
                 }

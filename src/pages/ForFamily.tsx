@@ -34,7 +34,14 @@ interface BankAccount { id: string; bankName: string; checkingAccountNo: string;
 interface InvestmentsDocuments { fixedDepositDetails: string; fdBank: string; fdCertificateKeptAt: string; bankLockerNumber: string; lockerBankBranch: string; lockerAccessibleBy: string; lockerKeyLocation: string; dematPortfolioLocation: string; bondsDebenturesLocation: string; ppfAccountLocation: string; npsEpfGratuityDetails: string; goldJewelleryDetails: string; uploadedDocuments: UploadedDocument[]; }
 interface CreditCard { id: string; cardName: string; cardNumber: string; bank: string; expiryDate: string; creditLimit: string; }
 interface FinalWish { id: string; name: string; placeOfWorship: string; religiousAffiliation: string; panditName: string; panditPhone: string; funeralServicePreference: string; serviceLocationAddress: string; contactPhone: string; preArrangedLastRites: boolean; exServicemanBenefits: boolean; militaryHonours: boolean; obituaryWanted: boolean; lastRitesPreference: string; cremationGroundChoice: string; lotPurchased: boolean; pallbearers: string; honoraryPallbearers: string; musicalSelections: string; specialRequests: string; }
-interface UploadedDocument { id: string; fileName: string; uploadedAt: string; }
+interface UploadedDocument { id: string; fileName: string; uploadedAt: string; dataUrl: string; }
+
+interface ApiDocument {
+  id?: number | string;
+  name?: string | null;
+  url?: string;
+  created_at?: string;
+}
 interface PersonalInfo { fullName: string; aadharNumber: string; panNumber: string; dateOfBirth: string; placeOfBirth: string; drivingLicenseNumber: string; drivingLicenseValidity: string; currentHomeAddress: string; mobileNumber: string; workPhone: string; nativeAddress: string; maritalStatus: string; marriageDate: string; spouseName: string; spouseMobile: string; spouseAadharNumber: string; spousePanNumber: string; spouseDrivingLicenseNumber: string; spouseDrivingLicenseValidity: string; spouseAddress: string; spouseEmployer: string; spouseWorkPhone: string; spouseEmployerAddress: string; formerSpouseName: string; formerSpouseContact: string; formerSpouseAddress: string; formerSpouseMarriageDate: string; formerSpouseDivorceDate: string; }
 
 // Define Steps for Stepper
@@ -95,6 +102,54 @@ export default function ForFamily() {
 
   const createId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const toggleSection = (section: string) => setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  const documentValues = (documents: UploadedDocument[]) => documents.map((document) => document.dataUrl).filter((value) => value.startsWith("data:"));
+  const getDocumentNameFromUrl = (url = "", fallback = "uploaded-document") => {
+    const withoutQuery = url.split("?")[0];
+    const lastSegment = withoutQuery.split("/").filter(Boolean).pop();
+    return decodeURIComponent(lastSegment || fallback);
+  };
+  const normalizeApiDocuments = (documents: unknown, fallbackPrefix: string): UploadedDocument[] =>
+    Array.isArray(documents)
+      ? documents.map((document, index) => {
+          const item = document as ApiDocument;
+          const url = item.url || "";
+          return {
+            id: String(item.id ?? `${fallbackPrefix}-${index}`),
+            fileName: item.name || getDocumentNameFromUrl(url, `${fallbackPrefix}-${index + 1}`),
+            uploadedAt: item.created_at ? new Date(item.created_at).toLocaleDateString() : "",
+            dataUrl: url,
+          };
+        })
+      : [];
+  const createUploadedDocument = (file: File): Promise<UploadedDocument> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () =>
+        resolve({
+          id: createId(),
+          fileName: file.name,
+          uploadedAt: new Date().toLocaleDateString(),
+          dataUrl: String(reader.result || ""),
+        });
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  const isPersistedDocumentId = (id: string) => /^\d+$/.test(id);
+  const deletePersistedDocument = async (id: string) => {
+    if (!isPersistedDocumentId(id)) return true;
+
+    const token = localStorage.getItem("auth_token");
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const response = await fetch(`https://life-api.lockated.com/family_profile/documents/${id}`, {
+      method: "DELETE",
+      headers,
+    });
+
+    if (!response.ok) throw new Error(`Failed to delete document: ${response.status}`);
+    return true;
+  };
 
   // --- Stepper Navigation Handlers ---
   const currentStepIndex = FORM_STEPS.findIndex(step => step.id === activeTab);
@@ -155,8 +210,17 @@ export default function ForFamily() {
         const data = await response.json();
         const profile = data.personal ? data : data.family_profile; 
         
-        if (profile && profile.personal) {
+          if (profile && profile.personal) {
           setHasExistingProfile(true); 
+          const apiDocuments = data.documents || profile.documents || {};
+          setPersonalDocuments(normalizeApiDocuments(apiDocuments.personal, "personal-document"));
+          setSpouseDocuments(normalizeApiDocuments(apiDocuments.spouse, "spouse-document"));
+          setInvestmentsDocuments(prev => ({
+            ...prev,
+            uploadedDocuments: normalizeApiDocuments(apiDocuments.investment, "investment-document"),
+          }));
+          setAttachedDocuments(normalizeApiDocuments(apiDocuments.other, "other-document"));
+          const willDocument = normalizeApiDocuments(apiDocuments.will, "will-document")[0];
 
           if (profile.personal) {
             setPersonalInfo(prev => ({ 
@@ -232,12 +296,25 @@ export default function ForFamily() {
           }
 
           if (profile.legal) {
-            setLegalDetails(prev => ({ ...prev, hasLivingWill: profile.legal.will_exists || false, willLocatedAt: profile.legal.will_location || "", attorneyWhoHandledWill: profile.legal.lawyer_name || "", attorneyPhone: profile.legal.lawyer_contact || "" }));
+            setLegalDetails(prev => ({
+              ...prev,
+              hasLivingWill: profile.legal.has_living_will ?? profile.legal.will_exists ?? false,
+              willLocatedAt: profile.legal.will_located_at || profile.legal.will_location || "",
+              attorneyWhoHandledWill: profile.legal.attorney_who_handled_will || profile.legal.lawyer_name || "",
+              attorneyPhone: profile.legal.attorney_phone || profile.legal.lawyer_contact || "",
+              lawFirm: profile.legal.law_firm || "",
+              willDate: profile.legal.will_date || "",
+              executor: profile.legal.executor_name || "",
+              guardianshipDocumentsLocation: profile.legal.guardianship_documents_location || "",
+              organDonationPreference: profile.legal.organ_donation_preference || "",
+              notesForFamily: profile.legal.notes_for_family || "",
+              willDocumentUploaded: willDocument?.dataUrl || profile.legal.will_document || "",
+            }));
           }
 
           // Other Info Map
           if (profile.other_info) {
-             setOtherInfo({ notes: profile.other_info.notes || "" });
+             setOtherInfo({ notes: profile.other_info.additional_notes || profile.other_info.notes || "" });
           }
 
           if (profile.final_wishes && Array.isArray(profile.final_wishes)) {
@@ -270,56 +347,112 @@ export default function ForFamily() {
             full_name: personalInfo.fullName,
             date_of_birth: personalInfo.dateOfBirth,
             place_of_birth: personalInfo.placeOfBirth,
-            nationality: "",
-            marital_status: personalInfo.maritalStatus,
-            occupation: importantContacts.employerSupervisor,
-            employer: importantContacts.bankName,
-            aadhaar_number: personalInfo.aadharNumber,
             pan_number: personalInfo.panNumber,
-            passport_number: "",
-            driving_license: personalInfo.drivingLicenseNumber
+            aadhaar_number: personalInfo.aadharNumber,
+            driving_license: personalInfo.drivingLicenseNumber,
+            license_validity: personalInfo.drivingLicenseValidity,
+            mobile_number: personalInfo.mobileNumber,
+            work_phone: personalInfo.workPhone,
+            current_address: personalInfo.currentHomeAddress,
+            permanent_address: personalInfo.nativeAddress,
+            documents: documentValues(personalDocuments),
           },
           family: {
             spouse_name: personalInfo.spouseName,
-            spouse_phone: personalInfo.spouseMobile,
+            spouse_aadhaar: personalInfo.spouseAadharNumber,
+            spouse_pan: personalInfo.spousePanNumber,
+            spouse_mobile: personalInfo.spouseMobile,
+            spouse_driving_license: personalInfo.spouseDrivingLicenseNumber,
+            spouse_license_validity: personalInfo.spouseDrivingLicenseValidity,
+            spouse_address: personalInfo.spouseAddress,
+            spouse_employer_name: personalInfo.spouseEmployer,
+            spouse_work_phone: personalInfo.spouseWorkPhone,
+            spouse_employer_address: personalInfo.spouseEmployerAddress,
+            spouse_documents: documentValues(spouseDocuments),
+            former_spouse_name: personalInfo.formerSpouseName,
+            former_spouse_contact: personalInfo.formerSpouseContact,
+            former_spouse_address: personalInfo.formerSpouseAddress,
+            marriage_date: personalInfo.marriageDate || personalInfo.formerSpouseMarriageDate,
+            divorce_date: personalInfo.formerSpouseDivorceDate,
             children: children.map(c => ({ name: c.name, date_of_birth: c.dob })),
             parents: [
-              ...husbandSiblings.filter(s => s.relation.toLowerCase() === 'father' || s.relation.toLowerCase() === 'mother').map(s => ({ name: s.name, relationship: s.relation })),
-              ...wifeSiblings.filter(s => s.relation.toLowerCase() === 'father' || s.relation.toLowerCase() === 'mother').map(s => ({ name: s.name, relationship: s.relation }))
+              ...husbandSiblings.map(s => ({ name: s.name, relationship: s.relation, contact: s.phone })),
+              ...wifeSiblings.map(s => ({ name: s.name, relationship: s.relation, contact: s.phone }))
             ]
           },
           emergency: {
             primary_contact_name: emergencyContacts[0]?.name || "",
             primary_contact_phone: emergencyContacts[0]?.homePhone || "",
+            primary_contact_relationship: emergencyContacts[0]?.relationship || "",
             secondary_contact_name: emergencyContacts[1]?.name || "",
             secondary_contact_phone: emergencyContacts[1]?.homePhone || "",
+            secondary_contact_relationship: emergencyContacts[1]?.relationship || "",
             home_address: personalInfo.currentHomeAddress,
-            medical_conditions: "",
             blood_group: "",
+            medical_conditions: "",
+            allergies: "",
+            doctor_name: importantContacts.physicianName,
+            doctor_phone: importantContacts.physicianPhone,
             insurance_provider: importantContacts.insuranceAgencyName,
             insurance_policy_number: lifeInsurancePolicies.find(p => p.policyName === "Health/Emergency")?.policyNumber || ""
           },
           contacts: [
-            ...(importantContacts.physicianName ? [{ name: importantContacts.physicianName, relationship: "Family Doctor", phone: importantContacts.physicianPhone, email: importantContacts.physicianEmail }] : []),
-            ...(importantContacts.lawyerName ? [{ name: importantContacts.lawyerName, relationship: "Lawyer", phone: importantContacts.lawyerPhone, email: "" }] : []),
-            ...(importantContacts.accountantName ? [{ name: importantContacts.accountantName, relationship: "Accountant", phone: importantContacts.accountantPhone, email: "" }] : [])
+            ...(importantContacts.physicianName ? [{ name: importantContacts.physicianName, relationship: "Family Doctor", phone: importantContacts.physicianPhone, email: importantContacts.physicianEmail, address: importantContacts.physicianAddress }] : []),
+            ...(importantContacts.lawyerName ? [{ name: importantContacts.lawyerName, relationship: "Lawyer", phone: importantContacts.lawyerPhone, email: "", address: importantContacts.lawyerAddress }] : []),
+            ...(importantContacts.attorneyName ? [{ name: importantContacts.attorneyName, relationship: "Attorney", phone: importantContacts.attorneyPhone, email: importantContacts.attorneyEmail, address: importantContacts.attorneyAddress }] : []),
+            ...(importantContacts.accountantName ? [{ name: importantContacts.accountantName, relationship: "Accountant", phone: importantContacts.accountantPhone, email: "", address: importantContacts.accountantAddress }] : []),
+            ...(importantContacts.insuranceAgentName ? [{ name: importantContacts.insuranceAgentName, relationship: "Insurance Agent", phone: importantContacts.insurancePhone, email: "", address: importantContacts.insuranceAddress }] : []),
+            ...(importantContacts.bankerName ? [{ name: importantContacts.bankerName, relationship: "Banker", phone: importantContacts.bankPhone, email: "", address: importantContacts.bankAddress }] : []),
+            ...(importantContacts.brokerName ? [{ name: importantContacts.brokerName, relationship: "Broker", phone: importantContacts.brokerPhone, email: "", address: importantContacts.brokerAddress }] : [])
           ],
-          finances: lifeInsurancePolicies.filter(p => p.policyName !== "Insurance" && p.policyName !== "Health/Emergency").map(p => ({ bank_name: importantContacts.bankName || "", account_type: p.policyName, account_number: p.policyNumber, nominee: p.nominee })),
+          finances: bankAccounts.flatMap(account => [
+            ...(account.checkingAccountNo ? [{
+              bank_name: account.bankName,
+              branch: "",
+              account_type: "Checking",
+              account_number: account.checkingAccountNo,
+              ifsc_code: "",
+              nominee: "",
+            }] : []),
+            ...(account.savingsAccountNo ? [{
+              bank_name: account.bankName,
+              branch: "",
+              account_type: "Savings",
+              account_number: account.savingsAccountNo,
+              ifsc_code: "",
+              nominee: "",
+            }] : []),
+          ]),
+          investment_documents: documentValues(investmentsDocuments.uploadedDocuments),
           assets: [
-            ...propertyAssets.map(p => ({ asset_type: "Property", description: p.propertyType, location: p.address, estimated_value: p.marketValue })),
-            ...vehicleAssets.map(v => ({ asset_type: "Vehicle", description: `${v.vehicleType} - ${v.model}`, location: "", estimated_value: "" }))
+            ...propertyAssets.map(p => ({ asset_type: "Property", description: p.propertyType, location: p.address, estimated_value: p.marketValue, documents_location: p.documentLocation })),
+            ...vehicleAssets.map(v => ({ asset_type: "Vehicle", description: `${v.vehicleType} ${v.model}`.trim(), registration_number: v.registrationNumber, estimated_value: "" }))
           ],
-          benefits: lifeInsurancePolicies.filter(p => p.policyName === "Insurance").map(p => ({ benefit_type: "Insurance", provider_name: p.insurer, policy_number: p.policyNumber })),
+          benefits: lifeInsurancePolicies.map(p => ({ benefit_type: p.policyName, provider_name: p.insurer, policy_number: p.policyNumber, sum_assured: p.sumAssured, nominee: p.nominee, premium_due_date: "" })),
           legal: {
-            will_exists: legalDetails.hasLivingWill,
-            will_location: legalDetails.willLocatedAt,
-            lawyer_name: legalDetails.attorneyWhoHandledWill,
-            lawyer_contact: legalDetails.attorneyPhone
+            will_located_at: legalDetails.willLocatedAt,
+            attorney_who_handled_will: legalDetails.attorneyWhoHandledWill,
+            law_firm: legalDetails.lawFirm,
+            attorney_phone: legalDetails.attorneyPhone,
+            will_date: legalDetails.willDate,
+            executor_name: legalDetails.executor,
+            will_document: legalDetails.willDocumentUploaded.startsWith("data:") ? legalDetails.willDocumentUploaded : "",
+            has_living_will: legalDetails.hasLivingWill,
+            organ_donation_preference: legalDetails.organDonationPreference,
+            guardianship_documents_location: legalDetails.guardianshipDocumentsLocation,
+            notes_for_family: legalDetails.notesForFamily,
           },
           final_wishes: finalWishes.map(w => ({
             person_name: w.name, religious_affiliation: w.religiousAffiliation, place_of_worship: w.placeOfWorship, priest_name: w.panditName, priest_phone: w.panditPhone, service_location_address: w.serviceLocationAddress, contact_phone: w.contactPhone, last_rites_preference: w.lastRitesPreference, cremation_or_burial_choice: w.cremationGroundChoice, pallbearers: w.pallbearers, musical_selections: w.musicalSelections, special_requests: w.specialRequests
           })),
-          other_info: { notes: otherInfo.notes } 
+          other_info: {
+            additional_notes: otherInfo.notes,
+            documents: attachedDocuments.map((document) => ({
+              name: document.fileName,
+              description: "",
+              file: document.dataUrl.startsWith("data:") ? document.dataUrl : "",
+            })).filter((document) => document.file),
+          } 
         }
       };
 
@@ -505,12 +638,48 @@ export default function ForFamily() {
   const updateImportantContact = (field: keyof ImportantContacts, value: string) => setImportantContacts(prev => ({ ...prev, [field]: value }));
   const updateBenefitsDetails = (field: keyof BenefitsDetails, value: string | boolean) => setBenefitsDetails(prev => ({ ...prev, [field]: value }));
   const updateLegalDetails = (field: keyof LegalDetails, value: string | boolean) => setLegalDetails(prev => ({ ...prev, [field]: value }));
-  const addPersonalDocument = () => setPersonalDocuments(prev => [...prev, { id: createId(), fileName: `document-${Date.now()}.pdf`, uploadedAt: new Date().toLocaleDateString() }]);
-  const removePersonalDocument = (id: string) => setPersonalDocuments(prev => prev.filter(doc => doc.id !== id));
-  const addSpouseDocument = () => setSpouseDocuments(prev => [...prev, { id: createId(), fileName: `spouse-document-${Date.now()}.pdf`, uploadedAt: new Date().toLocaleDateString() }]);
-  const removeSpouseDocument = (id: string) => setSpouseDocuments(prev => prev.filter(doc => doc.id !== id));
-  const addAttachedDocument = () => setAttachedDocuments(prev => [...prev, { id: createId(), fileName: `document-${Date.now()}.pdf`, uploadedAt: new Date().toLocaleDateString() }]);
-  const removeAttachedDocument = (id: string) => setAttachedDocuments(prev => prev.filter(doc => doc.id !== id));
+  const addPersonalDocument = async (file: File) => {
+    const document = await createUploadedDocument(file);
+    setPersonalDocuments(prev => [...prev, document]);
+  };
+  const removePersonalDocument = async (id: string) => {
+    try {
+      await deletePersistedDocument(id);
+      setPersonalDocuments(prev => prev.filter(doc => doc.id !== id));
+      toast({ title: "Removed", description: "Document removed successfully.", variant: "goalsSuccess" });
+    } catch (error) {
+      console.error("Delete personal document error:", error);
+      toast({ title: "Error", description: "Could not remove document.", variant: "destructive" });
+    }
+  };
+  const addSpouseDocument = async (file: File) => {
+    const document = await createUploadedDocument(file);
+    setSpouseDocuments(prev => [...prev, document]);
+  };
+  const removeSpouseDocument = async (id: string) => {
+    try {
+      await deletePersistedDocument(id);
+      setSpouseDocuments(prev => prev.filter(doc => doc.id !== id));
+      toast({ title: "Removed", description: "Document removed successfully.", variant: "goalsSuccess" });
+    } catch (error) {
+      console.error("Delete spouse document error:", error);
+      toast({ title: "Error", description: "Could not remove document.", variant: "destructive" });
+    }
+  };
+  const addAttachedDocument = async (file: File) => {
+    const document = await createUploadedDocument(file);
+    setAttachedDocuments(prev => [...prev, document]);
+  };
+  const removeAttachedDocument = async (id: string) => {
+    try {
+      await deletePersistedDocument(id);
+      setAttachedDocuments(prev => prev.filter(doc => doc.id !== id));
+      toast({ title: "Removed", description: "Document removed successfully.", variant: "goalsSuccess" });
+    } catch (error) {
+      console.error("Delete attached document error:", error);
+      toast({ title: "Error", description: "Could not remove document.", variant: "destructive" });
+    }
+  };
   const addHusbandSibling = () => setHusbandSiblings(prev => [...prev, { id: createId(), name: "", aadhar: "", address: "", phone: "", relation: "brother" }]);
   const removeHusbandSibling = (id: string) => setHusbandSiblings(prev => prev.filter(s => s.id !== id));
   const updateHusbandSibling = (id: string, field: keyof Sibling, value: string) => setHusbandSiblings(prev => prev.map(s => (s.id === id ? { ...s, [field]: value } : s)));
@@ -541,13 +710,28 @@ export default function ForFamily() {
   const removeBankAccount = (id: string) => setBankAccounts(prev => prev.filter(b => b.id !== id));
   const updateBankAccount = (id: string, field: keyof BankAccount, value: string | boolean) => setBankAccounts(prev => prev.map(b => (b.id === id ? { ...b, [field]: value } : b)));
   const updateInvestmentsDocuments = (field: keyof InvestmentsDocuments, value: string) => setInvestmentsDocuments(prev => ({ ...prev, [field]: value }));
-  const addInvestmentDocument = (file: File) => setInvestmentsDocuments(prev => ({ ...prev, uploadedDocuments: [...prev.uploadedDocuments, { id: createId(), fileName: file.name, uploadedAt: new Date().toLocaleDateString() }] }));
-  const removeInvestmentDocument = (id: string) => setInvestmentsDocuments(prev => ({ ...prev, uploadedDocuments: prev.uploadedDocuments.filter(d => d.id !== id) }));
+  const addInvestmentDocument = async (file: File) => {
+    const document = await createUploadedDocument(file);
+    setInvestmentsDocuments(prev => ({ ...prev, uploadedDocuments: [...prev.uploadedDocuments, document] }));
+  };
+  const removeInvestmentDocument = async (id: string) => {
+    try {
+      await deletePersistedDocument(id);
+      setInvestmentsDocuments(prev => ({ ...prev, uploadedDocuments: prev.uploadedDocuments.filter(d => d.id !== id) }));
+      toast({ title: "Removed", description: "Document removed successfully.", variant: "goalsSuccess" });
+    } catch (error) {
+      console.error("Delete investment document error:", error);
+      toast({ title: "Error", description: "Could not remove document.", variant: "destructive" });
+    }
+  };
   const addCreditCard = () => setCreditCards(prev => [...prev, { id: createId(), cardName: "", cardNumber: "", bank: "", expiryDate: "", creditLimit: "" }]);
   const removeCreditCard = (id: string) => setCreditCards(prev => prev.filter(c => c.id !== id));
   const updateCreditCard = (id: string, field: keyof CreditCard, value: string) => setCreditCards(prev => prev.map(c => (c.id === id ? { ...c, [field]: value } : c)));
   
-  const handleWillDocumentUpload = () => updateLegalDetails("willDocumentUploaded", `will-document-${Date.now()}.pdf`);
+  const handleWillDocumentUpload = async (file: File) => {
+    const document = await createUploadedDocument(file);
+    updateLegalDetails("willDocumentUploaded", document.dataUrl);
+  };
   const addFinalWish = () => setFinalWishes(prev => [...prev, { id: createId(), name: "", placeOfWorship: "", religiousAffiliation: "", panditName: "", panditPhone: "", funeralServicePreference: "", serviceLocationAddress: "", contactPhone: "", preArrangedLastRites: false, exServicemanBenefits: false, militaryHonours: false, obituaryWanted: false, lastRitesPreference: "", cremationGroundChoice: "", lotPurchased: false, pallbearers: "", honoraryPallbearers: "", musicalSelections: "", specialRequests: "" }]);
   const removeFinalWish = (id: string) => setFinalWishes(prev => prev.filter(w => w.id !== id));
   const updateFinalWish = (id: string, field: keyof FinalWish, value: string | boolean) => setFinalWishes(prev => prev.map(w => (w.id === id ? { ...w, [field]: value } : w)));

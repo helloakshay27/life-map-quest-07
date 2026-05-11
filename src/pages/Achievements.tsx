@@ -334,6 +334,19 @@ const DEFAULT_STATS: AchievementStats = {
   percent: 0,
 };
 
+const asRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+
+const getNumberValue = (...values: unknown[]) => {
+  for (const value of values) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+  return 0;
+};
+
 /** Figma dashboard: terracotta primary, ~8px radius, 8px×16px padding */
 const figmaPrimaryButton =
   "!bg-[#D67455] !text-white shadow-sm hover:!bg-[#D67455]/92 active:!bg-[#D67455]/85 rounded-md px-4 py-2 h-auto min-h-9 font-medium border-0 [&_svg]:!text-white";
@@ -348,9 +361,25 @@ const buildBadges = (
   }));
 
 const parseStats = (raw: Record<string, unknown>): AchievementStats => {
-  const p = (raw.progress as Record<string, unknown>) ?? raw;
+  const data = asRecord(raw.data);
+  const user = asRecord(raw.user);
+  const currentUser = asRecord(raw.current_user);
+  const yourRank = asRecord(raw.your_rank);
+  const p = asRecord(raw.progress ?? data.progress) || raw;
   return {
-    points: Number(p.points ?? p.total_points ?? 0),
+    points: getNumberValue(
+      p.my_points,
+      p.points,
+      p.total_points,
+      raw.my_points,
+      raw.points,
+      raw.total_points,
+      data.my_points,
+      data.points,
+      user.points,
+      currentUser.points,
+      yourRank.points,
+    ),
     total_badges: Number(p.total_badges ?? 18),
     daily_entries: Number(p.daily_entries ?? p.daily_count ?? 0),
     weekly_entries: Number(p.weekly_entries ?? p.weekly_count ?? 0),
@@ -359,6 +388,21 @@ const parseStats = (raw: Record<string, unknown>): AchievementStats => {
     unlocked_count: Number(p.unlocked_badges ?? p.unlocked_count ?? 0),
     percent: Number(p.percent ?? 0),
   };
+};
+
+const parseLeaderboardPoints = (raw: unknown) => {
+  const data = asRecord(raw);
+  const nestedData = asRecord(data.data);
+  const yourRank = asRecord(data.your_rank ?? nestedData.your_rank);
+  const currentUser = asRecord(data.current_user ?? nestedData.current_user);
+  return getNumberValue(
+    yourRank.points,
+    yourRank.total_points,
+    currentUser.points,
+    currentUser.total_points,
+    data.points,
+    nestedData.points,
+  );
 };
 
 const Pulse = ({ className = "" }: { className?: string }) => (
@@ -999,23 +1043,24 @@ const Achievements = () => {
 
     if (ok && data) {
       const raw = data as Record<string, unknown>;
+      const payload = Object.keys(asRecord(raw.data)).length > 0 ? asRecord(raw.data) : raw;
       console.log("[Achievements] Response:", raw);
 
       const earnedList = (
-        Array.isArray(raw.earned)
-          ? raw.earned
-          : Array.isArray(raw.user_badges)
-            ? raw.user_badges
-            : Array.isArray(raw.badges)
-              ? raw.badges
+        Array.isArray(payload.earned)
+          ? payload.earned
+          : Array.isArray(payload.user_badges)
+            ? payload.user_badges
+            : Array.isArray(payload.badges)
+              ? payload.badges
               : []
       ) as Record<string, unknown>[];
 
       const lockedList = (
-        Array.isArray(raw.locked)
-          ? raw.locked
-          : Array.isArray(raw.locked_badges)
-            ? raw.locked_badges
+        Array.isArray(payload.locked)
+          ? payload.locked
+          : Array.isArray(payload.locked_badges)
+            ? payload.locked_badges
             : []
       ) as Record<string, unknown>[];
 
@@ -1024,7 +1069,12 @@ const Achievements = () => {
       );
 
       setBadges(buildBadges(earnedList, lockedList));
-      setStats(parseStats(raw));
+      const nextStats = parseStats(raw);
+      if (nextStats.points === 0) {
+        const leaderboard = await safeFetch("/leaderboard/rankings");
+        nextStats.points = parseLeaderboardPoints(leaderboard.data);
+      }
+      setStats(nextStats);
       return true;
     }
 

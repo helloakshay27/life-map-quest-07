@@ -110,11 +110,73 @@ const getTodoCategoryValue = (todo: any) => {
 };
 
 const QUADRANT_OPTIONS = [
-  { value: "Q1: Urgent & Important", label: "🔴 Q1 - Urgent & Important" },
-  { value: "Q2: Important, Not Urgent", label: "🟢 Q2 - Important, Not Urgent" },
-  { value: "Q3: Urgent, Not Important", label: "🟡 Q3 - Urgent, Not Important" },
-  { value: "Q4: Not Urgent or Important", label: "🔵 Q4 - Not Urgent or Important" },
+  { value: "Q1 - Urgent & Important", label: "🔴 Q1 - Urgent & Important" },
+  { value: "Q2 - Important, Not Urgent", label: "🟢 Q2 - Important, Not Urgent" },
+  { value: "Q3 - Urgent, Not Important", label: "🟡 Q3 - Urgent, Not Important" },
+  { value: "Q4 - Not Urgent or Important", label: "🔵 Q4 - Not Urgent or Important" },
 ];
+
+const DEFAULT_QUADRANT = "Q2 - Important, Not Urgent";
+
+const normalizeQuadrantValue = (quadrant?: string) => {
+  const clean = String(quadrant || "").trim();
+  const matched = QUADRANT_OPTIONS.find(
+    (option) =>
+      option.value === clean ||
+      option.value.replace(" - ", ": ") === clean ||
+      clean.startsWith(option.value.slice(0, 2)),
+  );
+  return matched?.value ?? DEFAULT_QUADRANT;
+};
+
+const getPriorityDescription = (priority: any) =>
+  String(priority?.description ?? priority?.text ?? "").trim();
+
+const getPriorityLifeArea = (priority: any) =>
+  CATEGORY_OPTIONS.some((option) => option.value === priority?.life_area)
+    ? priority.life_area
+    : CATEGORY_OPTIONS.some((option) => option.value === priority?.category)
+      ? priority.category
+      : "Career";
+
+const getPriorityPlannedFor = (priority: any, fallbackDate: string) =>
+  String(priority?.planned_for || fallbackDate);
+
+const getPlanWeekDateByDay = (baseDate?: Date) => {
+  if (!baseDate) return {};
+  const start = addDays(startOfWeek(baseDate, { weekStartsOn: 0 }), 7);
+  return Array.from({ length: 7 }).reduce<Record<string, string>>((dates, _, index) => {
+    const date = addDays(start, index);
+    dates[format(date, "EEE").toLowerCase()] = format(date, "yyyy-MM-dd");
+    return dates;
+  }, {});
+};
+
+export const normalizeWeeklyPlanPayload = (weeklyPlanData: any, baseDate?: Date) => {
+  const days = Array.isArray(weeklyPlanData?.days) ? weeklyPlanData.days : [];
+  const plannedForByDay = getPlanWeekDateByDay(baseDate);
+  return {
+    ...weeklyPlanData,
+    days: days.map((day: any) => ({
+      ...day,
+      planned_for: day?.planned_for || plannedForByDay[String(day?.id || "").toLowerCase()] || "",
+      priorities: Array.isArray(day?.priorities)
+        ? day.priorities
+            .map((priority: any) => ({
+              description: getPriorityDescription(priority),
+              life_area: getPriorityLifeArea(priority),
+              quadrant: normalizeQuadrantValue(priority?.quadrant),
+              dayAssign: priority?.dayAssign || day?.day || "",
+              planned_for: getPriorityPlannedFor(
+                priority,
+                day?.planned_for || plannedForByDay[String(day?.id || "").toLowerCase()] || "",
+              ),
+            }))
+            .filter((priority: any) => priority.description)
+        : [],
+    })),
+  };
+};
 
 // Drag type constants
 const DRAG_TYPE_PRIORITY = "priority";
@@ -161,6 +223,7 @@ export const generateEmptyWeekData = (baseDate = new Date()) => {
       id: dayStr.toLowerCase(),
       day: dayStr,
       date: format(currentDate, "d MMM"),
+      planned_for: format(currentDate, "yyyy-MM-dd"),
       theme: "",
       defaultTheme: defaultThemes[index],
       priorities: [],
@@ -427,6 +490,29 @@ export default function WeeklyPlanComponent({
     return Array.from({ length: 7 }, (_, index) => addDays(start, index));
   }, [currentDate]);
 
+  useEffect(() => {
+    if (!Array.isArray(data?.days)) return;
+    let changed = false;
+    const nextDays = data.days.map((day: any, dayIndex: number) => {
+      const plannedFor = day.planned_for || (planWeekDates[dayIndex] ? format(planWeekDates[dayIndex], "yyyy-MM-dd") : "");
+      const priorities = Array.isArray(day.priorities)
+        ? day.priorities.map((priority: any, priorityIndex: number) => {
+            if (priority.id && priority.planned_for) return priority;
+            changed = true;
+            return {
+              id: priority.id || Date.now() + dayIndex * 100 + priorityIndex,
+              ...priority,
+              planned_for: priority.planned_for || plannedFor,
+            };
+          })
+        : [];
+      if (day.planned_for) return { ...day, priorities };
+      changed = true;
+      return { ...day, planned_for: plannedFor, priorities };
+    });
+    if (changed) setData((prev: any) => ({ ...prev, days: nextDays }));
+  }, [data?.days, planWeekDates, setData]);
+
 
 
   // Fetch todos
@@ -477,7 +563,7 @@ export default function WeeklyPlanComponent({
       ...prev,
       days: prev.days.map((d: any) =>
         d.id === dayId
-          ? { ...d, priorities: d.priorities.map((p: any) => p.id === priorityId ? { ...p, text: newText } : p) }
+          ? { ...d, priorities: d.priorities.map((p: any) => p.id === priorityId ? { ...p, description: newText } : p) }
           : d,
       ),
     }));
@@ -486,7 +572,7 @@ export default function WeeklyPlanComponent({
   const handlePriorityFieldChange = (
     dayId: string,
     priorityId: number,
-    field: "category" | "quadrant",
+    field: "life_area" | "quadrant",
     value: string,
   ) => {
     setData((prev: any) => ({
@@ -524,10 +610,11 @@ export default function WeeklyPlanComponent({
                 ...d.priorities,
                 {
                   id: Date.now(),
+                  description: "",
+                  life_area: "Career",
+                  quadrant: DEFAULT_QUADRANT,
                   dayAssign: d.day,
-                  category: "Career",
-                  quadrant: "Q2: Important, Not Urgent",
-                  text: "",
+                  planned_for: d.planned_for,
                 },
               ],
             }
@@ -561,6 +648,7 @@ export default function WeeklyPlanComponent({
       const movingPriority = sourceDay?.priorities.find((p: any) => p.id === draggedPriority.priorityId);
       if (!movingPriority) return prev;
       const targetDay = prev.days.find((d: any) => d.id === targetDayId);
+      const nextPlannedFor = targetDay?.planned_for ?? movingPriority.planned_for;
       const nextDayAssign = targetDay?.day ?? movingPriority.dayAssign;
       return {
         ...prev,
@@ -571,7 +659,7 @@ export default function WeeklyPlanComponent({
             ? Math.min(Math.max(targetIndex, 0), withoutDragged.length)
             : withoutDragged.length;
           const nextPriorities = [...withoutDragged];
-          nextPriorities.splice(insertAt, 0, { ...movingPriority, dayAssign: nextDayAssign });
+          nextPriorities.splice(insertAt, 0, { ...movingPriority, dayAssign: nextDayAssign, planned_for: nextPlannedFor });
           return { ...d, priorities: nextPriorities };
         }),
       };
@@ -601,10 +689,11 @@ export default function WeeklyPlanComponent({
 
     const newPriority = {
       id: Date.now(),
+      description: todoTitle,
+      life_area: todoCategory,
+      quadrant: DEFAULT_QUADRANT,
       dayAssign: targetDay.day,
-      category: todoCategory,
-      quadrant: "Q2: Important, Not Urgent",
-      text: todoTitle,
+      planned_for: targetDay.planned_for,
       todoId: draggedTodo.id, // link back to source todo
     };
 
@@ -823,7 +912,7 @@ export default function WeeklyPlanComponent({
                             {/* Text input */}
                             <input
                               type="text"
-                              value={priority.text}
+                              value={getPriorityDescription(priority)}
                               onChange={(e) => handlePriorityTextChange(dayObj.id, priority.id, e.target.value)}
                               placeholder="Priority details..."
                               className={`w-full px-2.5 py-1.5 text-[12px] rounded-lg border bg-white focus:outline-none focus:ring-1 focus:ring-[#DA7756]/30 placeholder:text-[#888780] text-[#2C2C2A] transition-all ${themeColor.border}`}
@@ -833,12 +922,12 @@ export default function WeeklyPlanComponent({
                             <div className="relative">
                               <select
                                 value={
-                                  CATEGORY_OPTIONS.some((o) => o.value === priority.category)
-                                    ? priority.category
+                                  CATEGORY_OPTIONS.some((o) => o.value === getPriorityLifeArea(priority))
+                                    ? getPriorityLifeArea(priority)
                                     : "Career"
                                 }
                                 onChange={(e) =>
-                                  handlePriorityFieldChange(dayObj.id, priority.id, "category", e.target.value)
+                                  handlePriorityFieldChange(dayObj.id, priority.id, "life_area", e.target.value)
                                 }
                                 className={`appearance-none w-full bg-white border rounded-lg pl-2.5 pr-7 py-1.5 text-[11px] font-medium ${themeColor.border} text-[#2C2C2A] cursor-pointer outline-none`}
                               >
@@ -853,9 +942,7 @@ export default function WeeklyPlanComponent({
                             <div className="relative">
                               <select
                                 value={
-                                  QUADRANT_OPTIONS.some((o) => o.value === priority.quadrant)
-                                    ? priority.quadrant
-                                    : "Q2: Important, Not Urgent"
+                                  normalizeQuadrantValue(priority.quadrant)
                                 }
                                 onChange={(e) =>
                                   handlePriorityFieldChange(dayObj.id, priority.id, "quadrant", e.target.value)

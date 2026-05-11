@@ -17,6 +17,7 @@ import {
   ffRemoveGhost,
   ffDocRow,
 } from "@/components/ForFamilySections/forFamilySectionStyles";
+import { DocumentName } from "@/components/ForFamilySections/documentUtils";
 
 interface UploadedDocument {
   id: string;
@@ -124,7 +125,7 @@ export default function OtherInfoSection({
                 <div className="space-y-2">
                   {attachedDocuments.map((doc) => (
                     <div key={doc.id} className={ffDocRow}>
-                      <span className="text-sm">{doc.fileName}</span>
+                      <DocumentName fileName={doc.fileName} />
                       <Button 
                         variant="ghost" 
                         size="sm"

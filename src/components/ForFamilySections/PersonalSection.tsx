@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Shield, ChevronDown, X } from "lucide-react";
-import { 
+import {
   Select, 
   SelectContent, 
   SelectItem, 
@@ -25,6 +25,7 @@ import {
   ffRemoveGhost,
   ffDocRow,
 } from "@/components/ForFamilySections/forFamilySectionStyles";
+import { DocumentName } from "@/components/ForFamilySections/documentUtils";
 
 interface PersonalInfo {
   fullName: string;
@@ -283,7 +284,7 @@ export default function PersonalSection({
                 <div className="space-y-2">
                   {personalDocuments.map((doc) => (
                     <div key={doc.id} className={ffDocRow}>
-                      <span className="text-sm">{doc.fileName}</span>
+                      <DocumentName fileName={doc.fileName} />
                       <Button 
                         variant="ghost" 
                         size="sm"
@@ -418,7 +419,7 @@ export default function PersonalSection({
                   <div className="space-y-2 mb-4">
                     {spouseDocuments.map((doc) => (
                       <div key={doc.id} className={ffDocRow}>
-                        <span className="text-sm">{doc.fileName}</span>
+                        <DocumentName fileName={doc.fileName} />
                         <Button 
                           variant="ghost" 
                           size="sm"
